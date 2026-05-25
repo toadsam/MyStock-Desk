@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AppLayout from './layouts/AppLayout'
+import AuthPage from './pages/AuthPage'
 import HomePage from './pages/HomePage'
 import MarketPage from './pages/MarketPage'
 import PortfolioPage from './pages/PortfolioPage'
@@ -10,6 +11,8 @@ import TradePage from './pages/TradePage'
 export default function App() {
   return (
     <Routes>
+      <Route path="login" element={<AuthPage />} />
+      <Route path="register" element={<AuthPage />} />
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route path="market" element={<MarketPage />} />

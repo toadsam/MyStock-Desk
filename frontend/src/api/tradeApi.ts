@@ -1,9 +1,9 @@
-import { api, requestData } from './axios'
-import { createMockOrder, mockExecutions, mockOrders } from '../data/mockData'
+import { api, requestData, requestStrictData } from './axios'
+import { mockExecutions, mockOrders } from '../data/mockData'
 import type { Execution, TradeOrder, TradeOrderRequest } from '../types/trade'
 
 export function createOrder(request: TradeOrderRequest) {
-  return requestData<TradeOrder>(api.post('/api/trades/orders', request), createMockOrder(request))
+  return requestStrictData<TradeOrder>(api.post('/api/trades/orders', request))
 }
 
 export function getOrders() {
@@ -15,8 +15,5 @@ export function getExecutions() {
 }
 
 export function cancelOrder(orderId: number) {
-  return requestData<TradeOrder>(
-    api.patch(`/api/trades/orders/${orderId}/cancel`),
-    { ...mockOrders[0], id: orderId, status: 'CANCELLED' },
-  )
+  return requestStrictData<TradeOrder>(api.patch(`/api/trades/orders/${orderId}/cancel`))
 }

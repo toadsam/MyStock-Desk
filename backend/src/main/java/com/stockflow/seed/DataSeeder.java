@@ -41,6 +41,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -59,6 +60,7 @@ public class DataSeeder implements CommandLineRunner {
     private final NewsRepository newsRepository;
     private final AiInsightRepository aiInsightRepository;
     private final SectorPerformanceRepository sectorPerformanceRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
@@ -69,6 +71,7 @@ public class DataSeeder implements CommandLineRunner {
         Member member = memberRepository.save(Member.builder()
                 .name("김투자")
                 .email("investor@stockflow.com")
+                .passwordHash(passwordEncoder.encode("stockflow1234"))
                 .profileImageUrl("https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=160&q=80")
                 .membershipGrade("VIP")
                 .createdAt(LocalDateTime.now().minusMonths(16))

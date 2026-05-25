@@ -1,5 +1,5 @@
-import { Bell, ChevronDown, Mail, Search } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { Bell, ChevronDown, LogOut, Mail, Search } from 'lucide-react'
+import { Link, NavLink } from 'react-router-dom'
 import type { Member } from '../types/member'
 import { cn } from '../utils/cn'
 
@@ -24,7 +24,7 @@ export function Logo() {
   )
 }
 
-export default function Header({ member }: { member: Member }) {
+export default function Header({ member, isAuthenticated, onLogout }: { member: Member; isAuthenticated: boolean; onLogout: () => void }) {
   return (
     <header className="sticky top-0 z-40 hidden h-16 items-center border-b border-slate-800/80 bg-slate-950/85 px-5 backdrop-blur-xl lg:flex">
       <div className="mr-8">
@@ -63,9 +63,20 @@ export default function Header({ member }: { member: Member }) {
         </button>
         <button type="button" className="text-slate-300"><Mail className="h-5 w-5" /></button>
         <div className="h-8 w-px bg-slate-800" />
-        <img src={member.profileImageUrl} alt="" className="h-8 w-8 rounded-full bg-slate-700 object-cover" />
-        <span className="text-sm font-semibold text-slate-200">{member.name} 님</span>
-        <span className="rounded-full border border-blue-500 px-3 py-1 text-sm font-bold text-blue-400">VIP</span>
+        {isAuthenticated ? (
+          <>
+            <img src={member.profileImageUrl} alt="" className="h-8 w-8 rounded-full bg-slate-700 object-cover" />
+            <span className="text-sm font-semibold text-slate-200">{member.name} 님</span>
+            <span className="rounded-full border border-blue-500 px-3 py-1 text-sm font-bold text-blue-400">{member.membershipGrade}</span>
+            <button type="button" className="text-slate-400 transition hover:text-slate-100" onClick={onLogout} title="로그아웃">
+              <LogOut className="h-5 w-5" />
+            </button>
+          </>
+        ) : (
+          <Link to="/login" className="rounded-full border border-blue-500/70 px-4 py-1.5 text-sm font-bold text-blue-300 transition hover:bg-blue-500/10">
+            로그인
+          </Link>
+        )}
       </div>
     </header>
   )

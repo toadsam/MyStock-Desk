@@ -1,5 +1,6 @@
 package com.stockflow.watchlist.service;
 
+import com.stockflow.auth.security.CurrentMemberProvider;
 import com.stockflow.stock.dto.StockDto;
 import com.stockflow.stock.entity.Stock;
 import com.stockflow.stock.repository.StockRepository;
@@ -9,7 +10,6 @@ import com.stockflow.watchlist.repository.WatchlistRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,22 +19,21 @@ public class WatchlistService {
 
     private final WatchlistRepository watchlistRepository;
     private final StockRepository stockRepository;
-
-    @Value("${stockflow.mock-member-id:1}")
-    private Long mockMemberId;
+    private final CurrentMemberProvider currentMemberProvider;
 
     public List<WatchlistDto> getWatchlist() {
-        return watchlistRepository.findByMemberIdOrderByCreatedAtDesc(mockMemberId).stream()
+        return watchlistRepository.findByMemberIdOrderByCreatedAtDesc(currentMemberProvider.currentMemberId()).stream()
                 .map(this::toDto)
                 .toList();
     }
 
     @Transactional
     public WatchlistDto add(String symbol) {
+        Long memberId = currentMemberProvider.currentMemberId();
         Stock stock = findStock(symbol);
-        Watchlist watchlist = watchlistRepository.findByMemberIdAndStockId(mockMemberId, stock.getId())
+        Watchlist watchlist = watchlistRepository.findByMemberIdAndStockId(memberId, stock.getId())
                 .orElseGet(() -> watchlistRepository.save(Watchlist.builder()
-                        .memberId(mockMemberId)
+                        .memberId(memberId)
                         .stockId(stock.getId())
                         .createdAt(LocalDateTime.now())
                         .build()));
@@ -44,7 +43,7 @@ public class WatchlistService {
     @Transactional
     public void delete(String symbol) {
         Stock stock = findStock(symbol);
-        watchlistRepository.deleteByMemberIdAndStockId(mockMemberId, stock.getId());
+        watchlistRepository.deleteByMemberIdAndStockId(currentMemberProvider.currentMemberId(), stock.getId());
     }
 
     private WatchlistDto toDto(Watchlist watchlist) {

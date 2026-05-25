@@ -8,6 +8,8 @@ group = 'com.stockflow'
 version = '0.0.1-SNAPSHOT'
 description = 'StockFlow mock investment REST API'
 
+layout.buildDirectory = file("${System.getProperty('java.io.tmpdir')}/stockflow-backend-build")
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(17)
@@ -21,8 +23,10 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-h2console'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.h2database:h2'
 	runtimeOnly 'com.mysql:mysql-connector-j'

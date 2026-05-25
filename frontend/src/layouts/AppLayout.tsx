@@ -1,6 +1,7 @@
 import { Bell, Menu, Search } from 'lucide-react'
-import { Outlet } from 'react-router-dom'
+import { Link, Outlet } from 'react-router-dom'
 import { getCurrentMember } from '../api/memberApi'
+import { useAuth } from '../auth/AuthContext'
 import { mockMember } from '../data/mockData'
 import { useAsyncData } from '../hooks/useAsyncData'
 import BottomNav from './BottomNav'
@@ -8,11 +9,13 @@ import Header, { Logo } from './Header'
 import Sidebar from './Sidebar'
 
 export default function AppLayout() {
-  const { data: member } = useAsyncData(getCurrentMember, mockMember)
+  const auth = useAuth()
+  const { data: apiMember } = useAsyncData(getCurrentMember, mockMember)
+  const member = auth.member ?? apiMember
 
   return (
     <div className="min-h-screen text-slate-100">
-      <Header member={member} />
+      <Header member={member} isAuthenticated={auth.isAuthenticated} onLogout={auth.logout} />
       <div className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-slate-800/70 bg-slate-950/85 px-5 backdrop-blur-xl lg:hidden">
         <div className="flex items-center gap-3">
           <Menu className="h-6 w-6 text-slate-200" />
@@ -24,8 +27,14 @@ export default function AppLayout() {
             <Bell className="h-6 w-6 text-slate-200" />
             <span className="absolute -right-2 -top-2 rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">12</span>
           </button>
-          <img src={member.profileImageUrl} alt="" className="h-9 w-9 rounded-full bg-slate-700 object-cover" />
-          <span className="rounded-full border border-blue-500 px-2 py-1 text-sm font-bold text-blue-400">VIP</span>
+          {auth.isAuthenticated ? (
+            <>
+              <img src={member.profileImageUrl} alt="" className="h-9 w-9 rounded-full bg-slate-700 object-cover" />
+              <span className="rounded-full border border-blue-500 px-2 py-1 text-sm font-bold text-blue-400">{member.membershipGrade}</span>
+            </>
+          ) : (
+            <Link to="/login" className="rounded-full border border-blue-500 px-3 py-1 text-sm font-bold text-blue-400">로그인</Link>
+          )}
         </div>
       </div>
       <Sidebar />

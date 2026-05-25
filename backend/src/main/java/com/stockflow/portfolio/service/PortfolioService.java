@@ -1,5 +1,6 @@
 package com.stockflow.portfolio.service;
 
+import com.stockflow.auth.security.CurrentMemberProvider;
 import com.stockflow.global.type.OrderType;
 import com.stockflow.portfolio.dto.AllocationDto;
 import com.stockflow.portfolio.dto.HoldingDto;
@@ -15,10 +16,12 @@ import com.stockflow.stock.repository.StockRepository;
 import com.stockflow.trade.entity.TradeOrder;
 import com.stockflow.trade.repository.TradeOrderRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,16 +31,20 @@ public class PortfolioService {
     private final HoldingRepository holdingRepository;
     private final StockRepository stockRepository;
     private final TradeOrderRepository tradeOrderRepository;
+    private final CurrentMemberProvider currentMemberProvider;
+    private final PortfolioSnapshotService portfolioSnapshotService;
 
-    @Value("${stockflow.mock-member-id:1}")
-    private Long mockMemberId;
-
+    @Transactional
     public PortfolioDto getPortfolio() {
-        return PortfolioDto.from(findPortfolio());
+        Portfolio portfolio = findPortfolio();
+        portfolioSnapshotService.refresh(portfolio);
+        return PortfolioDto.from(portfolio);
     }
 
+    @Transactional
     public List<HoldingDto> getHoldings() {
         Portfolio portfolio = findPortfolio();
+        portfolioSnapshotService.refresh(portfolio);
         return holdingRepository.findByPortfolioIdOrderByWeightDesc(portfolio.getId()).stream()
                 .map(holding -> {
                     Stock stock = findStock(holding.getStockId());
@@ -63,18 +70,24 @@ public class PortfolioService {
         );
     }
 
+    @Transactional
     public List<AllocationDto> getAllocation() {
-        return List.of(
-                new AllocationDto("국내 주식", BigDecimal.valueOf(111210000), BigDecimal.valueOf(72.3)),
-                new AllocationDto("해외 주식", BigDecimal.valueOf(22600000), BigDecimal.valueOf(14.7)),
-                new AllocationDto("ETF", BigDecimal.valueOf(9990000), BigDecimal.valueOf(6.5)),
-                new AllocationDto("현금", BigDecimal.valueOf(8450000), BigDecimal.valueOf(5.5)),
-                new AllocationDto("채권", BigDecimal.valueOf(1530000), BigDecimal.valueOf(1.0))
-        );
+        Portfolio portfolio = findPortfolio();
+        portfolioSnapshotService.refresh(portfolio);
+        BigDecimal totalAsset = portfolio.getTotalAsset();
+        List<AllocationDto> allocation = new ArrayList<>();
+        BigDecimal domesticStock = portfolio.getTotalEvaluationAmount();
+        if (domesticStock.compareTo(BigDecimal.ZERO) > 0) {
+            allocation.add(new AllocationDto("국내 주식", domesticStock, rate(domesticStock, totalAsset)));
+        }
+        if (portfolio.getCash().compareTo(BigDecimal.ZERO) > 0) {
+            allocation.add(new AllocationDto("현금", portfolio.getCash(), rate(portfolio.getCash(), totalAsset)));
+        }
+        return allocation;
     }
 
     public List<TransactionDto> getTransactions() {
-        return tradeOrderRepository.findTop10ByMemberIdOrderByCreatedAtDesc(mockMemberId).stream()
+        return tradeOrderRepository.findTop10ByMemberIdOrderByCreatedAtDesc(currentMemberProvider.currentMemberId()).stream()
                 .map(this::toTransaction)
                 .toList();
     }
@@ -99,8 +112,15 @@ public class PortfolioService {
     }
 
     private Portfolio findPortfolio() {
-        return portfolioRepository.findByMemberId(mockMemberId)
+        return portfolioRepository.findByMemberId(currentMemberProvider.currentMemberId())
                 .orElseThrow(() -> new IllegalArgumentException("포트폴리오를 찾을 수 없습니다."));
+    }
+
+    private BigDecimal rate(BigDecimal value, BigDecimal total) {
+        if (total.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        return value.multiply(BigDecimal.valueOf(100)).divide(total, 2, RoundingMode.HALF_UP);
     }
 
     private Stock findStock(Long stockId) {

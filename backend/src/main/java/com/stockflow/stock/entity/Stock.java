@@ -45,4 +45,27 @@ public class Stock {
     private BigDecimal dividendYield;
     private BigDecimal week52High;
     private BigDecimal week52Low;
+
+    public void updateQuote(
+            BigDecimal currentPrice,
+            BigDecimal highPrice,
+            BigDecimal lowPrice,
+            Long volume,
+            BigDecimal tradingValue
+    ) {
+        this.previousClose = this.currentPrice;
+        this.currentPrice = currentPrice;
+        this.changePrice = currentPrice.subtract(this.previousClose);
+        if (this.previousClose.compareTo(BigDecimal.ZERO) == 0) {
+            this.changeRate = BigDecimal.ZERO;
+        } else {
+            this.changeRate = this.changePrice
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(this.previousClose, 2, java.math.RoundingMode.HALF_UP);
+        }
+        this.highPrice = highPrice;
+        this.lowPrice = lowPrice;
+        this.volume = volume;
+        this.tradingValue = tradingValue;
+    }
 }

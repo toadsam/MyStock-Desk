@@ -14,3 +14,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+stockflow:
+  jwt:
+    secret: change_this_secret_for_mysql_profile
+    expiration-seconds: 86400

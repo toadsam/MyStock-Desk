@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type DependencyList } from 'react'
 
-export function useAsyncData<T>(loader: () => Promise<T>, initialValue: T) {
+export function useAsyncData<T>(loader: () => Promise<T>, initialValue: T, deps: DependencyList = []) {
   const [data, setData] = useState<T>(initialValue)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -28,7 +28,7 @@ export function useAsyncData<T>(loader: () => Promise<T>, initialValue: T) {
     return () => {
       mounted = false
     }
-  }, [])
+  }, deps)
 
   return { data, setData, loading, error }
 }

@@ -1,5 +1,6 @@
-import { ArrowRight, Gauge, Info } from 'lucide-react'
+import { ArrowRight, Info, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { getDataRefreshStatus, refreshMarketData } from '../api/marketDataApi'
 import { getMarketBreadth, getMarketHeatmap, getMarketIndices, getMarketSectors } from '../api/marketApi'
 import { getNewsBriefing } from '../api/newsApi'
 import { BarChartList } from '../components/charts/BarChartCard'
@@ -7,6 +8,7 @@ import { Sparkline } from '../components/charts/Sparkline'
 import { Heatmap } from '../components/stock/Heatmap'
 import { NewsBriefing } from '../components/stock/NewsBriefing'
 import { AiSummaryCard } from '../components/stock/AiSummaryCard'
+import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Tabs } from '../components/ui/Tabs'
 import { indexPrices, mockBreadth, mockHeatmap, mockIndices, mockNews, mockSectors } from '../data/mockData'
@@ -17,15 +19,52 @@ import { useState } from 'react'
 
 export default function MarketPage() {
   const [sectorTab, setSectorTab] = useState<'TOP' | 'BOTTOM'>('TOP')
-  const { data: indices } = useAsyncData(getMarketIndices, mockIndices)
-  const { data: heatmap } = useAsyncData(getMarketHeatmap, mockHeatmap)
-  const { data: sectors } = useAsyncData(getMarketSectors, mockSectors)
-  const { data: breadth } = useAsyncData(getMarketBreadth, mockBreadth)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null)
+  const { data: refreshStatus } = useAsyncData(getDataRefreshStatus, {
+    provider: 'StockFlow Demo Feed',
+    refreshedStocks: 0,
+    refreshedAt: new Date().toISOString(),
+    externalReady: false,
+    message: '',
+  })
+  const { data: indices } = useAsyncData(getMarketIndices, mockIndices, [refreshKey])
+  const { data: heatmap } = useAsyncData(getMarketHeatmap, mockHeatmap, [refreshKey])
+  const { data: sectors } = useAsyncData(getMarketSectors, mockSectors, [refreshKey])
+  const { data: breadth } = useAsyncData(getMarketBreadth, mockBreadth, [refreshKey])
   const { data: news } = useAsyncData(getNewsBriefing, mockNews)
   const visibleSectors = sectors.filter((item) => item.type === sectorTab)
 
+  const refresh = async () => {
+    setRefreshing(true)
+    setRefreshMessage(null)
+    try {
+      const result = await refreshMarketData()
+      setRefreshMessage(`${result.refreshedStocks}개 종목 시세가 갱신되었습니다.`)
+      setRefreshKey((value) => value + 1)
+    } catch (exception) {
+      setRefreshMessage(exception instanceof Error ? exception.message : '시세 갱신에 실패했습니다.')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/35 p-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="text-sm font-semibold text-blue-300">{refreshStatus.provider}</div>
+          <div className="mt-1 text-sm text-slate-400">
+            {refreshMessage ?? (refreshStatus.externalReady ? '외부 시세 Provider 사용 가능' : '현재 데모 시세 Provider 사용 중')}
+          </div>
+        </div>
+        <Button type="button" variant="outline" onClick={refresh} disabled={refreshing}>
+          <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+          시세 갱신
+        </Button>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         {indices.map((item) => (
           <Card key={item.code} className="min-h-48">

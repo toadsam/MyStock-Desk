@@ -28,6 +28,9 @@ public class Member {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(nullable = false)
+    private String passwordHash;
+
     private String profileImageUrl;
     private String membershipGrade;
     private LocalDateTime createdAt;

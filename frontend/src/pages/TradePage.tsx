@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getStock, getStockPrices, getOrderBook } from '../api/stockApi'
-import { createOrder, getExecutions, getOrders } from '../api/tradeApi'
+import { cancelOrder, createOrder, getExecutions, getOrders } from '../api/tradeApi'
 import { LineAreaChart } from '../components/charts/LineAreaChart'
 import { OrderBook } from '../components/stock/OrderBook'
 import { Badge } from '../components/ui/Badge'
@@ -24,28 +24,49 @@ export default function TradePage() {
   const [orderMethod, setOrderMethod] = useState<OrderMethod>('LIMIT')
   const [quantity, setQuantity] = useState(10)
   const [price, setPrice] = useState(78600)
+  const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   const { data: stock } = useAsyncData(() => getStock(initialSymbol), stockBySymbol(initialSymbol))
   const { data: prices } = useAsyncData(() => getStockPrices(initialSymbol), stockPrices(initialSymbol))
   const { data: book } = useAsyncData(() => getOrderBook(initialSymbol), orderBook(initialSymbol))
   const { data: orders, setData: setOrders } = useAsyncData(getOrders, mockOrders)
-  const { data: executions } = useAsyncData(getExecutions, mockExecutions)
+  const { data: executions, setData: setExecutions } = useAsyncData(getExecutions, mockExecutions)
 
   const orderPrice = orderMethod === 'MARKET' ? stock.currentPrice : price
   const estimatedAmount = orderPrice * quantity
   const fee = Math.round(estimatedAmount * 0.00015)
 
   const submit = async () => {
-    const created = await createOrder({
-      symbol: stock.symbol,
-      orderType,
-      orderMethod,
-      orderPrice,
-      quantity,
-    })
-    setOrders([created, ...orders])
-    setToast('가상 주문이 접수되었습니다.')
+    setSubmitting(true)
+    try {
+      const created = await createOrder({
+        symbol: stock.symbol,
+        orderType,
+        orderMethod,
+        orderPrice,
+        quantity,
+      })
+      setOrders((previous) => [created, ...previous.filter((order) => order.id !== created.id)])
+      if (created.status === 'COMPLETED') {
+        setExecutions(await getExecutions())
+      }
+      setToast(created.status === 'COMPLETED' ? '가상 주문이 체결되어 포트폴리오에 반영되었습니다.' : '가상 주문이 접수되었습니다.')
+    } catch (exception) {
+      setToast(exception instanceof Error ? exception.message : '주문 처리 중 오류가 발생했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const cancel = async (orderId: number) => {
+    try {
+      const cancelled = await cancelOrder(orderId)
+      setOrders((previous) => previous.map((order) => (order.id === cancelled.id ? cancelled : order)))
+      setToast('미체결 주문이 취소되었습니다.')
+    } catch (exception) {
+      setToast(exception instanceof Error ? exception.message : '주문 취소에 실패했습니다.')
+    }
   }
 
   return (
@@ -110,8 +131,8 @@ export default function TradePage() {
             <Line label="수수료" value={formatWon(fee)} />
             <Line label="주문가능" value={formatWon(4690245)} />
           </div>
-          <Button variant={orderType === 'BUY' ? 'buy' : 'sell'} className="mt-5 w-full text-base" onClick={submit}>
-            {orderType === 'BUY' ? '매수 주문' : '매도 주문'}
+          <Button variant={orderType === 'BUY' ? 'buy' : 'sell'} className="mt-5 w-full text-base" onClick={submit} disabled={submitting}>
+            {submitting ? '주문 처리 중' : orderType === 'BUY' ? '매수 주문' : '매도 주문'}
           </Button>
           <p className="mt-3 text-xs text-slate-500">주문 확인 시 거래가 실제로 체결되지 않는 가상 주문입니다.</p>
         </Card>
@@ -122,7 +143,7 @@ export default function TradePage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1.2fr_0.8fr]">
-        <OrderTable title="미체결 주문" orders={orders.filter((order) => order.status === 'PENDING')} />
+        <OrderTable title="미체결 주문" orders={orders.filter((order) => order.status === 'PENDING')} onCancel={cancel} />
         <OrderTable title="주문/체결 내역" orders={orders} />
         <Card title="최근 체결">
           <div className="space-y-3">
@@ -176,7 +197,7 @@ function Line({ label, value }: { label: string; value: string }) {
   )
 }
 
-function OrderTable({ title, orders }: { title: string; orders: TradeOrder[] }) {
+function OrderTable({ title, orders, onCancel }: { title: string; orders: TradeOrder[]; onCancel?: (orderId: number) => void }) {
   return (
     <Card title={title}>
       <div className="overflow-x-auto">
@@ -189,6 +210,7 @@ function OrderTable({ title, orders }: { title: string; orders: TradeOrder[] }) 
               <th>가격</th>
               <th>수량</th>
               <th>상태</th>
+              {onCancel && <th>관리</th>}
             </tr>
           </thead>
           <tbody>
@@ -204,6 +226,17 @@ function OrderTable({ title, orders }: { title: string; orders: TradeOrder[] }) 
                     {order.status === 'COMPLETED' ? '체결완료' : order.status === 'PENDING' ? '접수' : '취소'}
                   </Badge>
                 </td>
+                {onCancel && (
+                  <td>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-300 transition hover:border-red-400 hover:text-red-300"
+                      onClick={() => onCancel(order.id)}
+                    >
+                      취소
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
