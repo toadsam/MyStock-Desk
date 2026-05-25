@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { getStockEarnings, getStockFinancials } from '../api/earningsApi'
 import { getStock, getStockNews, getStockPrices } from '../api/stockApi'
+import { getInvestmentMemos } from '../api/transactionApi'
 import { BeginnerNewsExplainer } from '../components/beginner/BeginnerNewsExplainer'
 import { BeginnerSummaryCard } from '../components/beginner/BeginnerSummaryCard'
 import { GlossaryTip } from '../components/beginner/GlossaryTip'
 import { InvestmentChecklist } from '../components/beginner/InvestmentChecklist'
 import { LearningModeCard } from '../components/beginner/LearningModeCard'
-import { BarChartList } from '../components/charts/BarChartCard'
 import { LineAreaChart } from '../components/charts/LineAreaChart'
 import { MiniCandleChart } from '../components/charts/MiniCandleChart'
 import { AiSummaryCard } from '../components/stock/AiSummaryCard'
@@ -17,7 +18,7 @@ import { Card } from '../components/ui/Card'
 import { Tabs } from '../components/ui/Tabs'
 import { Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { mockNews, stockBySymbol, stockPrices } from '../data/mockData'
+import { mockEarningsBySymbol, mockNews, stockBySymbol, stockPrices } from '../data/mockData'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { formatCompactWon, formatNumber, formatPercent } from '../utils/format'
 
@@ -27,6 +28,11 @@ export default function StockDetailPage() {
   const { data: stock } = useAsyncData(() => getStock(symbol), stockBySymbol(symbol))
   const { data: prices } = useAsyncData(() => getStockPrices(symbol), stockPrices(symbol))
   const { data: news } = useAsyncData(() => getStockNews(symbol), mockNews.filter((item) => item.relatedStockSymbol === symbol))
+  const { data: earnings } = useAsyncData(() => getStockEarnings(symbol), mockEarningsBySymbol(symbol))
+  const { data: financials } = useAsyncData(() => getStockFinancials(symbol), mockEarningsBySymbol(symbol))
+  const { data: memos } = useAsyncData(getInvestmentMemos, [])
+  const latestEarnings = earnings[0]
+  const stockMemos = memos.filter((memo) => memo.symbol === stock.symbol)
 
   return (
     <div className="space-y-4">
@@ -64,7 +70,7 @@ export default function StockDetailPage() {
           <InfoRow label="포트폴리오 비중" value="18.4%" />
           <div className="mt-4 grid gap-2">
             <Link to={`/transactions?symbol=${stock.symbol}`}><Button className="w-full">거래 기록 추가</Button></Link>
-            <Button variant="outline" className="w-full">투자 메모 작성</Button>
+            <Link to={`/transactions?symbol=${stock.symbol}`}><Button variant="outline" className="w-full">투자 메모 작성</Button></Link>
           </div>
         </Card>
 
@@ -84,16 +90,21 @@ export default function StockDetailPage() {
           score={78}
         />
 
-        <Card title="실적 추이">
-          <BarChartList
-            items={[
-              { label: '2023.1Q', value: 6.2 },
-              { label: '2023.2Q', value: 3.4 },
-              { label: '2023.3Q', value: 7.1 },
-              { label: '2023.4Q', value: 11.4 },
-              { label: '2024.1Q', value: 16.2 },
-            ]}
-          />
+        <Card title="실적 체크">
+          {latestEarnings ? (
+            <div className="space-y-3">
+              <InfoRow label="다음 실적 발표" value={latestEarnings.announcementDate} />
+              <InfoRow label="매출 성장률" value={formatPercent(latestEarnings.yoyRevenueGrowth)} />
+              <InfoRow label="영업이익 성장률" value={formatPercent(latestEarnings.yoyOperatingProfitGrowth)} />
+              <InfoRow label="영업이익률" value={formatPercent(latestEarnings.operatingMargin, false)} />
+              <p className="rounded-xl border border-slate-800 bg-slate-950/25 p-3 text-sm leading-6 text-slate-400">
+                매출은 증가했지만 영업이익률이 낮아졌다면 많이 팔았어도 수익성이 약해졌을 수 있습니다. 실적 발표 전 기존 투자 이유가 유지되는지 확인하세요.
+              </p>
+              <div className="text-xs text-slate-500">출처: {latestEarnings.source} · 갱신: {latestEarnings.lastUpdatedAt.slice(0, 10)}</div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">아직 연결된 실적 데이터가 없습니다. 일부 종목은 데모 데이터로 표시됩니다.</p>
+          )}
         </Card>
       </div>
 
@@ -107,14 +118,76 @@ export default function StockDetailPage() {
       <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
         <InvestmentChecklist />
         <Card title="재무 요약">
-          <div className="grid grid-cols-2 gap-3">
-            <FinanceMetric label="매출액" value="300.87조원" change="+16.21%" />
-            <FinanceMetric label={<span>영업이익 <GlossaryTip term="영업이익률" /></span>} value="32.73조원" change="+398.91%" />
-            <FinanceMetric label="순이익" value="26.19조원" change="+145.23%" />
-            <FinanceMetric label={<span>영업이익률 <GlossaryTip term="영업이익률" /></span>} value="10.88%" change="+8.64%p" />
-          </div>
+          {latestEarnings ? (
+            <div className="grid grid-cols-2 gap-3">
+              <FinanceMetric label="매출액" value={formatCompactWon(latestEarnings.revenue)} change={formatPercent(latestEarnings.yoyRevenueGrowth)} />
+              <FinanceMetric label={<span>영업이익 <GlossaryTip term="영업이익률" /></span>} value={formatCompactWon(latestEarnings.operatingProfit)} change={formatPercent(latestEarnings.yoyOperatingProfitGrowth)} />
+              <FinanceMetric label="순이익" value={formatCompactWon(latestEarnings.netIncome)} change="실적 발표 후 확인" />
+              <FinanceMetric label={<span>영업이익률 <GlossaryTip term="영업이익률" /></span>} value={formatPercent(latestEarnings.operatingMargin, false)} change="수익성 체크" />
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">실적 데이터가 준비되면 매출, 영업이익, 순이익, 영업이익률을 표시합니다.</p>
+          )}
         </Card>
       </div>
+
+      <Card title="이 종목 투자 메모">
+        {stockMemos.length === 0 ? (
+          <p className="text-sm text-slate-500">아직 이 종목에 연결된 메모가 없습니다. 거래 기록 화면에서 매수 이유, 리스크, 실적 체크 메모를 남길 수 있습니다.</p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-3">
+            {stockMemos.slice(0, 3).map((memo) => (
+              <div key={memo.id} className="rounded-xl border border-slate-800 bg-slate-950/25 p-4">
+                <div className="text-xs font-semibold text-sky-300">{memo.memoType}</div>
+                <div className="mt-2 font-bold text-slate-100">{memo.title}</div>
+                <p className="mt-2 text-sm leading-6 text-slate-400">{memo.content}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card title="실적·재무 상세">
+        {financials.length === 0 ? (
+          <p className="text-sm text-slate-500">이 종목에 연결된 재무 데이터가 아직 없습니다. 데이터가 준비되면 분기별 매출, 영업이익, 순이익, 성장률을 표시합니다.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="compact-table text-sm">
+              <thead>
+                <tr>
+                  <th>기간</th>
+                  <th>매출</th>
+                  <th>영업이익</th>
+                  <th>순이익</th>
+                  <th>영업이익률</th>
+                  <th>매출 성장률</th>
+                  <th>영업이익 성장률</th>
+                  <th>발표일</th>
+                  <th>출처</th>
+                </tr>
+              </thead>
+              <tbody>
+                {financials.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.year}.{item.quarter}Q</td>
+                    <td>{formatCompactWon(item.revenue)}</td>
+                    <td>{formatCompactWon(item.operatingProfit)}</td>
+                    <td>{formatCompactWon(item.netIncome)}</td>
+                    <td>{formatPercent(item.operatingMargin, false)}</td>
+                    <td>{formatPercent(item.yoyRevenueGrowth)}</td>
+                    <td>{formatPercent(item.yoyOperatingProfitGrowth)}</td>
+                    <td>{item.announcementDate}</td>
+                    <td>{item.estimated ? '예상 · ' : ''}{item.source}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-3 text-xs leading-5 text-slate-500">
+              매출은 늘었지만 영업이익률이 하락했다면 많이 팔았어도 수익성이 약해졌을 수 있습니다. 이 표는 투자 판단을 대신하지 않고 확인할 항목을 정리합니다.
+            </p>
+          </div>
+        )}
+      </Card>
 
       <Card title="다음 확인 항목">
         <div className="grid gap-3 md:grid-cols-4">

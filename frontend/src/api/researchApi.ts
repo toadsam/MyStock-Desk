@@ -2,16 +2,16 @@ import { api, requestData } from './axios'
 import {
   mockBriefing,
   mockPortfolioImpact,
-  mockRecommendations,
+  mockStudyCandidates,
   mockRisks,
   mockSentiment,
 } from '../data/mockData'
 import type {
   PortfolioImpact,
-  Recommendation,
   ResearchBriefing,
   Risk,
   SentimentSummary,
+  StudyCandidate,
 } from '../types/research'
 
 export function getResearchBriefing() {
@@ -26,8 +26,8 @@ export function getResearchRisks() {
   return requestData<Risk[]>(api.get('/api/research/risks'), mockRisks)
 }
 
-export function getRecommendations() {
-  return requestData<Recommendation[]>(api.get('/api/research/recommendations'), mockRecommendations)
+export function getStudyCandidates() {
+  return requestData<StudyCandidate[]>(api.get('/api/research/study-candidates'), mockStudyCandidates)
 }
 
 export function getPortfolioImpact() {

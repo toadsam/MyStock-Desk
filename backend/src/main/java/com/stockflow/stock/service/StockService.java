@@ -4,7 +4,7 @@ import com.stockflow.global.type.TargetType;
 import com.stockflow.market.dto.PricePointDto;
 import com.stockflow.market.repository.PricePointRepository;
 import com.stockflow.news.dto.NewsDto;
-import com.stockflow.news.repository.NewsRepository;
+import com.stockflow.news.service.NewsService;
 import com.stockflow.stock.dto.OrderBookDto;
 import com.stockflow.stock.dto.OrderBookLevelDto;
 import com.stockflow.stock.dto.StockDto;
@@ -22,7 +22,7 @@ public class StockService {
 
     private final StockRepository stockRepository;
     private final PricePointRepository pricePointRepository;
-    private final NewsRepository newsRepository;
+    private final NewsService newsService;
 
     public List<StockDto> getStocks() {
         return stockRepository.findAll().stream()
@@ -65,9 +65,7 @@ public class StockService {
 
     public List<NewsDto> getStockNews(String symbol) {
         findStock(symbol);
-        return newsRepository.findByRelatedStockSymbolOrderByPublishedAtDesc(symbol).stream()
-                .map(NewsDto::from)
-                .toList();
+        return newsService.getStockNews(symbol);
     }
 
     private Stock findStock(String symbol) {

@@ -68,7 +68,7 @@ export default function ThemeDiscoveryPage() {
             <div className="text-sm font-semibold text-sky-300">테마/공급망 연관 종목 탐색</div>
             <h1 className="mt-2 text-3xl font-black text-slate-50">호재가 어디로 퍼지는지 따라가며 공부하기</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-              대장주를 바로 사기 어렵다면 관련 산업과 공급망을 먼저 이해하세요. 이 화면은 매수 추천이 아니라 함께 확인할 종목과 근거를 정리합니다.
+              대장주를 바로 사기 어렵다면 관련 산업과 공급망을 먼저 이해하세요. 이 화면은 직접적인 투자 권유가 아니라 함께 확인할 종목과 근거를 정리합니다.
             </p>
           </div>
           <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3 text-xs leading-5 text-slate-400">

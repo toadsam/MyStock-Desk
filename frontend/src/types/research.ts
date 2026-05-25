@@ -34,12 +34,16 @@ export interface Risk {
   riskScore: number
 }
 
-export interface Recommendation {
+export interface StudyCandidate {
   symbol: string
   name: string
-  targetPrice: number
-  upside: number
-  reason: string
+  category: string
+  relationType: string
+  studyReason: string
+  checkPoints: string[]
+  relevanceScore: number
+  riskNote: string
+  dataSource: string
 }
 
 export interface PortfolioImpact {

@@ -72,7 +72,7 @@ export interface RiskAlert {
   severity: 'HIGH' | 'MEDIUM' | 'LOW'
 }
 
-export type MemoType = 'BUY_REASON' | 'SELL_REASON' | 'CHECKPOINT' | 'RISK' | 'GENERAL'
+export type MemoType = 'BUY_REASON' | 'SELL_REASON' | 'EARNINGS_CHECK' | 'RISK_CHECK' | 'NEWS_MEMO' | 'REVIEW' | 'CHECKPOINT' | 'RISK' | 'GENERAL'
 
 export interface InvestmentMemo {
   id: number

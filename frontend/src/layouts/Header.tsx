@@ -5,12 +5,13 @@ import { cn } from '../utils/cn'
 
 const topNav = [
   { label: '홈', to: '/' },
-  { label: '투자', to: '/stock/005930' },
-  { label: '시장', to: '/market' },
+  { label: '거래기록', to: '/transactions' },
+  { label: '포트폴리오', to: '/portfolio' },
+  { label: '관심종목', to: '/watchlist' },
+  { label: '실적 캘린더', to: '/earnings-calendar' },
   { label: '테마탐색', to: '/themes' },
-  { label: '뉴스', to: '/research' },
   { label: '리서치', to: '/research' },
-  { label: '커뮤니티', to: '/research' },
+  { label: 'AI 리포트', to: '/ai-report' },
 ]
 
 export function Logo() {
@@ -53,7 +54,7 @@ export default function Header({ member, isAuthenticated, onLogout }: { member: 
       <div className="mx-auto max-w-md flex-1 px-6">
         <label className="flex h-10 items-center gap-2 rounded-xl border border-slate-700/70 bg-slate-950/60 px-3 text-slate-500">
           <Search className="h-4 w-4" />
-          <input className="w-full bg-transparent text-sm outline-none placeholder:text-slate-600" placeholder="종목명, 티커, 키워드를 검색하세요" />
+          <input className="w-full bg-transparent text-sm outline-none placeholder:text-slate-600" placeholder="종목명, 테마, 공부 후보를 검색하세요" />
           <span className="rounded border border-slate-700 px-1.5 text-xs">/</span>
         </label>
       </div>

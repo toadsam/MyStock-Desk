@@ -2,10 +2,10 @@ package com.stockflow.research.controller;
 
 import com.stockflow.global.response.ApiResponse;
 import com.stockflow.research.dto.PortfolioImpactDto;
-import com.stockflow.research.dto.RecommendationDto;
 import com.stockflow.research.dto.ResearchBriefingDto;
 import com.stockflow.research.dto.RiskDto;
 import com.stockflow.research.dto.SentimentDto;
+import com.stockflow.research.dto.StudyCandidateDto;
 import com.stockflow.research.service.ResearchService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -35,9 +35,9 @@ public class ResearchController {
         return ApiResponse.success(researchService.getRisks());
     }
 
-    @GetMapping("/recommendations")
-    public ApiResponse<List<RecommendationDto>> recommendations() {
-        return ApiResponse.success(researchService.getRecommendations());
+    @GetMapping("/study-candidates")
+    public ApiResponse<List<StudyCandidateDto>> studyCandidates() {
+        return ApiResponse.success(researchService.getStudyCandidates());
     }
 
     @GetMapping("/portfolio-impact")

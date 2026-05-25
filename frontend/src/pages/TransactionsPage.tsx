@@ -439,6 +439,10 @@ export default function TransactionsPage() {
                 <select className="mt-2 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950/40 px-3 text-sm text-slate-100 outline-none" value={memoForm.memoType} onChange={(event) => setMemoForm({ ...memoForm, memoType: event.target.value as InvestmentMemoRequest['memoType'] })}>
                   <option value="BUY_REASON">매수 이유</option>
                   <option value="SELL_REASON">매도 이유</option>
+                  <option value="EARNINGS_CHECK">실적 체크</option>
+                  <option value="RISK_CHECK">리스크 체크</option>
+                  <option value="NEWS_MEMO">뉴스 메모</option>
+                  <option value="REVIEW">복기</option>
                   <option value="CHECKPOINT">체크포인트</option>
                   <option value="RISK">리스크</option>
                   <option value="GENERAL">일반</option>

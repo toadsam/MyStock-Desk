@@ -1,11 +1,13 @@
 import { AlertTriangle, Bot, CalendarClock, Settings2, Star } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { getLatestPortfolioReport } from '../api/aiApi'
 import { getResearchNews } from '../api/newsApi'
 import {
   getPortfolioImpact,
-  getRecommendations,
   getResearchBriefing,
   getResearchRisks,
   getResearchSentiment,
+  getStudyCandidates,
 } from '../api/researchApi'
 import { BeginnerNewsExplainer } from '../components/beginner/BeginnerNewsExplainer'
 import { DonutChart } from '../components/charts/DonutChart'
@@ -18,7 +20,8 @@ import {
   mockBriefing,
   mockNews,
   mockPortfolioImpact,
-  mockRecommendations,
+  mockPortfolioReport,
+  mockStudyCandidates,
   mockRisks,
   mockSentiment,
 } from '../data/mockData'
@@ -32,7 +35,8 @@ export default function ResearchPage() {
   const { data: news } = useAsyncData(getResearchNews, mockNews)
   const { data: risks } = useAsyncData(getResearchRisks, mockRisks)
   const { data: impact } = useAsyncData(getPortfolioImpact, mockPortfolioImpact)
-  const { data: recommendations } = useAsyncData(getRecommendations, mockRecommendations)
+  const { data: studyCandidates } = useAsyncData(getStudyCandidates, mockStudyCandidates)
+  const { data: portfolioReport } = useAsyncData(getLatestPortfolioReport, mockPortfolioReport)
 
   const sentimentDonut = [
     { name: '호재', value: sentiment.positive, rate: Math.round((sentiment.positive / sentiment.total) * 100) },
@@ -47,7 +51,7 @@ export default function ResearchPage() {
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-black text-slate-50 md:text-3xl">AI 체크포인트 브리핑</h1>
-              <span className="text-sm text-slate-500">AI가 정리한 확인 항목과 포트폴리오 영향도</span>
+              <span className="text-sm text-slate-500">AI가 정리한 확인 항목과 포트폴리오 관심도</span>
             </div>
             <div className="mt-6 rounded-2xl border border-blue-500/20 bg-blue-600/8 p-4">
               <div className="flex items-center gap-3">
@@ -71,7 +75,7 @@ export default function ResearchPage() {
           </div>
           <div className="flex shrink-0 items-center gap-3 text-sm text-slate-400">
             <CalendarClock className="h-4 w-4" />
-            2024.05.16 목요일 08:30 기준
+            최근 갱신: {new Date(briefing.basedAt).toLocaleString('ko-KR')}
             <button type="button" className="rounded-xl border border-slate-700 px-3 py-2 text-slate-200">
               <Settings2 className="mr-1 inline h-4 w-4" /> 브리핑 설정
             </button>
@@ -133,7 +137,7 @@ export default function ResearchPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.9fr]">
-        <Card title="내 포트폴리오 영향도 TOP 뉴스" action={<span className="text-sm text-blue-400">더보기</span>}>
+        <Card title="내 포트폴리오 확인 우선 뉴스" action={<span className="text-sm text-blue-400">더보기</span>}>
           <div className="space-y-3">
             {impact.map((item) => (
               <div key={item.title} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/25 p-3">
@@ -148,11 +152,20 @@ export default function ResearchPage() {
             ))}
           </div>
         </Card>
+        <Card title="AI 포트폴리오 리포트" action={<Link to="/ai-report" className="text-sm text-blue-400">전체 보기</Link>}>
+          <p className="text-sm leading-6 text-slate-300">{portfolioReport.summary}</p>
+          <div className="mt-4 space-y-2 text-sm text-slate-400">
+            {[...portfolioReport.performanceNotes, ...portfolioReport.concentrationNotes, ...portfolioReport.upcomingEarnings].slice(0, 5).map((item) => (
+              <div key={item} className="rounded-xl border border-slate-800 bg-slate-950/25 p-3">{item}</div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs leading-5 text-slate-500">{portfolioReport.disclaimer}</p>
+        </Card>
       </div>
 
-      <Card title="확인해야 할 종목" action={<span className="text-sm text-blue-400">더보기</span>}>
+      <Card title="공부 후보 종목" action={<span className="text-sm text-blue-400">더보기</span>}>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {recommendations.map((item) => (
+          {studyCandidates.map((item) => (
             <div key={item.symbol} className="rounded-2xl border border-slate-800 bg-slate-950/25 p-4">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -161,11 +174,15 @@ export default function ResearchPage() {
                 </div>
                 <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
               </div>
-              <div className="text-sm text-slate-400">{item.reason}</div>
-              <div className="mt-4 flex items-end justify-between">
-                <span className="text-slate-400">현재 확인 기준</span>
-                <span className="text-lg font-bold text-emerald-400">영향도 {item.upside.toFixed(1)}</span>
+              <div className="text-sm leading-6 text-slate-400">{item.studyReason}</div>
+              <div className="mt-3 space-y-1 text-xs text-slate-500">
+                {item.checkPoints.slice(0, 2).map((point) => <div key={point}>확인 포인트 · {point}</div>)}
               </div>
+              <div className="mt-4 flex items-end justify-between">
+                <span className="text-slate-400">관심도 점수</span>
+                <span className="text-lg font-bold text-sky-300">{item.relevanceScore.toFixed(0)}</span>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-yellow-100">{item.riskNote}</p>
             </div>
           ))}
         </div>
@@ -173,7 +190,7 @@ export default function ResearchPage() {
 
       <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 text-xs text-slate-500">
         <AlertTriangle className="mr-2 inline h-4 w-4 text-yellow-400" />
-        AI 분석은 mock data 기반의 참고 정보이며 매수·매도 추천이나 실제 주문 권유가 아닙니다.
+        AI 분석은 사용자의 기록과 공개 참고 데이터를 정리한 자료이며 매수·매도 추천이나 실제 주문 권유가 아닙니다.
       </div>
     </div>
   )

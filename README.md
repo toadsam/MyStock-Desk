@@ -96,11 +96,20 @@ VITE_API_BASE_URL=http://localhost:8080
 기본 설정은 `stockflow.market-data.provider: yahoo`입니다.
 
 - 시세 갱신: Yahoo Finance chart endpoint를 통해 현재가, 고가, 저가, 거래량을 참고 데이터로 가져옵니다.
-- 테마탐색 뉴스: Google News RSS 검색 결과를 읽어 최신 기사 제목, 출처, 발행시간, 반복 키워드를 표시합니다.
+- 뉴스: Google News RSS 검색 결과를 읽어 홈/종목 상세/리서치/테마탐색에 최신 기사 제목, 출처, 발행시간, 반복 키워드를 표시합니다.
+- 실적/재무: `DART_API_KEY`를 설정하면 OpenDART `corpCode`, `fnlttSinglAcntAll`, `list` API로 종목코드 기반 회사 고유번호, 최근 재무제표, 최근 정기공시 접수일을 조회합니다.
 - 네트워크 오류나 외부 응답 실패 시 기존 seed/mock data로 보정합니다.
 - 실제 증권사 주문, 체결, 계좌 잔고와는 연결되지 않습니다.
 - 테마 관련 종목 설명은 기본적으로 뉴스 근거와 공급망 관계를 바탕으로 로컬 설명을 생성합니다.
 - `stockflow.ai.provider: openai`와 `OPENAI_API_KEY`를 설정하면 OpenAI Responses API 기반 설명으로 교체됩니다. 이 경우에도 매수/매도 추천, 목표가, 상승 확률 표현은 사용하지 않도록 제한합니다.
+
+OpenDART 재무/공시 데이터는 무료 인증키가 필요합니다. 키가 없으면 앱은 기존 데모 실적 데이터를 표시하고, 화면의 출처가 `demo-*`로 남습니다.
+
+```powershell
+$env:DART_API_KEY="발급받은_OPEN_DART_인증키"
+cd backend
+.\gradlew.bat bootRun
+```
 
 데모 시세 Provider로 되돌리려면 `application.yml`에서 아래처럼 변경하세요.
 
@@ -134,6 +143,9 @@ stockflow:
 - `GET /api/stocks/{symbol}`
 - `GET /api/stocks/{symbol}/prices`
 - `GET /api/stocks/{symbol}/news`
+- `GET /api/stocks/{symbol}/earnings`
+- `GET /api/stocks/{symbol}/financials`
+- `GET /api/earnings/calendar`
 - `GET /api/transactions`
 - `POST /api/transactions`
 - `GET /api/transactions/{id}`
@@ -149,6 +161,9 @@ stockflow:
 - `GET /api/portfolio/performance`
 - `GET /api/portfolio/allocation`
 - `GET /api/portfolio/transactions`
+- `GET /api/portfolio/study-candidates`
+- `GET /api/ai/portfolio-report/latest`
+- `POST /api/ai/portfolio-report`
 - `GET /api/investment-memos`
 - `POST /api/investment-memos`
 - `PATCH /api/investment-memos/{id}`
@@ -161,6 +176,7 @@ stockflow:
 - `GET /api/research/sentiment`
 - `GET /api/research/risks`
 - `GET /api/research/portfolio-impact`
+- `GET /api/research/study-candidates`
 - `GET /api/themes`
 - `GET /api/themes/search?keyword=nvidia`
 

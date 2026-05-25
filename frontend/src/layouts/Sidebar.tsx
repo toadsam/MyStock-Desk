@@ -3,11 +3,9 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   Camera,
-  CreditCard,
   GitBranch,
   Home,
   LineChart,
-  Settings,
   Star,
   WalletCards,
 } from 'lucide-react'
@@ -16,15 +14,13 @@ import { cn } from '../utils/cn'
 
 const items = [
   { label: '홈', to: '/', icon: Home },
-  { label: '관심종목', to: '/stock/005930', icon: Star },
-  { label: '포트폴리오', to: '/portfolio', icon: BriefcaseBusiness },
   { label: '거래기록', to: '/transactions', icon: Camera },
+  { label: '포트폴리오', to: '/portfolio', icon: BriefcaseBusiness },
+  { label: '관심종목', to: '/watchlist', icon: Star },
+  { label: '실적캘린더', to: '/earnings-calendar', icon: CalendarDays },
   { label: '테마탐색', to: '/themes', icon: GitBranch },
-  { label: '계좌', to: '/portfolio', icon: CreditCard },
   { label: '리서치 허브', to: '/research', icon: LineChart },
-  { label: 'AI 투자비서', to: '/research', icon: Bot },
-  { label: '캘린더', to: '/market', icon: CalendarDays },
-  { label: '설정', to: '/', icon: Settings },
+  { label: 'AI 리포트', to: '/ai-report', icon: Bot },
 ]
 
 export default function Sidebar() {

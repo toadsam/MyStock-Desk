@@ -45,5 +45,9 @@ export interface MarketBreadth {
 export interface WatchlistItem {
   id: number
   stock: Stock
+  reason: string
+  checkPoints: string
+  priceMemo: string
+  updatedAt: string
   createdAt: string
 }

@@ -1,13 +1,13 @@
-import { BarChart3, GitBranch, Home, Plus, Star } from 'lucide-react'
+import { Bot, BriefcaseBusiness, CalendarDays, Home, Plus } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '../utils/cn'
 
 const tabs = [
   { label: '홈', to: '/', icon: Home },
   { label: '기록', to: '/transactions', icon: Plus },
-  { label: '포트폴리오', to: '/portfolio', icon: Star },
-  { label: '테마', to: '/themes', icon: GitBranch },
-  { label: '시장', to: '/market', icon: BarChart3 },
+  { label: '포트폴리오', to: '/portfolio', icon: BriefcaseBusiness },
+  { label: '실적', to: '/earnings-calendar', icon: CalendarDays },
+  { label: 'AI', to: '/ai-report', icon: Bot },
 ]
 
 export default function BottomNav() {

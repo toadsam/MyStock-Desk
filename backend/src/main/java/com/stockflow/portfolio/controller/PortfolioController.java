@@ -5,6 +5,7 @@ import com.stockflow.portfolio.dto.AllocationDto;
 import com.stockflow.portfolio.dto.HoldingDto;
 import com.stockflow.portfolio.dto.PerformancePointDto;
 import com.stockflow.portfolio.dto.PortfolioDto;
+import com.stockflow.portfolio.dto.PortfolioStudyCandidateDto;
 import com.stockflow.portfolio.dto.TransactionDto;
 import com.stockflow.portfolio.service.PortfolioService;
 import java.util.List;
@@ -38,6 +39,11 @@ public class PortfolioController {
     @GetMapping("/allocation")
     public ApiResponse<List<AllocationDto>> allocation() {
         return ApiResponse.success(portfolioService.getAllocation());
+    }
+
+    @GetMapping("/study-candidates")
+    public ApiResponse<List<PortfolioStudyCandidateDto>> studyCandidates() {
+        return ApiResponse.success(portfolioService.getStudyCandidates());
     }
 
     @GetMapping("/transactions")

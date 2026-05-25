@@ -8,10 +8,10 @@ import com.stockflow.news.entity.News;
 import com.stockflow.news.repository.NewsRepository;
 import com.stockflow.research.dto.AiInsightDto;
 import com.stockflow.research.dto.PortfolioImpactDto;
-import com.stockflow.research.dto.RecommendationDto;
 import com.stockflow.research.dto.ResearchBriefingDto;
 import com.stockflow.research.dto.RiskDto;
 import com.stockflow.research.dto.SentimentDto;
+import com.stockflow.research.dto.StudyCandidateDto;
 import com.stockflow.research.repository.AiInsightRepository;
 import com.stockflow.stock.entity.Stock;
 import com.stockflow.stock.repository.StockRepository;
@@ -68,12 +68,16 @@ public class ResearchService {
                 .toList();
     }
 
-    public List<RecommendationDto> getRecommendations() {
+    public List<StudyCandidateDto> getStudyCandidates() {
         return List.of(
-                recommendation("000660", BigDecimal.valueOf(240000), BigDecimal.valueOf(22.1), "HBM 수요 증가 수혜"),
-                recommendation("005930", BigDecimal.valueOf(92000), BigDecimal.valueOf(17.0), "온디바이스 AI 수혜 전망"),
-                recommendation("005380", BigDecimal.valueOf(280000), BigDecimal.valueOf(18.4), "전기차 판매 회복 기대"),
-                recommendation("010120", BigDecimal.valueOf(130000), BigDecimal.valueOf(24.0), "전력 인프라 투자 확대")
+                studyCandidate("000660", "RELATED_THEME", BigDecimal.valueOf(86), "HBM과 AI GPU 공급망 관련 뉴스가 반복되어 확인할 후보입니다.",
+                        List.of("HBM 매출 비중", "공급 계약 뉴스", "영업이익률 변화"), "반도체 비중이 이미 높다면 포트폴리오 쏠림을 확인하세요."),
+                studyCandidate("005930", "SUPPLY_CHAIN", BigDecimal.valueOf(78), "메모리와 파운드리 양쪽에서 AI 반도체 흐름을 확인할 후보입니다.",
+                        List.of("HBM 수율", "메모리 가격", "파운드리 가동률"), "대형 복합 기업이라 특정 테마 영향이 희석될 수 있습니다."),
+                studyCandidate("005380", "DIVERSIFICATION", BigDecimal.valueOf(62), "반도체 외 업종 분산 관점에서 자동차 업황과 환율 영향을 확인할 후보입니다.",
+                        List.of("판매량", "환율 영향", "영업이익률"), "업종 분산 후보일 뿐 매수 판단은 별도 검토가 필요합니다."),
+                studyCandidate("010120", "SUPPLY_CHAIN", BigDecimal.valueOf(74), "AI 데이터센터 전력 인프라 확대와 연결해 공부할 후보입니다.",
+                        List.of("전력기기 수주", "북미 매출", "원자재 비용"), "수주 기대가 가격에 먼저 반영됐는지 확인하세요.")
         );
     }
 
@@ -91,13 +95,24 @@ public class ResearchService {
                 .toList();
     }
 
-    private RecommendationDto recommendation(String symbol, BigDecimal targetPrice, BigDecimal upside, String reason) {
+    private StudyCandidateDto studyCandidate(String symbol, String relationType, BigDecimal relevanceScore, String studyReason,
+                                             List<String> checkPoints, String riskNote) {
         Stock stock = stockRepository.findBySymbol(symbol)
                 .orElseGet(() -> Stock.builder()
                         .symbol(symbol)
                         .name("LS ELECTRIC")
                         .build());
-        return new RecommendationDto(stock.getSymbol(), stock.getName(), targetPrice, upside, reason);
+        return new StudyCandidateDto(
+                stock.getSymbol(),
+                stock.getName(),
+                stock.getIndustry(),
+                relationType,
+                studyReason,
+                checkPoints,
+                relevanceScore,
+                riskNote,
+                "seed/portfolio/news-check"
+        );
     }
 
     private BigDecimal impactValue(ImpactType impactType) {

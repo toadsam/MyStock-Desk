@@ -49,3 +49,17 @@ export interface Transaction {
   realizedProfitLoss: number
   createdAt: string
 }
+
+export interface PortfolioStudyCandidate {
+  candidateSymbol: string
+  candidateName: string
+  category: string
+  relationType: string
+  studyReason: string
+  checkPoints: string[]
+  relatedHoldings: string[]
+  relevanceScore: number
+  riskNote: string
+  dataSource: string
+  lastUpdatedAt: string
+}

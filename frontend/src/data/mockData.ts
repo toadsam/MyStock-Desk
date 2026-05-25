@@ -1,12 +1,13 @@
 import type { Member } from '../types/member'
+import type { PortfolioReport } from '../types/ai'
+import type { Earnings, EarningsCalendarItem } from '../types/earnings'
 import type { HeatmapSector, MarketBreadth, MarketIndex, SectorPerformance, WatchlistItem } from '../types/market'
 import type { News } from '../types/news'
-import type { Allocation, Holding, PerformancePoint, Portfolio, Transaction } from '../types/portfolio'
-import type { PortfolioImpact, Recommendation, ResearchBriefing, Risk, SentimentSummary } from '../types/research'
+import type { Allocation, Holding, PerformancePoint, Portfolio, PortfolioStudyCandidate, Transaction } from '../types/portfolio'
+import type { PortfolioImpact, ResearchBriefing, Risk, SentimentSummary, StudyCandidate } from '../types/research'
 import type { OrderBook, PricePoint, Stock } from '../types/stock'
 import type { ThemeDiscovery } from '../types/theme'
 import type { HoldingSummary, InvestmentTransaction, TransactionSummary } from '../types/transaction'
-import type { Execution, TradeOrder, TradeOrderRequest } from '../types/trade'
 
 const now = new Date()
 
@@ -140,6 +141,10 @@ export function orderBook(symbol = '005930'): OrderBook {
 export const mockWatchlist: WatchlistItem[] = mockStocks.slice(0, 5).map((item, index) => ({
   id: index + 1,
   stock: item,
+  reason: `${item.name}의 실적과 뉴스가 내 포트폴리오에 어떤 영향을 주는지 확인하기 위해 등록`,
+  checkPoints: '실적 발표 일정, 최근 뉴스, 기존 보유 종목과의 연관성',
+  priceMemo: '관심 가격대는 거래 기록 입력 전 직접 확인',
+  updatedAt: now.toISOString(),
   createdAt: now.toISOString(),
 }))
 
@@ -195,11 +200,11 @@ export const mockPerformance: PerformancePoint[] = [
 }))
 
 export const mockAllocation: Allocation[] = [
-  { name: 'Domestic stock', value: 111210000, rate: 72.3 },
-  { name: 'Global stock', value: 22600000, rate: 14.7 },
-  { name: 'ETF', value: 9990000, rate: 6.5 },
-  { name: 'Cash', value: 8450000, rate: 5.5 },
-  { name: 'Bond', value: 1530000, rate: 1.0 },
+  { name: '반도체', value: 35370000, rate: 23.0 },
+  { name: '2차전지', value: 27760000, rate: 18.0 },
+  { name: '자동차', value: 14190000, rate: 9.2 },
+  { name: '인터넷', value: 15333000, rate: 10.0 },
+  { name: '현금', value: 8450000, rate: 5.5 },
 ]
 
 export const mockTransactions: Transaction[] = [
@@ -209,47 +214,6 @@ export const mockTransactions: Transaction[] = [
   { id: 4, stockName: 'NAVER', symbol: '035420', transactionType: 'BUY', price: 197500, quantity: 10, amount: -1975000, realizedProfitLoss: 0, createdAt: now.toISOString() },
   { id: 5, stockName: 'SK hynix', symbol: '000660', transactionType: 'BUY', price: 196500, quantity: 1, amount: -196500, realizedProfitLoss: 0, createdAt: now.toISOString() },
 ]
-
-export const mockOrders: TradeOrder[] = mockTransactions.map((transaction) => ({
-  id: transaction.id,
-  stock: stockBySymbol(transaction.symbol),
-  orderType: transaction.transactionType === 'SELL' ? 'SELL' : 'BUY',
-  orderMethod: 'MARKET',
-  orderPrice: transaction.price,
-  quantity: transaction.quantity,
-  estimatedAmount: Math.abs(transaction.amount),
-  fee: Math.round(Math.abs(transaction.amount) * 0.00015),
-  status: 'COMPLETED',
-  createdAt: transaction.createdAt,
-}))
-
-export const mockExecutions: Execution[] = mockOrders
-  .filter((item) => item.status === 'COMPLETED')
-  .map((item) => ({
-    id: item.id,
-    orderId: item.id,
-    stock: item.stock,
-    executionPrice: item.orderPrice,
-    quantity: item.quantity,
-    executedAt: item.createdAt,
-  }))
-
-export function createMockOrder(request: TradeOrderRequest): TradeOrder {
-  const item = stockBySymbol(request.symbol)
-  const estimatedAmount = request.orderPrice * request.quantity
-  return {
-    id: Date.now(),
-    stock: item,
-    orderType: request.orderType,
-    orderMethod: request.orderMethod,
-    orderPrice: request.orderPrice,
-    quantity: request.quantity,
-    estimatedAmount,
-    fee: Math.round(estimatedAmount * 0.00015),
-    status: request.orderMethod === 'MARKET' ? 'COMPLETED' : 'PENDING',
-    createdAt: new Date().toISOString(),
-  }
-}
 
 export const mockInvestmentTransactions: InvestmentTransaction[] = [
   {
@@ -281,7 +245,7 @@ export const mockInvestmentTransactions: InvestmentTransaction[] = [
     totalAmount: 991500,
     realizedProfitLoss: 42000,
     transactionDate: '2026-05-20',
-    reason: '단기 목표가 도달',
+    reason: '기존 정리 기준에 도달',
     memo: '광고 회복 속도는 계속 확인',
     tags: ['플랫폼', '리스크관리'],
     createdAt: now.toISOString(),
@@ -311,6 +275,65 @@ export const mockTransactionSummary: TransactionSummary = {
   totalSellAmount: 1950000,
   realizedProfitLoss: 324000,
   totalFee: 8400,
+}
+
+export const mockEarningsCalendar: EarningsCalendarItem[] = [
+  earningsCalendar(1, '005930', '삼성전자', 5, 'HOLDING', false, 'demo-public-disclosure'),
+  earningsCalendar(2, '000660', 'SK hynix', 9, 'HOLDING', false, 'demo-public-disclosure'),
+  earningsCalendar(3, '373220', 'LG Energy Solution', 12, 'HOLDING', true, 'demo-estimate'),
+  earningsCalendar(4, '035420', 'NAVER', 18, 'WATCHLIST', false, 'demo-public-disclosure'),
+  earningsCalendar(5, '010120', 'LS ELECTRIC', 24, 'MARKET_REFERENCE', true, 'demo-estimate'),
+]
+
+function earningsCalendar(id: number, symbol: string, companyName: string, days: number, relationType: EarningsCalendarItem['relationType'], estimated: boolean, source: string): EarningsCalendarItem {
+  const announcementDate = new Date(now)
+  announcementDate.setDate(now.getDate() + days)
+  return {
+    id,
+    symbol,
+    companyName,
+    announcementDate: announcementDate.toISOString().slice(0, 10),
+    daysUntil: days,
+    estimated,
+    relationType,
+    checklist: ['매출 성장률', '영업이익률 변화', '기존 투자 이유 유지 여부', '업황 관련 코멘트', '환율/원자재/수요 변화 영향'],
+    reviewQuestion: '실적 발표 후 내 투자 이유가 유지되는지 한 문장으로 복기해보세요.',
+    source,
+    lastUpdatedAt: now.toISOString(),
+  }
+}
+
+export const mockEarnings: Earnings[] = [
+  earnings(1, '005930', '삼성전자', 2026, 1, 79140000000000, 6610000000000, 5120000000000, 8.35, 12.4, 931.8, 5, false, 'demo-public-disclosure'),
+  earnings(2, '000660', 'SK hynix', 2026, 1, 12430000000000, 2880000000000, 1920000000000, 23.17, 144.8, 302.1, 9, false, 'demo-public-disclosure'),
+  earnings(3, '035420', 'NAVER', 2026, 1, 2510000000000, 439000000000, 318000000000, 17.49, 10.2, 5.6, 18, false, 'demo-public-disclosure'),
+  earnings(4, '373220', 'LG Energy Solution', 2026, 1, 6130000000000, 157000000000, 89000000000, 2.56, -18.4, -43.9, 12, true, 'demo-estimate'),
+]
+
+function earnings(id: number, symbol: string, companyName: string, year: number, quarter: number, revenue: number, operatingProfit: number, netIncome: number, operatingMargin: number, yoyRevenueGrowth: number, yoyOperatingProfitGrowth: number, days: number, estimated: boolean, source: string): Earnings {
+  const announcementDate = new Date(now)
+  announcementDate.setDate(now.getDate() + days)
+  return {
+    id,
+    symbol,
+    companyName,
+    year,
+    quarter,
+    revenue,
+    operatingProfit,
+    netIncome,
+    operatingMargin,
+    yoyRevenueGrowth,
+    yoyOperatingProfitGrowth,
+    announcementDate: announcementDate.toISOString().slice(0, 10),
+    estimated,
+    source,
+    lastUpdatedAt: now.toISOString(),
+  }
+}
+
+export function mockEarningsBySymbol(symbol: string) {
+  return mockEarnings.filter((item) => item.symbol === symbol)
 }
 
 export const mockHoldingSummaries: HoldingSummary[] = [
@@ -406,11 +429,40 @@ export const mockRisks: Risk[] = [
   { title: 'Raw material volatility', description: 'Copper and crude price swings can affect industrial and battery earnings.', riskScore: 46 },
 ]
 
-export const mockRecommendations: Recommendation[] = [
-  { symbol: '000660', name: 'SK hynix', targetPrice: 240000, upside: 22.1, reason: 'HBM demand growth' },
-  { symbol: '005930', name: 'Samsung Electronics', targetPrice: 92000, upside: 17.0, reason: 'On-device AI cycle' },
-  { symbol: '005380', name: 'Hyundai Motor', targetPrice: 280000, upside: 18.4, reason: 'EV sales recovery' },
-  { symbol: '010120', name: 'LS ELECTRIC', targetPrice: 130000, upside: 24.0, reason: 'Grid investment expansion' },
+export const mockStudyCandidates: StudyCandidate[] = [
+  { symbol: '000660', name: 'SK hynix', category: 'Memory', relationType: 'RELATED_THEME', relevanceScore: 86, studyReason: 'HBM과 AI GPU 공급망 관련 뉴스가 반복되어 확인할 후보입니다.', checkPoints: ['HBM 매출 비중', '공급 계약 뉴스', '영업이익률 변화'], riskNote: '반도체 비중이 이미 높다면 포트폴리오 쏠림을 확인하세요.', dataSource: 'demo/news-check' },
+  { symbol: '005930', name: 'Samsung Electronics', category: 'Semiconductor', relationType: 'SUPPLY_CHAIN', relevanceScore: 78, studyReason: '메모리와 파운드리 양쪽에서 AI 반도체 흐름을 확인할 후보입니다.', checkPoints: ['HBM 수율', '메모리 가격', '파운드리 가동률'], riskNote: '대형 복합 기업이라 특정 테마 영향이 희석될 수 있습니다.', dataSource: 'demo/news-check' },
+  { symbol: '005380', name: 'Hyundai Motor', category: 'Auto', relationType: 'DIVERSIFICATION', relevanceScore: 62, studyReason: '반도체 외 업종 분산 관점에서 자동차 업황과 환율 영향을 확인할 후보입니다.', checkPoints: ['판매량', '환율 영향', '영업이익률'], riskNote: '업종 분산 후보일 뿐 매수 판단은 별도 검토가 필요합니다.', dataSource: 'demo/portfolio-check' },
+  { symbol: '010120', name: 'LS ELECTRIC', category: 'Power equipment', relationType: 'SUPPLY_CHAIN', relevanceScore: 74, studyReason: 'AI 데이터센터 전력 인프라 확대와 연결해 공부할 후보입니다.', checkPoints: ['전력기기 수주', '북미 매출', '원자재 비용'], riskNote: '수주 기대가 가격에 먼저 반영됐는지 확인하세요.', dataSource: 'demo/news-check' },
+]
+
+export const mockPortfolioStudyCandidates: PortfolioStudyCandidate[] = [
+  {
+    candidateSymbol: '010120',
+    candidateName: 'LS ELECTRIC',
+    category: '전력기기',
+    relationType: 'SUPPLY_CHAIN',
+    studyReason: '반도체와 AI 데이터센터 이슈가 전력 인프라 수요로 이어지는지 확인해볼 후보입니다.',
+    checkPoints: ['전력기기 수주', '북미 매출', '영업이익률', '데이터센터 투자 뉴스'],
+    relatedHoldings: ['삼성전자', 'SK hynix'],
+    relevanceScore: 82,
+    riskNote: 'AI 인프라 기대가 가격에 먼저 반영됐는지 확인하세요.',
+    dataSource: 'holdings/sector/demo',
+    lastUpdatedAt: now.toISOString(),
+  },
+  {
+    candidateSymbol: '207940',
+    candidateName: 'Samsung Biologics',
+    category: 'CDMO',
+    relationType: 'DIVERSIFICATION',
+    studyReason: '반도체 비중이 높은 포트폴리오에서 다른 업종 흐름을 비교해볼 분산 공부 후보입니다.',
+    checkPoints: ['신규 수주', '가동률', '영업이익률', '환율 영향'],
+    relatedHoldings: ['삼성전자', 'SK hynix'],
+    relevanceScore: 68,
+    riskNote: '분산 후보라도 사업 구조와 밸류에이션을 따로 확인해야 합니다.',
+    dataSource: 'holdings/sector/demo',
+    lastUpdatedAt: now.toISOString(),
+  },
 ]
 
 export const mockPortfolioImpact: PortfolioImpact[] = mockNews.slice(0, 5).map((item, index) => ({
@@ -507,4 +559,15 @@ function stockTheme(
       generatedBy: 'local-fallback',
     },
   }
+}
+
+export const mockPortfolioReport: PortfolioReport = {
+  generatedAt: now.toISOString(),
+  summary: '현재 포트폴리오는 입력한 거래 기록과 보유 종목 기준으로 정리되었습니다. 반도체와 2차전지 비중을 함께 확인하세요.',
+  performanceNotes: ['수익 종목과 손실 종목을 나누어 투자 이유가 유지되는지 복기하세요.', '최근 거래 기록의 수수료와 세금 반영 여부를 확인하세요.'],
+  concentrationNotes: ['반도체 관련 종목 비중이 높다면 같은 업종 뉴스에 함께 흔들릴 수 있습니다.'],
+  upcomingEarnings: ['삼성전자 실적 발표 D-5', 'SK hynix 실적 발표 D-9'],
+  recentReviewQuestions: ['최근 매수 이유가 한 문장으로 남아 있나요?', '손실 종목의 리스크 기준이 깨졌나요?'],
+  studyCandidates: ['LS ELECTRIC · AI 데이터센터 전력 인프라 수요를 확인할 후보', 'Samsung Biologics · 업종 분산 관점의 공부 후보'],
+  disclaimer: '이 리포트는 사용자의 투자 기록과 공개 정보를 바탕으로 정리한 참고 자료이며, 매수·매도 추천이나 투자 자문이 아닙니다.',
 }

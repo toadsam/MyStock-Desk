@@ -5,9 +5,9 @@ export function OrderBook({ orderBook }: { orderBook: OrderBookType }) {
   return (
     <div className="space-y-1">
       <div className="grid grid-cols-3 px-2 text-xs text-slate-500">
-        <span>매도잔량</span>
-        <span className="text-center">호가</span>
-        <span className="text-right">매수잔량</span>
+        <span>상단 잔량</span>
+        <span className="text-center">참고 가격</span>
+        <span className="text-right">하단 잔량</span>
       </div>
       {orderBook.asks.map((level) => (
         <div key={`ask-${level.price}`} className="grid grid-cols-3 items-center rounded-lg bg-red-500/8 px-2 py-1.5 text-sm">
@@ -27,7 +27,7 @@ export function OrderBook({ orderBook }: { orderBook: OrderBookType }) {
         </div>
       ))}
       <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2 text-sm">
-        <span className="text-slate-400">체결강도</span>
+        <span className="text-slate-400">시장 관심도</span>
         <span className="font-semibold text-emerald-400">{orderBook.executionStrength.toFixed(2)}%</span>
       </div>
     </div>

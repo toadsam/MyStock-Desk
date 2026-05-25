@@ -5,9 +5,6 @@ export interface ApiResponse<T> {
 }
 
 export type ImpactType = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL'
-export type OrderType = 'BUY' | 'SELL'
-export type OrderMethod = 'LIMIT' | 'MARKET' | 'CONDITIONAL'
-export type OrderStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED'
 export type InsightType =
   | 'HOME'
   | 'MARKET'

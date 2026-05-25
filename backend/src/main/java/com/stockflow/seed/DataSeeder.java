@@ -2,13 +2,12 @@ package com.stockflow.seed;
 
 import com.stockflow.global.type.ImpactType;
 import com.stockflow.global.type.InsightType;
-import com.stockflow.global.type.OrderMethod;
-import com.stockflow.global.type.OrderStatus;
-import com.stockflow.global.type.OrderType;
 import com.stockflow.global.type.SectorPerformanceType;
 import com.stockflow.global.type.Sentiment;
 import com.stockflow.global.type.TargetType;
 import com.stockflow.global.type.TransactionType;
+import com.stockflow.earnings.entity.Earnings;
+import com.stockflow.earnings.repository.EarningsRepository;
 import com.stockflow.market.entity.MarketIndex;
 import com.stockflow.market.entity.PricePoint;
 import com.stockflow.market.entity.SectorPerformance;
@@ -27,18 +26,13 @@ import com.stockflow.research.entity.AiInsight;
 import com.stockflow.research.repository.AiInsightRepository;
 import com.stockflow.stock.entity.Stock;
 import com.stockflow.stock.repository.StockRepository;
-import com.stockflow.trade.entity.Execution;
-import com.stockflow.trade.entity.TradeLedger;
-import com.stockflow.trade.entity.TradeOrder;
-import com.stockflow.trade.repository.ExecutionRepository;
-import com.stockflow.trade.repository.TradeLedgerRepository;
-import com.stockflow.trade.repository.TradeOrderRepository;
 import com.stockflow.transaction.entity.InvestmentTransaction;
 import com.stockflow.transaction.repository.InvestmentTransactionRepository;
 import com.stockflow.watchlist.entity.Watchlist;
 import com.stockflow.watchlist.repository.WatchlistRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -60,10 +54,8 @@ public class DataSeeder implements CommandLineRunner {
     private final WatchlistRepository watchlistRepository;
     private final PortfolioRepository portfolioRepository;
     private final HoldingRepository holdingRepository;
-    private final TradeOrderRepository tradeOrderRepository;
-    private final TradeLedgerRepository tradeLedgerRepository;
-    private final ExecutionRepository executionRepository;
     private final InvestmentTransactionRepository transactionRepository;
+    private final EarningsRepository earningsRepository;
     private final NewsRepository newsRepository;
     private final AiInsightRepository aiInsightRepository;
     private final SectorPerformanceRepository sectorPerformanceRepository;
@@ -91,8 +83,8 @@ public class DataSeeder implements CommandLineRunner {
         seedWatchlist(member.getId(), stocks);
         Portfolio portfolio = seedPortfolio(member.getId());
         seedHoldings(portfolio.getId(), stocks);
-        seedOrdersAndExecutions(member.getId(), portfolio, stocks);
         seedInvestmentTransactions(member.getId(), stocks);
+        seedEarnings(stocks);
         seedNews();
         seedInsights();
     }
@@ -246,6 +238,10 @@ public class DataSeeder implements CommandLineRunner {
         return Watchlist.builder()
                 .memberId(memberId)
                 .stockId(stockId)
+                .reason("보유 종목과 함께 확인할 공부 후보")
+                .checkPoints("실적 발표 일정, 최근 뉴스, 기존 투자 이유 영향")
+                .priceMemo("관심 가격대는 거래 기록 입력 전 직접 확인")
+                .updatedAt(LocalDateTime.now().minusDays(daysAgo))
                 .createdAt(LocalDateTime.now().minusDays(daysAgo))
                 .build();
     }
@@ -299,80 +295,12 @@ public class DataSeeder implements CommandLineRunner {
                 .build();
     }
 
-    private void seedOrdersAndExecutions(Long memberId, Portfolio portfolio, Map<String, Stock> stocks) {
-        List<TradeOrder> orders = tradeOrderRepository.saveAll(List.of(
-                order(memberId, stocks.get("005930"), OrderType.BUY, OrderMethod.LIMIT, 78200, 50, OrderStatus.COMPLETED, 2),
-                order(memberId, stocks.get("360750"), OrderType.BUY, OrderMethod.LIMIT, 12480, 30, OrderStatus.COMPLETED, 3),
-                order(memberId, stocks.get("035720"), OrderType.SELL, OrderMethod.LIMIT, 44800, 40, OrderStatus.COMPLETED, 4),
-                order(memberId, stocks.get("035420"), OrderType.BUY, OrderMethod.LIMIT, 197500, 10, OrderStatus.PENDING, 5),
-                order(memberId, stocks.get("000660"), OrderType.BUY, OrderMethod.MARKET, 196500, 1, OrderStatus.COMPLETED, 8),
-                order(memberId, stocks.get("373220"), OrderType.SELL, OrderMethod.LIMIT, 347000, 10, OrderStatus.PENDING, 11),
-                order(memberId, stocks.get("005380"), OrderType.BUY, OrderMethod.MARKET, 236500, 20, OrderStatus.COMPLETED, 13)
-        ));
-
-        orders.stream()
-                .filter(order -> order.getStatus() == OrderStatus.COMPLETED)
-                .forEach(order -> {
-                    LocalDateTime executedAt = order.getCreatedAt().plusSeconds(11);
-                    executionRepository.save(Execution.builder()
-                            .orderId(order.getId())
-                            .stockId(order.getStockId())
-                            .executionPrice(order.getOrderPrice())
-                            .quantity(order.getQuantity())
-                            .executedAt(executedAt)
-                            .build());
-                    tradeLedgerRepository.save(TradeLedger.builder()
-                            .memberId(memberId)
-                            .portfolioId(portfolio.getId())
-                            .orderId(order.getId())
-                            .stockId(order.getStockId())
-                            .orderType(order.getOrderType())
-                            .quantity(order.getQuantity())
-                            .executionPrice(order.getOrderPrice())
-                            .grossAmount(order.getEstimatedAmount())
-                            .fee(order.getFee())
-                            .netCashAmount(order.getOrderType() == OrderType.BUY
-                                    ? order.getEstimatedAmount().add(order.getFee()).negate()
-                                    : order.getEstimatedAmount().subtract(order.getFee()))
-                            .realizedProfitLoss(order.getOrderType() == OrderType.SELL ? bd(88_000) : BigDecimal.ZERO)
-                            .cashBalance(portfolio.getCash())
-                            .totalAsset(portfolio.getTotalAsset())
-                            .createdAt(executedAt)
-                            .build());
-                });
-    }
-
-    private TradeOrder order(
-            Long memberId,
-            Stock stock,
-            OrderType orderType,
-            OrderMethod method,
-            long price,
-            int quantity,
-            OrderStatus status,
-            int daysAgo
-    ) {
-        BigDecimal orderPrice = bd(price);
-        BigDecimal estimated = orderPrice.multiply(BigDecimal.valueOf(quantity));
-        return TradeOrder.builder()
-                .memberId(memberId)
-                .stockId(stock.getId())
-                .orderType(orderType)
-                .orderMethod(method)
-                .orderPrice(orderPrice)
-                .quantity(quantity)
-                .estimatedAmount(estimated)
-                .fee(estimated.multiply(new BigDecimal("0.00015")).setScale(0, RoundingMode.HALF_UP))
-                .status(status)
-                .createdAt(LocalDateTime.now().minusDays(daysAgo))
-                .build();
-    }
-
     private void seedInvestmentTransactions(Long memberId, Map<String, Stock> stocks) {
         transactionRepository.saveAll(List.of(
                 transaction(memberId, stocks.get("005930"), TransactionType.BUY, 50, 78200, 587, 0, 0, 2, "HBM 수요 증가 기대", "6개월 이상 보유 예정", "반도체,장기보유"),
                 transaction(memberId, stocks.get("360750"), TransactionType.BUY, 30, 12480, 56, 0, 0, 3, "해외지수 분산 목적", "월 적립 후보", "ETF,분산"),
-                transaction(memberId, stocks.get("035720"), TransactionType.SELL, 40, 44800, 269, 2790, 88000, 4, "단기 목표가 도달", "플랫폼 규제 뉴스 확인 후 일부 정리", "플랫폼,리스크관리"),
+                transaction(memberId, stocks.get("035720"), TransactionType.BUY, 80, 41500, 498, 0, 0, 20, "플랫폼 사업 회복 여부 확인", "매도 기록 계산을 위한 과거 매수 기록", "플랫폼,복기"),
+                transaction(memberId, stocks.get("035720"), TransactionType.SELL, 40, 44800, 269, 2790, 88000, 4, "기존 정리 기준에 도달", "플랫폼 규제 뉴스 확인 후 일부 정리", "플랫폼,리스크관리"),
                 transaction(memberId, stocks.get("000660"), TransactionType.BUY, 1, 196500, 29, 0, 0, 8, "HBM 매출 비중 확대", "실적 발표 전까지 뉴스 흐름 확인", "반도체,실적개선"),
                 transaction(memberId, stocks.get("005380"), TransactionType.BUY, 20, 236500, 710, 0, 0, 13, "북미 판매 회복 기대", "환율과 전기차 판매량 체크", "자동차,환율"),
                 cashTransaction(memberId, TransactionType.DEPOSIT, 1_000_000, 15, "월 투자금 입금", "정기 현금 유입"),
@@ -413,6 +341,50 @@ public class DataSeeder implements CommandLineRunner {
                 .tags(tags)
                 .createdAt(LocalDateTime.now().minusDays(daysAgo))
                 .updatedAt(LocalDateTime.now().minusDays(daysAgo))
+                .build();
+    }
+
+    private void seedEarnings(Map<String, Stock> stocks) {
+        earningsRepository.saveAll(List.of(
+                earnings(stocks.get("005930"), 2026, 1, 79_140_000_000_000L, 6_610_000_000_000L, 5_120_000_000_000L, 8.35, 12.4, 931.8, LocalDate.now().plusDays(5), false, "demo-public-disclosure"),
+                earnings(stocks.get("000660"), 2026, 1, 12_430_000_000_000L, 2_880_000_000_000L, 1_920_000_000_000L, 23.17, 144.8, 302.1, LocalDate.now().plusDays(9), false, "demo-public-disclosure"),
+                earnings(stocks.get("035420"), 2026, 1, 2_510_000_000_000L, 439_000_000_000L, 318_000_000_000L, 17.49, 10.2, 5.6, LocalDate.now().plusDays(18), false, "demo-public-disclosure"),
+                earnings(stocks.get("035720"), 2026, 1, 1_920_000_000_000L, 121_000_000_000L, 78_000_000_000L, 6.30, 4.1, -12.6, LocalDate.now().plusDays(24), true, "demo-estimate"),
+                earnings(stocks.get("373220"), 2026, 1, 6_130_000_000_000L, 157_000_000_000L, 89_000_000_000L, 2.56, -18.4, -43.9, LocalDate.now().plusDays(12), true, "demo-estimate"),
+                earnings(stocks.get("005380"), 2026, 1, 41_200_000_000_000L, 3_760_000_000_000L, 2_910_000_000_000L, 9.13, 8.7, 2.5, LocalDate.now().plusDays(21), false, "demo-public-disclosure"),
+                earnings(stocks.get("005490"), 2026, 1, 18_400_000_000_000L, 892_000_000_000L, 612_000_000_000L, 4.85, 7.2, 18.3, LocalDate.now().plusDays(16), false, "demo-public-disclosure")
+        ));
+    }
+
+    private Earnings earnings(
+            Stock stock,
+            int year,
+            int quarter,
+            long revenue,
+            long operatingProfit,
+            long netIncome,
+            double operatingMargin,
+            double yoyRevenueGrowth,
+            double yoyOperatingProfitGrowth,
+            LocalDate announcementDate,
+            boolean estimated,
+            String source
+    ) {
+        return Earnings.builder()
+                .symbol(stock.getSymbol())
+                .companyName(stock.getName())
+                .year(year)
+                .quarter(quarter)
+                .revenue(bd(revenue))
+                .operatingProfit(bd(operatingProfit))
+                .netIncome(bd(netIncome))
+                .operatingMargin(BigDecimal.valueOf(operatingMargin))
+                .yoyRevenueGrowth(BigDecimal.valueOf(yoyRevenueGrowth))
+                .yoyOperatingProfitGrowth(BigDecimal.valueOf(yoyOperatingProfitGrowth))
+                .announcementDate(announcementDate)
+                .estimated(estimated)
+                .source(source)
+                .lastUpdatedAt(LocalDateTime.now())
                 .build();
     }
 
@@ -471,8 +443,8 @@ public class DataSeeder implements CommandLineRunner {
     private void seedInsights() {
         LocalDateTime now = LocalDateTime.now();
         aiInsightRepository.saveAll(List.of(
-                insight(InsightType.HOME, "시장 강세 지속 전망", "AI 분석에 따르면 코스피는 2,700~2,750 구간에서 강세가 지속될 확률이 높습니다.", Sentiment.POSITIVE, 82, now.minusMinutes(10)),
-                insight(InsightType.STOCK, "삼성전자 중장기 긍정", "메모리 반도체 업황 개선과 AI 수요 증가로 실적 회복이 기대됩니다. 단기 변동성은 관리가 필요합니다.", Sentiment.POSITIVE, 78, now.minusMinutes(12)),
+                insight(InsightType.HOME, "시장 체크포인트", "코스피와 반도체 대형주 뉴스가 늘고 있어 보유 비중과 최근 거래 이유를 함께 점검할 필요가 있습니다.", Sentiment.POSITIVE, 82, now.minusMinutes(10)),
+                insight(InsightType.STOCK, "삼성전자 확인 항목", "메모리 반도체 업황 개선과 AI 수요 증가가 실적에 실제로 반영되는지 확인해야 합니다. 단기 변동성도 함께 점검하세요.", Sentiment.POSITIVE, 78, now.minusMinutes(12)),
                 insight(InsightType.MARKET, "반도체 중심 수급 개선", "외국인 순매수가 이어지며 반도체, 금융, 자동차 강세가 두드러집니다.", Sentiment.POSITIVE, 81, now.minusMinutes(15)),
                 insight(InsightType.PORTFOLIO, "리밸런싱 제안", "현재 포트폴리오는 전기전자 섹터 비중이 높습니다. 금융/헬스케어 섹터 비중을 5~10% 확대하는 방안을 검토하세요.", Sentiment.NEUTRAL, 76, now.minusMinutes(20)),
                 insight(InsightType.RESEARCH, "반도체 업황 개선 신호 감지", "HBM 공급 확대와 클라우드 투자 회복이 반도체 밸류체인에 우호적입니다.", Sentiment.POSITIVE, 92, now.minusMinutes(22)),

@@ -23,5 +23,16 @@ public class Watchlist {
 
     private Long memberId;
     private Long stockId;
+    private String reason;
+    private String checkPoints;
+    private String priceMemo;
+    private LocalDateTime updatedAt;
     private LocalDateTime createdAt;
+
+    public void updateMemo(String reason, String checkPoints, String priceMemo) {
+        this.reason = reason;
+        this.checkPoints = checkPoints;
+        this.priceMemo = priceMemo;
+        this.updatedAt = LocalDateTime.now();
+    }
 }

@@ -30,6 +30,12 @@ stockflow:
     enabled: false
   market-data:
     provider: yahoo
+  dart:
+    enabled: true
+    api-key: ${DART_API_KEY:}
+  news:
+    google-rss:
+      enabled: true
   ai:
     provider: local
     openai:

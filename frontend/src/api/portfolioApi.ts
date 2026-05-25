@@ -4,9 +4,10 @@ import {
   mockHoldings,
   mockPerformance,
   mockPortfolio,
+  mockPortfolioStudyCandidates,
   mockTransactions,
 } from '../data/mockData'
-import type { Allocation, Holding, PerformancePoint, Portfolio, Transaction } from '../types/portfolio'
+import type { Allocation, Holding, PerformancePoint, Portfolio, PortfolioStudyCandidate, Transaction } from '../types/portfolio'
 
 export function getPortfolio() {
   return requestData<Portfolio>(api.get('/api/portfolio'), mockPortfolio)
@@ -22,6 +23,10 @@ export function getPerformance() {
 
 export function getAllocation() {
   return requestData<Allocation[]>(api.get('/api/portfolio/allocation'), mockAllocation)
+}
+
+export function getPortfolioStudyCandidates() {
+  return requestData<PortfolioStudyCandidate[]>(api.get('/api/portfolio/study-candidates'), mockPortfolioStudyCandidates)
 }
 
 export function getTransactions() {

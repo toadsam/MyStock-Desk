@@ -1,5 +1,5 @@
 import { Eye, Info } from 'lucide-react'
-import { getAllocation, getHoldings, getPerformance, getPortfolio, getTransactions } from '../api/portfolioApi'
+import { getAllocation, getHoldings, getPerformance, getPortfolio, getPortfolioStudyCandidates, getTransactions } from '../api/portfolioApi'
 import { MistakeAlerts } from '../components/beginner/MistakeAlerts'
 import { PortfolioHealthCard } from '../components/beginner/PortfolioHealthCard'
 import { ReviewPromptCard } from '../components/beginner/ReviewPromptCard'
@@ -10,7 +10,7 @@ import { AiSummaryCard } from '../components/stock/AiSummaryCard'
 import { HoldingsTable } from '../components/stock/HoldingsTable'
 import { Card } from '../components/ui/Card'
 import { StatCard } from '../components/ui/StatCard'
-import { mockAllocation, mockHoldings, mockInvestmentTransactions, mockPerformance, mockPortfolio, mockTransactions } from '../data/mockData'
+import { mockAllocation, mockHoldings, mockInvestmentTransactions, mockPerformance, mockPortfolio, mockPortfolioStudyCandidates, mockTransactions } from '../data/mockData'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { cn } from '../utils/cn'
 import { formatNumber, formatPercent, formatWon, isUp } from '../utils/format'
@@ -21,6 +21,7 @@ export default function PortfolioPage() {
   const { data: performance } = useAsyncData(getPerformance, mockPerformance)
   const { data: allocation } = useAsyncData(getAllocation, mockAllocation)
   const { data: transactions } = useAsyncData(getTransactions, mockTransactions)
+  const { data: studyCandidates } = useAsyncData(getPortfolioStudyCandidates, mockPortfolioStudyCandidates)
 
   return (
     <div className="space-y-4">
@@ -72,20 +73,36 @@ export default function PortfolioPage() {
         <Card title="보유 종목 현황">
           <HoldingsTable holdings={holdings} />
         </Card>
-        <Card title="섹터 비중 (국내 주식)">
+        <Card title="보유 종목 기반 섹터 비중">
           <BarChartList
-            items={[
-              { label: '전기전자', value: 29.6 },
-              { label: 'IT 서비스', value: 16.2 },
-              { label: '금융', value: 11.3 },
-              { label: '자동차', value: 9.3 },
-              { label: '화학', value: 7.8 },
-              { label: '헬스케어', value: 6.4 },
-              { label: '기타', value: 19.6 },
-            ]}
+            items={allocation.map((item) => ({ label: item.name, value: item.rate }))}
           />
+          <p className="mt-4 text-xs leading-5 text-slate-500">
+            보유 종목 평가금액과 현금을 기준으로 계산합니다. 일부 항목은 데모 데이터일 수 있습니다.
+          </p>
         </Card>
       </div>
+
+      <Card title="내 보유 기준 공부 후보" action={<span className="text-sm text-slate-500">출처: holdings/sector</span>}>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {studyCandidates.map((candidate) => (
+            <div key={candidate.candidateSymbol} className="rounded-2xl border border-slate-800 bg-slate-950/25 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-bold text-slate-50">{candidate.candidateName}</div>
+                  <div className="mt-1 text-xs text-slate-500">{candidate.candidateSymbol} · {candidate.category}</div>
+                </div>
+                <div className="rounded-lg bg-blue-500/10 px-2 py-1 text-xs font-bold text-sky-300">{candidate.relevanceScore}</div>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-400">{candidate.studyReason}</p>
+              <div className="mt-3 space-y-1 text-xs text-slate-500">
+                {candidate.checkPoints.slice(0, 3).map((point) => <div key={point}>확인 포인트 · {point}</div>)}
+              </div>
+              <p className="mt-3 text-xs leading-5 text-yellow-100">{candidate.riskNote}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <Card title="최근 투자 기록" action={<span className="text-sm text-blue-400">더보기</span>}>

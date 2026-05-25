@@ -1,7 +1,6 @@
-package com.stockflow.trade;
+package com.stockflow.transaction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,7 +22,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @SpringBootTest
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-class TradeFlowIntegrationTest {
+class TransactionFlowIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -32,9 +31,39 @@ class TradeFlowIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Test
-    void loginAndMarketBuyUpdatesCashAndLedger() throws Exception {
+    void loginAndCreateBuyRecordStoresTransaction() throws Exception {
         String token = login("investor@stockflow.com", "stockflow1234");
-        BigDecimal cashBefore = portfolioCash(token);
+
+        mockMvc.perform(post("/api/transactions")
+                        .header("Authorization", bearer(token))
+                        .contentType("application/json")
+                        .content(json(Map.ofEntries(
+                                Map.entry("symbol", "005930"),
+                                Map.entry("stockName", "삼성전자"),
+                                Map.entry("transactionType", "BUY"),
+                                Map.entry("quantity", 1),
+                                Map.entry("price", 78600),
+                                Map.entry("fee", 12),
+                                Map.entry("tax", 0),
+                                Map.entry("transactionDate", "2026-05-25"),
+                                Map.entry("reason", "HBM 수요 증가 여부 확인"),
+                                Map.entry("memo", "실제 주문은 증권앱에서 처리했고 StockFlow에는 기록만 저장"),
+                                Map.entry("tags", java.util.List.of("반도체", "기록"))
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.transactionType").value("BUY"))
+                .andExpect(jsonPath("$.data.totalAmount").value(78600));
+
+        mockMvc.perform(get("/api/transactions").header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].reason").value("HBM 수요 증가 여부 확인"));
+    }
+
+    @Test
+    void deprecatedTradeOrderApiDoesNotCreateOrder() throws Exception {
+        String token = login("investor@stockflow.com", "stockflow1234");
 
         mockMvc.perform(post("/api/trades/orders")
                         .header("Authorization", bearer(token))
@@ -47,36 +76,8 @@ class TradeFlowIntegrationTest {
                                 "quantity", 1
                         ))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.status").value("COMPLETED"));
-
-        BigDecimal cashAfter = portfolioCash(token);
-        assertTrue(cashAfter.compareTo(cashBefore) < 0);
-
-        mockMvc.perform(get("/api/trades/ledger").header("Authorization", bearer(token)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].orderType").value("BUY"))
-                .andExpect(jsonPath("$.data[0].netCashAmount").value(-78612));
-    }
-
-    @Test
-    void oversellOrderIsRejected() throws Exception {
-        String token = login("investor@stockflow.com", "stockflow1234");
-
-        mockMvc.perform(post("/api/trades/orders")
-                        .header("Authorization", bearer(token))
-                        .contentType("application/json")
-                        .content(json(Map.of(
-                                "symbol", "005930",
-                                "orderType", "SELL",
-                                "orderMethod", "MARKET",
-                                "orderPrice", 78600,
-                                "quantity", 999999
-                        ))))
-                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
+                .andExpect(jsonPath("$.error.code").value("DEPRECATED_API"));
     }
 
     @Test
@@ -112,14 +113,6 @@ class TradeFlowIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andReturn();
         return read(result, "data", "accessToken").asText();
-    }
-
-    private BigDecimal portfolioCash(String token) throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/portfolio").header("Authorization", bearer(token)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andReturn();
-        return read(result, "data", "cash").decimalValue();
     }
 
     private JsonNode read(MvcResult result, String... path) throws Exception {

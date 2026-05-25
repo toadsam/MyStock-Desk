@@ -6,6 +6,7 @@ import com.stockflow.portfolio.dto.AllocationDto;
 import com.stockflow.portfolio.dto.HoldingDto;
 import com.stockflow.portfolio.dto.PerformancePointDto;
 import com.stockflow.portfolio.dto.PortfolioDto;
+import com.stockflow.portfolio.dto.PortfolioStudyCandidateDto;
 import com.stockflow.portfolio.dto.TransactionDto;
 import com.stockflow.portfolio.entity.Portfolio;
 import com.stockflow.portfolio.repository.HoldingRepository;
@@ -18,7 +19,10 @@ import com.stockflow.transaction.repository.InvestmentTransactionRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,15 +79,69 @@ public class PortfolioService {
         Portfolio portfolio = findPortfolio();
         portfolioSnapshotService.refresh(portfolio);
         BigDecimal totalAsset = portfolio.getTotalAsset();
-        List<AllocationDto> allocation = new ArrayList<>();
-        BigDecimal domesticStock = portfolio.getTotalEvaluationAmount();
-        if (domesticStock.compareTo(BigDecimal.ZERO) > 0) {
-            allocation.add(new AllocationDto("국내 주식", domesticStock, rate(domesticStock, totalAsset)));
-        }
+        Map<String, BigDecimal> sectorAmounts = new LinkedHashMap<>();
+        holdingRepository.findByPortfolioIdOrderByWeightDesc(portfolio.getId()).forEach(holding -> {
+            Stock stock = findStock(holding.getStockId());
+            String sector = stock.getSector() == null || stock.getSector().isBlank() ? "기타" : stock.getSector();
+            sectorAmounts.merge(sector, holding.getEvaluationAmount(), BigDecimal::add);
+        });
+        List<AllocationDto> allocation = sectorAmounts.entrySet().stream()
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .map(entry -> new AllocationDto(entry.getKey(), entry.getValue(), rate(entry.getValue(), totalAsset)))
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         if (portfolio.getCash().compareTo(BigDecimal.ZERO) > 0) {
             allocation.add(new AllocationDto("현금", portfolio.getCash(), rate(portfolio.getCash(), totalAsset)));
         }
         return allocation;
+    }
+
+    @Transactional
+    public List<PortfolioStudyCandidateDto> getStudyCandidates() {
+        Portfolio portfolio = findPortfolio();
+        portfolioSnapshotService.refresh(portfolio);
+        List<HoldingDto> holdings = getHoldings();
+        Map<String, BigDecimal> sectorWeights = holdings.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        holding -> holding.stock().sector(),
+                        java.util.stream.Collectors.mapping(HoldingDto::weight, java.util.stream.Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ));
+        String topSector = sectorWeights.entrySet().stream()
+                .max(Comparator.comparing(Map.Entry::getValue))
+                .map(Map.Entry::getKey)
+                .orElse("포트폴리오");
+        List<String> relatedHoldings = holdings.stream()
+                .filter(holding -> topSector.equals(holding.stock().sector()))
+                .map(holding -> holding.stock().name())
+                .toList();
+
+        List<Stock> candidates = stockRepository.findAll().stream()
+                .filter(stock -> holdings.stream().noneMatch(holding -> holding.stock().symbol().equals(stock.getSymbol())))
+                .sorted(Comparator.comparing(Stock::getMarketCap, Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(4)
+                .toList();
+
+        List<PortfolioStudyCandidateDto> result = new ArrayList<>();
+        for (Stock stock : candidates) {
+            boolean sameSector = topSector.equals(stock.getSector());
+            result.add(new PortfolioStudyCandidateDto(
+                    stock.getSymbol(),
+                    stock.getName(),
+                    stock.getIndustry(),
+                    sameSector ? "SAME_INDUSTRY" : "DIVERSIFICATION",
+                    sameSector
+                            ? "현재 포트폴리오에서 " + topSector + " 비중이 높아 같은 업종 내 실적과 뉴스 차이를 비교해볼 후보입니다."
+                            : "상위 비중 업종과 다른 흐름을 보이는지 확인해볼 분산 공부 후보입니다.",
+                    List.of("최근 실적 발표 일정", "매출과 영업이익률 변화", "내 보유 종목과 같이 움직이는지", "뉴스가 실제 실적으로 연결되는지"),
+                    relatedHoldings,
+                    sameSector ? 82 : 68,
+                    sameSector
+                            ? "같은 업종 관련 종목은 함께 하락할 수 있으므로 비중 확대 전 쏠림을 확인해야 합니다."
+                            : "분산 후보라도 사업을 이해하지 못하면 변동성에 대응하기 어렵습니다.",
+                    "holdings/sector/demo",
+                    java.time.LocalDateTime.now()
+            ));
+        }
+        return result;
     }
 
     public List<TransactionDto> getTransactions() {
