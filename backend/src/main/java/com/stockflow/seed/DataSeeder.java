@@ -27,8 +27,10 @@ import com.stockflow.research.repository.AiInsightRepository;
 import com.stockflow.stock.entity.Stock;
 import com.stockflow.stock.repository.StockRepository;
 import com.stockflow.trade.entity.Execution;
+import com.stockflow.trade.entity.TradeLedger;
 import com.stockflow.trade.entity.TradeOrder;
 import com.stockflow.trade.repository.ExecutionRepository;
+import com.stockflow.trade.repository.TradeLedgerRepository;
 import com.stockflow.trade.repository.TradeOrderRepository;
 import com.stockflow.watchlist.entity.Watchlist;
 import com.stockflow.watchlist.repository.WatchlistRepository;
@@ -56,6 +58,7 @@ public class DataSeeder implements CommandLineRunner {
     private final PortfolioRepository portfolioRepository;
     private final HoldingRepository holdingRepository;
     private final TradeOrderRepository tradeOrderRepository;
+    private final TradeLedgerRepository tradeLedgerRepository;
     private final ExecutionRepository executionRepository;
     private final NewsRepository newsRepository;
     private final AiInsightRepository aiInsightRepository;
@@ -84,7 +87,7 @@ public class DataSeeder implements CommandLineRunner {
         seedWatchlist(member.getId(), stocks);
         Portfolio portfolio = seedPortfolio(member.getId());
         seedHoldings(portfolio.getId(), stocks);
-        seedOrdersAndExecutions(member.getId(), stocks);
+        seedOrdersAndExecutions(member.getId(), portfolio, stocks);
         seedNews();
         seedInsights();
     }
@@ -291,7 +294,7 @@ public class DataSeeder implements CommandLineRunner {
                 .build();
     }
 
-    private void seedOrdersAndExecutions(Long memberId, Map<String, Stock> stocks) {
+    private void seedOrdersAndExecutions(Long memberId, Portfolio portfolio, Map<String, Stock> stocks) {
         List<TradeOrder> orders = tradeOrderRepository.saveAll(List.of(
                 order(memberId, stocks.get("005930"), OrderType.BUY, OrderMethod.LIMIT, 78200, 50, OrderStatus.COMPLETED, 2),
                 order(memberId, stocks.get("360750"), OrderType.BUY, OrderMethod.LIMIT, 12480, 30, OrderStatus.COMPLETED, 3),
@@ -304,13 +307,34 @@ public class DataSeeder implements CommandLineRunner {
 
         orders.stream()
                 .filter(order -> order.getStatus() == OrderStatus.COMPLETED)
-                .forEach(order -> executionRepository.save(Execution.builder()
-                        .orderId(order.getId())
-                        .stockId(order.getStockId())
-                        .executionPrice(order.getOrderPrice())
-                        .quantity(order.getQuantity())
-                        .executedAt(order.getCreatedAt().plusSeconds(11))
-                        .build()));
+                .forEach(order -> {
+                    LocalDateTime executedAt = order.getCreatedAt().plusSeconds(11);
+                    executionRepository.save(Execution.builder()
+                            .orderId(order.getId())
+                            .stockId(order.getStockId())
+                            .executionPrice(order.getOrderPrice())
+                            .quantity(order.getQuantity())
+                            .executedAt(executedAt)
+                            .build());
+                    tradeLedgerRepository.save(TradeLedger.builder()
+                            .memberId(memberId)
+                            .portfolioId(portfolio.getId())
+                            .orderId(order.getId())
+                            .stockId(order.getStockId())
+                            .orderType(order.getOrderType())
+                            .quantity(order.getQuantity())
+                            .executionPrice(order.getOrderPrice())
+                            .grossAmount(order.getEstimatedAmount())
+                            .fee(order.getFee())
+                            .netCashAmount(order.getOrderType() == OrderType.BUY
+                                    ? order.getEstimatedAmount().add(order.getFee()).negate()
+                                    : order.getEstimatedAmount().subtract(order.getFee()))
+                            .realizedProfitLoss(order.getOrderType() == OrderType.SELL ? bd(88_000) : BigDecimal.ZERO)
+                            .cashBalance(portfolio.getCash())
+                            .totalAsset(portfolio.getTotalAsset())
+                            .createdAt(executedAt)
+                            .build());
+                });
     }
 
     private TradeOrder order(

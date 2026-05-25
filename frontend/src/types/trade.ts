@@ -30,3 +30,19 @@ export interface Execution {
   quantity: number
   executedAt: string
 }
+
+export interface TradeLedger {
+  id: number
+  orderId: number
+  stock: Stock
+  orderType: OrderType
+  quantity: number
+  executionPrice: number
+  grossAmount: number
+  fee: number
+  netCashAmount: number
+  realizedProfitLoss: number
+  cashBalance: number
+  totalAsset: number
+  createdAt: string
+}

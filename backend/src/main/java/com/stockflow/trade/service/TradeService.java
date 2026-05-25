@@ -13,11 +13,14 @@ import com.stockflow.stock.dto.StockDto;
 import com.stockflow.stock.entity.Stock;
 import com.stockflow.stock.repository.StockRepository;
 import com.stockflow.trade.dto.ExecutionDto;
+import com.stockflow.trade.dto.TradeLedgerDto;
 import com.stockflow.trade.dto.TradeOrderDto;
 import com.stockflow.trade.dto.TradeOrderRequest;
 import com.stockflow.trade.entity.Execution;
+import com.stockflow.trade.entity.TradeLedger;
 import com.stockflow.trade.entity.TradeOrder;
 import com.stockflow.trade.repository.ExecutionRepository;
+import com.stockflow.trade.repository.TradeLedgerRepository;
 import com.stockflow.trade.repository.TradeOrderRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -37,6 +40,7 @@ public class TradeService {
 
     private final TradeOrderRepository tradeOrderRepository;
     private final ExecutionRepository executionRepository;
+    private final TradeLedgerRepository tradeLedgerRepository;
     private final StockRepository stockRepository;
     private final PortfolioRepository portfolioRepository;
     private final HoldingRepository holdingRepository;
@@ -74,13 +78,30 @@ public class TradeService {
                 .build());
 
         if (status == OrderStatus.COMPLETED) {
-            applyVirtualExecution(portfolio, stock, order, effectivePrice, estimatedAmount, fee);
+            LocalDateTime executedAt = LocalDateTime.now();
+            ExecutionSettlement settlement = applyVirtualExecution(portfolio, stock, order, effectivePrice, estimatedAmount, fee);
             executionRepository.save(Execution.builder()
                     .orderId(order.getId())
                     .stockId(stock.getId())
                     .executionPrice(effectivePrice)
                     .quantity(request.quantity())
-                    .executedAt(LocalDateTime.now())
+                    .executedAt(executedAt)
+                    .build());
+            tradeLedgerRepository.save(TradeLedger.builder()
+                    .memberId(memberId)
+                    .portfolioId(portfolio.getId())
+                    .orderId(order.getId())
+                    .stockId(stock.getId())
+                    .orderType(order.getOrderType())
+                    .quantity(order.getQuantity())
+                    .executionPrice(effectivePrice)
+                    .grossAmount(estimatedAmount)
+                    .fee(fee)
+                    .netCashAmount(settlement.netCashAmount())
+                    .realizedProfitLoss(settlement.realizedProfitLoss())
+                    .cashBalance(portfolio.getCash())
+                    .totalAsset(portfolio.getTotalAsset())
+                    .createdAt(executedAt)
                     .build());
         }
 
@@ -100,6 +121,12 @@ public class TradeService {
         return executionRepository.findAllByOrderByExecutedAtDesc().stream()
                 .filter(execution -> memberOrderIds.contains(execution.getOrderId()))
                 .map(this::toExecutionDto)
+                .toList();
+    }
+
+    public List<TradeLedgerDto> getLedger() {
+        return tradeLedgerRepository.findByMemberIdOrderByCreatedAtDesc(currentMemberProvider.currentMemberId()).stream()
+                .map(this::toLedgerDto)
                 .toList();
     }
 
@@ -149,7 +176,7 @@ public class TradeService {
         }
     }
 
-    private void applyVirtualExecution(
+    private ExecutionSettlement applyVirtualExecution(
             Portfolio portfolio,
             Stock stock,
             TradeOrder order,
@@ -157,7 +184,10 @@ public class TradeService {
             BigDecimal estimatedAmount,
             BigDecimal fee
     ) {
+        BigDecimal netCashAmount;
+        BigDecimal realizedProfitLoss = BigDecimal.ZERO;
         if (order.getOrderType() == OrderType.BUY) {
+            netCashAmount = estimatedAmount.add(fee).negate();
             portfolio.withdraw(estimatedAmount.add(fee));
             Holding holding = holdingRepository.findByPortfolioIdAndStockId(portfolio.getId(), stock.getId())
                     .orElseGet(() -> holdingRepository.save(Holding.builder()
@@ -173,15 +203,22 @@ public class TradeService {
                             .build()));
             holding.buy(order.getQuantity(), executionPrice);
         } else {
-            portfolio.deposit(estimatedAmount.subtract(fee));
+            netCashAmount = estimatedAmount.subtract(fee);
             Holding holding = holdingRepository.findByPortfolioIdAndStockId(portfolio.getId(), stock.getId())
                     .orElseThrow(() -> new IllegalArgumentException("매도 가능한 보유 종목이 없습니다."));
+            realizedProfitLoss = executionPrice
+                    .subtract(holding.getAveragePrice())
+                    .multiply(BigDecimal.valueOf(order.getQuantity()))
+                    .subtract(fee)
+                    .setScale(0, RoundingMode.HALF_UP);
+            portfolio.deposit(netCashAmount);
             holding.sell(order.getQuantity());
             if (holding.isEmpty()) {
                 holdingRepository.delete(holding);
             }
         }
         portfolioSnapshotService.refresh(portfolio);
+        return new ExecutionSettlement(netCashAmount, realizedProfitLoss);
     }
 
     private Portfolio findPortfolio(Long memberId) {
@@ -199,5 +236,14 @@ public class TradeService {
         Stock stock = stockRepository.findById(execution.getStockId())
                 .orElseThrow(() -> new IllegalArgumentException("종목을 찾을 수 없습니다."));
         return ExecutionDto.of(execution, StockDto.from(stock));
+    }
+
+    private TradeLedgerDto toLedgerDto(TradeLedger ledger) {
+        Stock stock = stockRepository.findById(ledger.getStockId())
+                .orElseThrow(() -> new IllegalArgumentException("종목을 찾을 수 없습니다."));
+        return TradeLedgerDto.of(ledger, StockDto.from(stock));
+    }
+
+    private record ExecutionSettlement(BigDecimal netCashAmount, BigDecimal realizedProfitLoss) {
     }
 }

@@ -30,7 +30,10 @@ export default function AuthPage() {
       } else {
         await auth.login({ email, password })
       }
-      navigate('/', { replace: true })
+      const from = typeof location.state === 'object' && location.state && 'from' in location.state
+        ? String(location.state.from)
+        : '/'
+      navigate(from, { replace: true })
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : '인증 처리 중 오류가 발생했습니다.')
     } finally {
@@ -43,7 +46,10 @@ export default function AuthPage() {
     setError(null)
     try {
       await auth.login({ email: 'investor@stockflow.com', password: 'stockflow1234' })
-      navigate('/', { replace: true })
+      const from = typeof location.state === 'object' && location.state && 'from' in location.state
+        ? String(location.state.from)
+        : '/'
+      navigate(from, { replace: true })
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : '데모 계정 로그인에 실패했습니다.')
     } finally {

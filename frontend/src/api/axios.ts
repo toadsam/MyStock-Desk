@@ -14,6 +14,18 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      localStorage.removeItem('stockflow.accessToken')
+      localStorage.removeItem('stockflow.member')
+      window.dispatchEvent(new CustomEvent('stockflow:auth-expired'))
+    }
+    return Promise.reject(error)
+  },
+)
+
 export async function requestData<T>(request: Promise<{ data: ApiResponse<T> }>, fallback: T): Promise<T> {
   try {
     const response = await request

@@ -13,6 +13,7 @@ public record TransactionDto(
         BigDecimal price,
         Integer quantity,
         BigDecimal amount,
+        BigDecimal realizedProfitLoss,
         OrderStatus status,
         LocalDateTime createdAt
 ) {

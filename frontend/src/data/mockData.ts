@@ -201,11 +201,11 @@ export const mockAllocation: Allocation[] = [
 ]
 
 export const mockTransactions: Transaction[] = [
-  { id: 1, stockName: 'Samsung Electronics', symbol: '005930', orderType: 'BUY', price: 78200, quantity: 50, amount: 3910000, status: 'COMPLETED', createdAt: now.toISOString() },
-  { id: 2, stockName: 'TIGER US S&P500', symbol: '360750', orderType: 'BUY', price: 12480, quantity: 30, amount: 374400, status: 'COMPLETED', createdAt: now.toISOString() },
-  { id: 3, stockName: 'Kakao', symbol: '035720', orderType: 'SELL', price: 44800, quantity: 40, amount: -1792000, status: 'COMPLETED', createdAt: now.toISOString() },
-  { id: 4, stockName: 'NAVER', symbol: '035420', orderType: 'BUY', price: 197500, quantity: 10, amount: 1975000, status: 'PENDING', createdAt: now.toISOString() },
-  { id: 5, stockName: 'SK hynix', symbol: '000660', orderType: 'BUY', price: 196500, quantity: 1, amount: 196500, status: 'COMPLETED', createdAt: now.toISOString() },
+  { id: 1, stockName: 'Samsung Electronics', symbol: '005930', orderType: 'BUY', price: 78200, quantity: 50, amount: 3910000, realizedProfitLoss: 0, status: 'COMPLETED', createdAt: now.toISOString() },
+  { id: 2, stockName: 'TIGER US S&P500', symbol: '360750', orderType: 'BUY', price: 12480, quantity: 30, amount: 374400, realizedProfitLoss: 0, status: 'COMPLETED', createdAt: now.toISOString() },
+  { id: 3, stockName: 'Kakao', symbol: '035720', orderType: 'SELL', price: 44800, quantity: 40, amount: -1792000, realizedProfitLoss: 124000, status: 'COMPLETED', createdAt: now.toISOString() },
+  { id: 4, stockName: 'NAVER', symbol: '035420', orderType: 'BUY', price: 197500, quantity: 10, amount: 1975000, realizedProfitLoss: 0, status: 'PENDING', createdAt: now.toISOString() },
+  { id: 5, stockName: 'SK hynix', symbol: '000660', orderType: 'BUY', price: 196500, quantity: 1, amount: 196500, realizedProfitLoss: 0, status: 'COMPLETED', createdAt: now.toISOString() },
 ]
 
 export const mockOrders: TradeOrder[] = mockTransactions.map((transaction) => ({

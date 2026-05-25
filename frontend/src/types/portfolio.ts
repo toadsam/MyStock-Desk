@@ -46,6 +46,7 @@ export interface Transaction {
   price: number
   quantity: number
   amount: number
+  realizedProfitLoss: number
   status: OrderStatus
   createdAt: string
 }

@@ -2,6 +2,7 @@ package com.stockflow.trade.controller;
 
 import com.stockflow.global.response.ApiResponse;
 import com.stockflow.trade.dto.ExecutionDto;
+import com.stockflow.trade.dto.TradeLedgerDto;
 import com.stockflow.trade.dto.TradeOrderDto;
 import com.stockflow.trade.dto.TradeOrderRequest;
 import com.stockflow.trade.service.TradeService;
@@ -36,6 +37,11 @@ public class TradeController {
     @GetMapping("/executions")
     public ApiResponse<List<ExecutionDto>> executions() {
         return ApiResponse.success(tradeService.getExecutions());
+    }
+
+    @GetMapping("/ledger")
+    public ApiResponse<List<TradeLedgerDto>> ledger() {
+        return ApiResponse.success(tradeService.getLedger());
     }
 
     @PatchMapping("/orders/{orderId}/cancel")

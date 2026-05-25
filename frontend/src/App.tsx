@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { ProtectedRoute } from './auth/ProtectedRoute'
 import AppLayout from './layouts/AppLayout'
 import AuthPage from './pages/AuthPage'
 import HomePage from './pages/HomePage'
@@ -17,8 +18,10 @@ export default function App() {
         <Route index element={<HomePage />} />
         <Route path="market" element={<MarketPage />} />
         <Route path="stock/:symbol" element={<StockDetailPage />} />
-        <Route path="portfolio" element={<PortfolioPage />} />
-        <Route path="trade" element={<TradePage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="portfolio" element={<PortfolioPage />} />
+          <Route path="trade" element={<TradePage />} />
+        </Route>
         <Route path="research" element={<ResearchPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

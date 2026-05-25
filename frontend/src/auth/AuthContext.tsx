@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { login as loginApi, register as registerApi } from '../api/authApi'
 import type { LoginRequest, RegisterRequest } from '../types/auth'
 import type { Member } from '../types/member'
@@ -31,6 +31,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMember(nextMember)
   }
 
+  const clear = () => {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(MEMBER_KEY)
+    setToken(null)
+    setMember(null)
+  }
+
+  useEffect(() => {
+    window.addEventListener('stockflow:auth-expired', clear)
+    return () => window.removeEventListener('stockflow:auth-expired', clear)
+  }, [])
+
   const value = useMemo<AuthContextValue>(
     () => ({
       member,
@@ -44,12 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const response = await registerApi(request)
         persist(response.accessToken, response.member)
       },
-      logout: () => {
-        localStorage.removeItem(TOKEN_KEY)
-        localStorage.removeItem(MEMBER_KEY)
-        setToken(null)
-        setMember(null)
-      },
+      logout: clear,
     }),
     [member, token],
   )

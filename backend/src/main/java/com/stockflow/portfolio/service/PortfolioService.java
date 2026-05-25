@@ -14,6 +14,7 @@ import com.stockflow.stock.dto.StockDto;
 import com.stockflow.stock.entity.Stock;
 import com.stockflow.stock.repository.StockRepository;
 import com.stockflow.trade.entity.TradeOrder;
+import com.stockflow.trade.repository.TradeLedgerRepository;
 import com.stockflow.trade.repository.TradeOrderRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -31,6 +32,7 @@ public class PortfolioService {
     private final HoldingRepository holdingRepository;
     private final StockRepository stockRepository;
     private final TradeOrderRepository tradeOrderRepository;
+    private final TradeLedgerRepository tradeLedgerRepository;
     private final CurrentMemberProvider currentMemberProvider;
     private final PortfolioSnapshotService portfolioSnapshotService;
 
@@ -106,6 +108,9 @@ public class PortfolioService {
                 order.getOrderPrice(),
                 order.getQuantity(),
                 amount,
+                tradeLedgerRepository.findFirstByOrderId(order.getId())
+                        .map(ledger -> ledger.getRealizedProfitLoss())
+                        .orElse(BigDecimal.ZERO),
                 order.getStatus(),
                 order.getCreatedAt()
         );

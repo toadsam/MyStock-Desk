@@ -1,5 +1,7 @@
 package com.stockflow.auth.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stockflow.global.response.ApiResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,9 +18,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
+    private final ObjectMapper objectMapper;
 
-    public JwtAuthenticationFilter(JwtProvider jwtProvider) {
+    public JwtAuthenticationFilter(JwtProvider jwtProvider, ObjectMapper objectMapper) {
         this.jwtProvider = jwtProvider;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -34,6 +38,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (IllegalArgumentException exception) {
                 SecurityContextHolder.clearContext();
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                objectMapper.writeValue(response.getWriter(), ApiResponse.fail("INVALID_TOKEN", "로그인이 만료되었거나 토큰이 올바르지 않습니다."));
+                return;
             }
         }
         filterChain.doFilter(request, response);
