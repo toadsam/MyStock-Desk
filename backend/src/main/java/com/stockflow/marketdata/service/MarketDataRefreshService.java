@@ -43,7 +43,9 @@ public class MarketDataRefreshService {
                 0,
                 LocalDateTime.now(),
                 marketDataProvider.supportsExternalApi(),
-                "현재는 데모 시세 Provider를 사용합니다. 외부 API Provider를 추가해 교체할 수 있습니다."
+                marketDataProvider.supportsExternalApi()
+                        ? "외부 시세 Provider를 사용합니다. 실제 주문/체결과는 연결되지 않습니다."
+                        : "현재는 데모 시세 Provider를 사용합니다. 외부 API Provider를 추가해 교체할 수 있습니다."
         );
     }
 
@@ -88,7 +90,9 @@ public class MarketDataRefreshService {
                 quoteBySymbol.size(),
                 refreshedAt,
                 marketDataProvider.supportsExternalApi(),
-                "시세 mock 데이터가 갱신되었습니다. 실제 증권사 주문/체결과는 연결되지 않습니다."
+                marketDataProvider.supportsExternalApi()
+                        ? "외부 시세 데이터가 갱신되었습니다. 실제 증권사 주문/체결과는 연결되지 않습니다."
+                        : "시세 mock 데이터가 갱신되었습니다. 실제 증권사 주문/체결과는 연결되지 않습니다."
         );
     }
 }

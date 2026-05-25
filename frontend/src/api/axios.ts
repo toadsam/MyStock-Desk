@@ -47,7 +47,7 @@ export async function requestStrictData<T>(request: Promise<{ data: ApiResponse<
     return response.data.data
   } catch (error) {
     if (axios.isAxiosError<ApiResponse<unknown>>(error)) {
-      throw new Error(error.response?.data.error?.message ?? error.message)
+      throw new Error(error.response?.data.error?.message ?? error.message, { cause: error })
     }
     throw error
   }

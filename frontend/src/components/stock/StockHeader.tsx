@@ -1,4 +1,4 @@
-import { Bell, Share2, Star } from 'lucide-react'
+import { Bell, NotebookPen, Share2, Star } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { Stock } from '../../types/stock'
 import { cn } from '../../utils/cn'
@@ -38,9 +38,8 @@ export function StockHeader({ stock }: { stock: Stock }) {
             <Button variant="outline" className="min-h-10 flex-1 px-3"><Bell className="h-4 w-4" /> 알림</Button>
             <Button variant="outline" className="min-h-10 flex-1 px-3"><Share2 className="h-4 w-4" /> 공유</Button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Link to={`/trade?symbol=${stock.symbol}&type=BUY`}><Button variant="buy" className="w-full">매수</Button></Link>
-            <Link to={`/trade?symbol=${stock.symbol}&type=SELL`}><Button variant="sell" className="w-full">매도</Button></Link>
+          <div className="grid grid-cols-1 gap-2">
+            <Link to={`/transactions?symbol=${stock.symbol}`}><Button variant="primary" className="w-full"><NotebookPen className="h-4 w-4" /> 거래 기록 추가</Button></Link>
           </div>
         </div>
       </div>

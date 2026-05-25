@@ -7,7 +7,6 @@ export function useAsyncData<T>(loader: () => Promise<T>, initialValue: T, deps:
 
   useEffect(() => {
     let mounted = true
-    setLoading(true)
     loader()
       .then((result) => {
         if (mounted) {

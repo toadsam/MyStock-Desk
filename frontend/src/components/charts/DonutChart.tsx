@@ -1,6 +1,5 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import type { Allocation } from '../../types/portfolio'
-import { formatWon } from '../../utils/format'
 
 const COLORS = ['#2f80ff', '#6d5dfc', '#e7d84c', '#22c55e', '#8ddc91']
 

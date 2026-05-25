@@ -7,7 +7,8 @@ import MarketPage from './pages/MarketPage'
 import PortfolioPage from './pages/PortfolioPage'
 import ResearchPage from './pages/ResearchPage'
 import StockDetailPage from './pages/StockDetailPage'
-import TradePage from './pages/TradePage'
+import ThemeDiscoveryPage from './pages/ThemeDiscoveryPage'
+import TransactionsPage from './pages/TransactionsPage'
 
 export default function App() {
   return (
@@ -17,10 +18,12 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route path="market" element={<MarketPage />} />
+        <Route path="themes" element={<ThemeDiscoveryPage />} />
         <Route path="stock/:symbol" element={<StockDetailPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="portfolio" element={<PortfolioPage />} />
-          <Route path="trade" element={<TradePage />} />
+          <Route path="transactions" element={<TransactionsPage />} />
+          <Route path="trade" element={<Navigate to="/transactions" replace />} />
         </Route>
         <Route path="research" element={<ResearchPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

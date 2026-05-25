@@ -1,4 +1,4 @@
-import type { OrderStatus, OrderType } from './common'
+import type { TransactionType } from './transaction'
 import type { Stock } from './stock'
 
 export interface Portfolio {
@@ -42,11 +42,10 @@ export interface Transaction {
   id: number
   stockName: string
   symbol: string
-  orderType: OrderType
+  transactionType: TransactionType
   price: number
   quantity: number
   amount: number
   realizedProfitLoss: number
-  status: OrderStatus
   createdAt: string
 }

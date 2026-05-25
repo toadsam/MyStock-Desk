@@ -1,36 +1,30 @@
-import { BarChart3, Home, Menu, Newspaper, Plus, Star } from 'lucide-react'
+import { BarChart3, GitBranch, Home, Plus, Star } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '../utils/cn'
 
 const tabs = [
   { label: '홈', to: '/', icon: Home },
-  { label: '관심종목', to: '/stock/005930', icon: Star },
+  { label: '기록', to: '/transactions', icon: Plus },
+  { label: '포트폴리오', to: '/portfolio', icon: Star },
+  { label: '테마', to: '/themes', icon: GitBranch },
   { label: '시장', to: '/market', icon: BarChart3 },
-  { label: 'AI 인사이트', to: '/research', icon: Newspaper },
-  { label: '더보기', to: '/portfolio', icon: Menu },
 ]
 
 export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 border-t border-slate-800/80 bg-slate-950/92 px-2 pb-[calc(.55rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl lg:hidden">
-      {tabs.map((tab, index) => {
+      {tabs.map((tab) => {
         const Icon = tab.icon
         return (
           <NavLink
             key={tab.label}
-            to={index === 2 ? '/trade' : tab.to}
+            to={tab.to}
             className={({ isActive }) =>
               cn('flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-xs font-semibold text-slate-400', isActive && 'text-blue-400')
             }
           >
-            {index === 2 ? (
-              <span className="grid h-12 w-12 -translate-y-3 place-items-center rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/35">
-                <Plus className="h-7 w-7" />
-              </span>
-            ) : (
-              <Icon className="h-6 w-6" />
-            )}
-            {index === 2 ? '주문/체결' : tab.label}
+            <Icon className="h-6 w-6" />
+            {tab.label}
           </NavLink>
         )
       })}

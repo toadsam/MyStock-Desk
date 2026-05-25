@@ -1,7 +1,7 @@
 import { Bell, Menu, Search } from 'lucide-react'
 import { Link, Outlet } from 'react-router-dom'
 import { getCurrentMember } from '../api/memberApi'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { mockMember } from '../data/mockData'
 import { useAsyncData } from '../hooks/useAsyncData'
 import BottomNav from './BottomNav'

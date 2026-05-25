@@ -1,22 +1,25 @@
-import { ArrowRight, Bot, ShoppingCart, Star, TrendingUp, WalletCards } from 'lucide-react'
+import { ArrowRight, ClipboardList, GitBranch, NotebookPen, WalletCards } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { getMarketBreadth, getMarketIndices, getIndexPrices } from '../api/marketApi'
 import { getNewsBriefing } from '../api/newsApi'
-import { getAllocation, getPortfolio } from '../api/portfolioApi'
+import { getAllocation, getHoldings, getPortfolio } from '../api/portfolioApi'
 import { getWatchlist } from '../api/watchlistApi'
+import { BeginnerGuideCard } from '../components/beginner/BeginnerGuideCard'
+import { InvestmentChecklist } from '../components/beginner/InvestmentChecklist'
+import { MistakeAlerts } from '../components/beginner/MistakeAlerts'
+import { PortfolioHealthCard } from '../components/beginner/PortfolioHealthCard'
+import { ReviewPromptCard } from '../components/beginner/ReviewPromptCard'
 import { LineAreaChart } from '../components/charts/LineAreaChart'
 import { Sparkline } from '../components/charts/Sparkline'
 import { AiSummaryCard } from '../components/stock/AiSummaryCard'
 import { NewsBriefing } from '../components/stock/NewsBriefing'
 import { Watchlist } from '../components/stock/Watchlist'
-import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
-import { StatCard } from '../components/ui/StatCard'
-import { indexPrices, mockAllocation, mockBreadth, mockIndices, mockNews, mockPortfolio, mockWatchlist } from '../data/mockData'
+import { indexPrices, mockAllocation, mockBreadth, mockHoldings, mockIndices, mockInvestmentTransactions, mockNews, mockPortfolio, mockWatchlist } from '../data/mockData'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { cn } from '../utils/cn'
-import { formatCompactWon, formatNumber, formatPercent, formatWon, isUp } from '../utils/format'
+import { formatNumber, formatPercent, formatWon, isUp } from '../utils/format'
 
 export default function HomePage() {
   const { data: portfolio } = useAsyncData(getPortfolio, mockPortfolio)
@@ -26,6 +29,7 @@ export default function HomePage() {
   const { data: news } = useAsyncData(getNewsBriefing, mockNews.slice(0, 6))
   const { data: breadth } = useAsyncData(getMarketBreadth, mockBreadth)
   const { data: allocation } = useAsyncData(getAllocation, mockAllocation)
+  const { data: holdings } = useAsyncData(getHoldings, mockHoldings)
 
   const kospi = indices[0]
 
@@ -65,6 +69,7 @@ export default function HomePage() {
             ))}
           </div>
         </Card>
+        <PortfolioHealthCard portfolio={portfolio} holdings={holdings} allocation={allocation} />
       </div>
 
       <div className="space-y-4">
@@ -94,9 +99,9 @@ export default function HomePage() {
         </Card>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <ActionCard icon={<ShoppingCart />} title="매수" text="원하는 종목을 매수합니다" to="/trade?symbol=005930&type=BUY" tone="blue" />
-          <ActionCard icon={<TrendingUp />} title="매도" text="보유 종목을 매도합니다" to="/trade?symbol=005930&type=SELL" tone="red" />
-          <ActionCard icon={<Star />} title="관심종목 추가" text="관심 종목을 등록하세요" to="/stock/005930" tone="violet" />
+          <ActionCard icon={<ClipboardList />} title="거래 기록 추가" text="직접 입력한 기록으로 포트폴리오를 갱신합니다" to="/transactions" tone="blue" />
+          <ActionCard icon={<NotebookPen />} title="투자 메모" text="매수·매도 이유와 체크포인트를 남깁니다" to="/transactions" tone="red" />
+          <ActionCard icon={<GitBranch />} title="테마탐색" text="호재가 퍼지는 공급망과 관련 종목을 공부합니다" to="/themes" tone="violet" />
         </div>
 
         <Card title="오늘의 시장 한눈에" action={<Link to="/market" className="text-sm text-blue-400">더보기</Link>}>
@@ -111,16 +116,28 @@ export default function HomePage() {
             ))}
           </div>
         </Card>
+        <InvestmentChecklist compact />
       </div>
 
       <div className="space-y-4">
+        <BeginnerGuideCard />
+        <Card title="오늘의 용어">
+          <div className="rounded-xl border border-slate-800 bg-slate-950/25 p-3">
+            <div className="text-lg font-bold text-slate-100">PER</div>
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              회사 이익 대비 주가가 비싼지 보는 지표입니다. 같은 업종끼리 비교해야 의미가 있고, 낮다고 무조건 좋은 것은 아닙니다.
+            </p>
+          </div>
+        </Card>
         <Card title="관심종목" action={<Link to="/stock/005930" className="text-sm text-blue-400">더보기</Link>}>
           <Watchlist items={watchlist} />
         </Card>
+        <MistakeAlerts holdings={holdings} transactions={mockInvestmentTransactions} />
+        <ReviewPromptCard transactions={mockInvestmentTransactions} />
         <Card title="뉴스 브리핑" action={<Link to="/research" className="text-sm text-blue-400">더보기</Link>}>
           <NewsBriefing news={news.slice(0, 5)} />
         </Card>
-        <AiSummaryCard content="시장 강세가 이어지고 있으며 반도체와 AI 인프라 업종의 수급 개선이 확인됩니다. 단기 변동성은 있지만 포트폴리오의 핵심 비중은 유지하는 전략이 적합합니다." />
+        <AiSummaryCard content="시장 강세가 이어지고 있으며 반도체와 AI 인프라 업종의 수급 개선이 확인됩니다. 다만 현재 보유 비중과 최근 뉴스 변화를 함께 점검해 기록 기반 판단을 보완하세요." />
       </div>
     </div>
   )

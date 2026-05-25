@@ -7,6 +7,7 @@ const topNav = [
   { label: '홈', to: '/' },
   { label: '투자', to: '/stock/005930' },
   { label: '시장', to: '/market' },
+  { label: '테마탐색', to: '/themes' },
   { label: '뉴스', to: '/research' },
   { label: '리서치', to: '/research' },
   { label: '커뮤니티', to: '/research' },

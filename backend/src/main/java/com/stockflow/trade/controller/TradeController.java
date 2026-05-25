@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/trades")
 @RequiredArgsConstructor
+@Deprecated(since = "transaction-records")
 public class TradeController {
 
     private final TradeService tradeService;

@@ -100,7 +100,8 @@ class TradeFlowIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andReturn();
 
-        assertEquals(new BigDecimal("100000000.00"), read(portfolio, "data", "totalAsset").decimalValue());
+        assertEquals(0, new BigDecimal("100000000.00")
+                .compareTo(read(portfolio, "data", "totalAsset").decimalValue()));
     }
 
     private String login(String email, String password) throws Exception {

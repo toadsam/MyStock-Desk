@@ -1,21 +1,10 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { login as loginApi, register as registerApi } from '../api/authApi'
-import type { LoginRequest, RegisterRequest } from '../types/auth'
 import type { Member } from '../types/member'
-
-interface AuthContextValue {
-  member: Member | null
-  token: string | null
-  isAuthenticated: boolean
-  login: (request: LoginRequest) => Promise<void>
-  register: (request: RegisterRequest) => Promise<void>
-  logout: () => void
-}
+import { AuthContext, type AuthContextValue } from './authContextCore'
 
 const TOKEN_KEY = 'stockflow.accessToken'
 const MEMBER_KEY = 'stockflow.member'
-
-const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
@@ -62,12 +51,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used inside AuthProvider')
-  }
-  return context
 }

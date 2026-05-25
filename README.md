@@ -1,8 +1,8 @@
 # StockFlow
 
-StockFlow는 관심종목, 시장 현황, 뉴스 브리핑, 포트폴리오, 가상 매수/매도, AI 투자 요약을 한 화면에서 관리하는 주식/투자 관리 웹앱 프로토타입입니다.
+StockFlow는 사용자가 직접 입력한 투자 기록을 기반으로 보유 종목, 수익률, 자산 비중, 뉴스 영향도, AI 체크포인트를 분석하는 투자 기록/포트폴리오 관리 웹앱 프로토타입입니다.
 
-이 프로젝트는 실제 증권사 API, 계좌 연동, 실주문 기능을 포함하지 않습니다. 모든 데이터와 AI 분석은 mock/seed data 기반이며, 주문은 가상 주문/가상 체결로만 처리됩니다.
+이 프로젝트는 실제 증권사 API, 실제 계좌 연동, 실제 주문 기능을 포함하지 않습니다. 포트폴리오는 사용자가 입력한 거래 기록을 바탕으로 계산하는 구조입니다. 시세와 테마탐색 뉴스는 외부 참고 데이터 Provider를 사용할 수 있고, Provider 실패 시에는 seed/mock data로 화면을 유지합니다. AI는 매수/매도 추천이 아니라 확인해야 할 점, 리스크, 뉴스 변화, 재무지표 변화, 내 보유 기준 영향도를 정리합니다.
 
 ## 기술 스택
 
@@ -20,10 +20,14 @@ backend/
     stock/
     market/
     portfolio/
+    transaction/
+    memo/
+    upload/
     watchlist/
     news/
-    trade/
     research/
+    theme/
+    marketdata/
     seed/
 frontend/
   src/
@@ -74,32 +78,48 @@ npm run dev
 VITE_API_BASE_URL=http://localhost:8080
 ```
 
-## H2 콘솔
-
-- URL: `http://localhost:8080/h2-console`
-- JDBC URL: `jdbc:h2:mem:stockflow`
-- Username: `sa`
-- Password: 빈 값
-
-## MySQL 전환
-
-`backend/src/main/resources/application-mysql.yml`에 MySQL 연결 설정이 준비되어 있습니다.
-
-```bash
-cd backend
-./gradlew bootRun --args='--spring.profiles.active=mysql'
-```
-
 ## 주요 페이지
 
 - `/` 홈 대시보드
 - `/login` 로그인
 - `/register` 회원가입
 - `/market` 시장 페이지
-- `/stock/005930` 종목 상세
+- `/stock/005930` 종목 상세 및 체크포인트
 - `/portfolio` 포트폴리오
-- `/trade` 주문/체결
-- `/research` AI 리서치
+- `/transactions` 거래 기록 입력/관리
+- `/trade` 기존 호환 리다이렉트
+- `/themes` 테마/공급망 연관 종목 탐색
+- `/research` AI 체크포인트
+
+## 외부 참고 데이터
+
+기본 설정은 `stockflow.market-data.provider: yahoo`입니다.
+
+- 시세 갱신: Yahoo Finance chart endpoint를 통해 현재가, 고가, 저가, 거래량을 참고 데이터로 가져옵니다.
+- 테마탐색 뉴스: Google News RSS 검색 결과를 읽어 최신 기사 제목, 출처, 발행시간, 반복 키워드를 표시합니다.
+- 네트워크 오류나 외부 응답 실패 시 기존 seed/mock data로 보정합니다.
+- 실제 증권사 주문, 체결, 계좌 잔고와는 연결되지 않습니다.
+- 테마 관련 종목 설명은 기본적으로 뉴스 근거와 공급망 관계를 바탕으로 로컬 설명을 생성합니다.
+- `stockflow.ai.provider: openai`와 `OPENAI_API_KEY`를 설정하면 OpenAI Responses API 기반 설명으로 교체됩니다. 이 경우에도 매수/매도 추천, 목표가, 상승 확률 표현은 사용하지 않도록 제한합니다.
+
+데모 시세 Provider로 되돌리려면 `application.yml`에서 아래처럼 변경하세요.
+
+```yaml
+stockflow:
+  market-data:
+    provider: demo
+```
+
+선택적 AI Provider 설정:
+
+```yaml
+stockflow:
+  ai:
+    provider: openai
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      model: ${OPENAI_MODEL:gpt-4.1-mini}
+```
 
 ## 주요 API
 
@@ -110,35 +130,47 @@ cd backend
 - `POST /api/data/refresh`
 - `GET /api/market/indices`
 - `GET /api/market/indices/{code}/prices`
-- `GET /api/market/heatmap`
-- `GET /api/market/sectors`
-- `GET /api/market/breadth`
 - `GET /api/stocks`
 - `GET /api/stocks/{symbol}`
 - `GET /api/stocks/{symbol}/prices`
-- `GET /api/stocks/{symbol}/orderbook`
 - `GET /api/stocks/{symbol}/news`
-- `GET /api/watchlist`
-- `POST /api/watchlist/{symbol}`
-- `DELETE /api/watchlist/{symbol}`
+- `GET /api/transactions`
+- `POST /api/transactions`
+- `GET /api/transactions/{id}`
+- `PATCH /api/transactions/{id}`
+- `DELETE /api/transactions/{id}`
+- `GET /api/transactions/summary`
+- `GET /api/transactions/timeline`
+- `POST /api/transactions/import/csv`
+- `GET /api/holdings`
+- `GET /api/holdings/{symbol}`
 - `GET /api/portfolio`
 - `GET /api/portfolio/holdings`
 - `GET /api/portfolio/performance`
 - `GET /api/portfolio/allocation`
 - `GET /api/portfolio/transactions`
-- `POST /api/trades/orders`
-- `GET /api/trades/orders`
-- `GET /api/trades/executions`
-- `PATCH /api/trades/orders/{orderId}/cancel`
+- `GET /api/investment-memos`
+- `POST /api/investment-memos`
+- `PATCH /api/investment-memos/{id}`
+- `DELETE /api/investment-memos/{id}`
+- `POST /api/uploads/screenshots`
 - `GET /api/news`
 - `GET /api/news/briefing`
 - `GET /api/news/research`
 - `GET /api/research/briefing`
 - `GET /api/research/sentiment`
 - `GET /api/research/risks`
-- `GET /api/research/recommendations`
 - `GET /api/research/portfolio-impact`
+- `GET /api/themes`
+- `GET /api/themes/search?keyword=nvidia`
+
+## CSV 형식
+
+```csv
+date,type,symbol,stockName,quantity,price,fee,tax,memo,reason,tags
+2026-05-25,BUY,005930,삼성전자,10,78600,590,0,6개월 이상 보유 예정,HBM 수요 증가 기대,반도체|장기보유
+```
 
 ## 주의사항
 
-StockFlow는 실제 투자/주문 서비스가 아닙니다. 모든 포트폴리오, 뉴스, 주가, AI 분석, 주문/체결 데이터는 데모용 가상 데이터입니다. `POST /api/data/refresh`도 데모 시세 Provider를 통해 mock 시세를 갱신할 뿐이며, 결제, 실명인증, 계좌연동, 민감정보 입력, 실제 매수/매도 기능은 구현하지 않았습니다.
+StockFlow는 투자 기록 관리 및 참고용 정보 제공을 목적으로 하며, 투자 판단의 최종 책임은 본인에게 있습니다. 실제 주문·체결 기능은 제공하지 않습니다.

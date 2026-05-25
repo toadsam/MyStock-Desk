@@ -4,6 +4,8 @@ import type { News } from '../types/news'
 import type { Allocation, Holding, PerformancePoint, Portfolio, Transaction } from '../types/portfolio'
 import type { PortfolioImpact, Recommendation, ResearchBriefing, Risk, SentimentSummary } from '../types/research'
 import type { OrderBook, PricePoint, Stock } from '../types/stock'
+import type { ThemeDiscovery } from '../types/theme'
+import type { HoldingSummary, InvestmentTransaction, TransactionSummary } from '../types/transaction'
 import type { Execution, TradeOrder, TradeOrderRequest } from '../types/trade'
 
 const now = new Date()
@@ -201,23 +203,23 @@ export const mockAllocation: Allocation[] = [
 ]
 
 export const mockTransactions: Transaction[] = [
-  { id: 1, stockName: 'Samsung Electronics', symbol: '005930', orderType: 'BUY', price: 78200, quantity: 50, amount: 3910000, realizedProfitLoss: 0, status: 'COMPLETED', createdAt: now.toISOString() },
-  { id: 2, stockName: 'TIGER US S&P500', symbol: '360750', orderType: 'BUY', price: 12480, quantity: 30, amount: 374400, realizedProfitLoss: 0, status: 'COMPLETED', createdAt: now.toISOString() },
-  { id: 3, stockName: 'Kakao', symbol: '035720', orderType: 'SELL', price: 44800, quantity: 40, amount: -1792000, realizedProfitLoss: 124000, status: 'COMPLETED', createdAt: now.toISOString() },
-  { id: 4, stockName: 'NAVER', symbol: '035420', orderType: 'BUY', price: 197500, quantity: 10, amount: 1975000, realizedProfitLoss: 0, status: 'PENDING', createdAt: now.toISOString() },
-  { id: 5, stockName: 'SK hynix', symbol: '000660', orderType: 'BUY', price: 196500, quantity: 1, amount: 196500, realizedProfitLoss: 0, status: 'COMPLETED', createdAt: now.toISOString() },
+  { id: 1, stockName: 'Samsung Electronics', symbol: '005930', transactionType: 'BUY', price: 78200, quantity: 50, amount: -3910000, realizedProfitLoss: 0, createdAt: now.toISOString() },
+  { id: 2, stockName: 'TIGER US S&P500', symbol: '360750', transactionType: 'BUY', price: 12480, quantity: 30, amount: -374400, realizedProfitLoss: 0, createdAt: now.toISOString() },
+  { id: 3, stockName: 'Kakao', symbol: '035720', transactionType: 'SELL', price: 44800, quantity: 40, amount: 1792000, realizedProfitLoss: 124000, createdAt: now.toISOString() },
+  { id: 4, stockName: 'NAVER', symbol: '035420', transactionType: 'BUY', price: 197500, quantity: 10, amount: -1975000, realizedProfitLoss: 0, createdAt: now.toISOString() },
+  { id: 5, stockName: 'SK hynix', symbol: '000660', transactionType: 'BUY', price: 196500, quantity: 1, amount: -196500, realizedProfitLoss: 0, createdAt: now.toISOString() },
 ]
 
 export const mockOrders: TradeOrder[] = mockTransactions.map((transaction) => ({
   id: transaction.id,
   stock: stockBySymbol(transaction.symbol),
-  orderType: transaction.orderType,
-  orderMethod: transaction.status === 'PENDING' ? 'LIMIT' : 'MARKET',
+  orderType: transaction.transactionType === 'SELL' ? 'SELL' : 'BUY',
+  orderMethod: 'MARKET',
   orderPrice: transaction.price,
   quantity: transaction.quantity,
   estimatedAmount: Math.abs(transaction.amount),
   fee: Math.round(Math.abs(transaction.amount) * 0.00015),
-  status: transaction.status,
+  status: 'COMPLETED',
   createdAt: transaction.createdAt,
 }))
 
@@ -248,6 +250,73 @@ export function createMockOrder(request: TradeOrderRequest): TradeOrder {
     createdAt: new Date().toISOString(),
   }
 }
+
+export const mockInvestmentTransactions: InvestmentTransaction[] = [
+  {
+    id: 1,
+    symbol: '005930',
+    stockName: '삼성전자',
+    transactionType: 'BUY',
+    quantity: 10,
+    price: 78600,
+    fee: 590,
+    tax: 0,
+    totalAmount: 786000,
+    realizedProfitLoss: 0,
+    transactionDate: '2026-05-25',
+    reason: 'HBM 수요 증가와 메모리 업황 회복 기대',
+    memo: '단기보다는 6개월 이상 보유 예정',
+    tags: ['반도체', '장기보유', '실적개선'],
+    createdAt: now.toISOString(),
+  },
+  {
+    id: 2,
+    symbol: '035420',
+    stockName: 'NAVER',
+    transactionType: 'SELL',
+    quantity: 5,
+    price: 198300,
+    fee: 149,
+    tax: 1546,
+    totalAmount: 991500,
+    realizedProfitLoss: 42000,
+    transactionDate: '2026-05-20',
+    reason: '단기 목표가 도달',
+    memo: '광고 회복 속도는 계속 확인',
+    tags: ['플랫폼', '리스크관리'],
+    createdAt: now.toISOString(),
+  },
+  {
+    id: 3,
+    symbol: 'DEPOSIT',
+    stockName: '입금',
+    transactionType: 'DEPOSIT',
+    quantity: 0,
+    price: 1000000,
+    fee: 0,
+    tax: 0,
+    totalAmount: 1000000,
+    realizedProfitLoss: 0,
+    transactionDate: '2026-05-15',
+    reason: '월 투자금 입금',
+    memo: '현금 비중 유지',
+    tags: ['현금흐름'],
+    createdAt: now.toISOString(),
+  },
+]
+
+export const mockTransactionSummary: TransactionSummary = {
+  monthlyTransactionCount: 12,
+  totalBuyAmount: 4820000,
+  totalSellAmount: 1950000,
+  realizedProfitLoss: 324000,
+  totalFee: 8400,
+}
+
+export const mockHoldingSummaries: HoldingSummary[] = [
+  { symbol: '005930', stockName: '삼성전자', quantity: 20, averagePrice: 72400, currentPrice: 78600, evaluationAmount: 1572000, profitLoss: 124000, returnRate: 8.56, realizedProfitLoss: 42000, weight: 18.4 },
+  { symbol: '000660', stockName: 'SK하이닉스', quantity: 8, averagePrice: 176000, currentPrice: 196500, evaluationAmount: 1572000, profitLoss: 164000, returnRate: 11.65, realizedProfitLoss: 0, weight: 16.8 },
+]
 
 export const mockNews: News[] = [
   ['Samsung HBM3E supply outlook improves', 'High value memory supply expectations are improving semiconductor sentiment.', 'Company', 'Yonhap', 'POSITIVE', '005930', 95],
@@ -350,3 +419,92 @@ export const mockPortfolioImpact: PortfolioImpact[] = mockNews.slice(0, 5).map((
   expectedImpact: [2.45, 1.78, 0.92, -0.56, -0.31][index],
   impactLabel: item.impactType === 'NEGATIVE' ? 'Risk check' : 'Positive impact',
 }))
+
+export const mockThemeDiscoveries: ThemeDiscovery[] = [
+  {
+    id: 'nvidia-ai-supply-chain',
+    keyword: 'nvidia',
+    title: '엔비디아 AI 반도체 공급망',
+    sourceCompany: 'NVIDIA',
+    summary: '엔비디아 호재는 GPU 자체보다 HBM, 파운드리, 패키징, AI 서버, 데이터센터 전력/냉각으로 영향이 퍼지는지 확인하는 흐름이 중요합니다.',
+    catalyst: {
+      title: 'AI GPU 수요와 데이터센터 투자 확대',
+      description: 'AI 학습/추론 서버 투자가 늘면 고성능 GPU뿐 아니라 메모리, 기판, 장비, 전력 인프라 수요도 함께 점검 대상이 됩니다.',
+      impactPaths: ['엔비디아', 'AI GPU', 'HBM/패키징', 'AI 서버/PCB', '데이터센터 전력/냉각'],
+    },
+    stages: [
+      { id: 'gpu', name: '핵심 기업', description: '이슈의 출발점이 되는 AI GPU와 가속기 생태계입니다.', focus: 'GPU 출하, 데이터센터 매출, 고객사 투자 계획', stockSymbols: ['NVDA', 'AMD'] },
+      { id: 'memory', name: 'HBM/메모리', description: 'AI GPU에 붙는 고대역폭 메모리 공급망입니다.', focus: 'HBM 공급 계약, 수율, 메모리 가격', stockSymbols: ['000660', '005930', 'MU'] },
+      { id: 'foundry', name: '파운드리/패키징', description: '칩 생산과 고급 패키징을 담당하는 영역입니다.', focus: '첨단 공정 가동률, CoWoS/패키징 증설', stockSymbols: ['TSM', '042700'] },
+      { id: 'server', name: 'AI 서버/기판', description: 'GPU를 실제 서버로 구성하는 하드웨어 영역입니다.', focus: '서버 수주, PCB 공급, 고객사 집중도', stockSymbols: ['SMCI', '007660'] },
+      { id: 'power', name: '전력/냉각 인프라', description: '데이터센터 증가로 전력기기와 냉각 수요가 늘어나는 영역입니다.', focus: '데이터센터 CAPEX, 전력 장비 수주, 마진', stockSymbols: ['VRT', '010120'] },
+    ],
+    relatedStocks: [
+      stockTheme('NVDA', 'NVIDIA', 'US', 'gpu', '핵심 기업', 1120, 'DIRECT', 'AI GPU 수요 증가 이슈의 출발점입니다.', ['데이터센터 매출', 'GPU 공급량', '주요 클라우드 고객 주문'], ['이미 높은 기대가 가격에 반영됐을 수 있음', '미중 규제와 공급 제약'], ['AI GPU', '대장주']),
+      stockTheme('000660', 'SK hynix', 'KR', 'memory', 'HBM/메모리', 196500, 'DIRECT', 'HBM 공급 확대 이슈가 엔비디아 GPU 수요와 직접 연결되는지 확인할 종목입니다.', ['HBM 매출 비중', '영업이익률', '공급 계약 뉴스'], ['HBM 기대가 과열되면 변동성이 커질 수 있음', '메모리 업황 둔화'], ['HBM', '메모리']),
+      stockTheme('005930', 'Samsung Electronics', 'KR', 'memory', 'HBM/메모리', 78600, 'INDIRECT', '메모리와 파운드리 양쪽 노출이 있어 AI 반도체 투자 사이클을 함께 볼 수 있습니다.', ['HBM 수율', '파운드리 가동률', '메모리 가격'], ['사업부가 커서 특정 테마 영향이 희석될 수 있음'], ['메모리', '파운드리']),
+      stockTheme('042700', 'Hanmi Semiconductor', 'KR', 'foundry', '파운드리/패키징', 146000, 'DIRECT', 'HBM용 패키징 장비 수요와 연결되는 장비주로 분류됩니다.', ['장비 수주', '고객사 투자', '영업이익률'], ['장비주는 수주 공백 시 변동성이 큼', '단기 테마 과열'], ['패키징', '장비']),
+      stockTheme('007660', 'IsuPetasys', 'KR', 'server', 'AI 서버/기판', 48200, 'INDIRECT', 'AI 서버용 고성능 PCB 수요 증가와 연결해 공부할 수 있습니다.', ['AI 서버 PCB 매출', '고객사 다변화', '마진'], ['특정 고객 의존도', '증설 비용'], ['PCB', 'AI서버']),
+      stockTheme('TSM', 'TSMC', 'US', 'foundry', '파운드리/패키징', 164, 'DIRECT', '엔비디아 GPU 생산과 첨단 패키징 병목을 함께 확인하는 핵심 파운드리입니다.', ['첨단 공정 매출', 'CoWoS 증설', '가동률'], ['지정학 리스크', '대형주라 기대 선반영 가능'], ['파운드리', '패키징']),
+      stockTheme('SMCI', 'Super Micro Computer', 'US', 'server', 'AI 서버/기판', 830, 'INDIRECT', 'GPU를 탑재한 AI 서버 수요와 연결되는 하드웨어 기업입니다.', ['서버 수주', '마진', '재고 회전'], ['회계/공시 이슈 확인 필요', '경쟁 심화'], ['AI서버', '하드웨어']),
+      stockTheme('VRT', 'Vertiv', 'US', 'power', '전력/냉각 인프라', 96, 'INDIRECT', '데이터센터 확대로 전력 관리와 냉각 인프라 수요가 늘어나는지 확인할 종목입니다.', ['데이터센터 수주', '영업이익률', '전력 인프라 투자'], ['밸류에이션 부담', '수주 둔화'], ['전력', '냉각']),
+      stockTheme('010120', 'LS ELECTRIC', 'KR', 'power', '전력/냉각 인프라', 130000, 'INDIRECT', '국내 전력기기와 데이터센터 전력 인프라 수요를 함께 확인할 수 있습니다.', ['전력기기 수주', '북미 매출', '마진'], ['원자재 가격', '수주 기대 선반영'], ['전력기기', '인프라']),
+    ],
+    beginnerSummary: [
+      '대장주 호재가 항상 모든 관련주 수익으로 이어지는 것은 아닙니다.',
+      '관련도가 높은지보다 실제 매출과 수주에 연결되는지 확인해야 합니다.',
+      '예산이 작다면 가격이 낮은 종목보다 변동성과 사업 이해도를 먼저 봐야 합니다.',
+    ],
+    aiCheckpoints: [
+      'HBM 공급 확대 뉴스가 반복되는지, 실제 분기 실적에서 매출로 확인되는지 보세요.',
+      'AI 서버와 전력 인프라 기업은 데이터센터 투자 계획이 둔화될 때 같이 흔들릴 수 있습니다.',
+      '반도체 보유 비중이 이미 높다면 관련주를 추가하기 전 포트폴리오 쏠림을 점검하세요.',
+    ],
+    riskNotes: ['단순 테마주는 뉴스가 약해지면 급격히 변동할 수 있습니다.', '미국 대형주 이슈가 국내 중소형주 실적으로 연결되는 데 시간이 걸릴 수 있습니다.', '낮은 주가가 낮은 위험을 의미하지는 않습니다.'],
+    repeatedKeywords: ['HBM', 'AI GPU', 'CoWoS', '데이터센터', '전력기기', 'AI 서버'],
+    liveNews: [
+      { title: 'AI GPU와 HBM 공급망 뉴스가 반복적으로 등장하고 있습니다', source: 'Google News', url: 'https://news.google.com', publishedAt: now.toISOString() },
+    ],
+    updatedAt: now.toISOString(),
+  },
+]
+
+function stockTheme(
+  symbol: string,
+  stockName: string,
+  market: 'KR' | 'US',
+  stageId: string,
+  stageName: string,
+  currentPrice: number,
+  relationLevel: 'DIRECT' | 'INDIRECT' | 'THEME',
+  relationReason: string,
+  checkMetrics: string[],
+  risks: string[],
+  tags: string[],
+) {
+  return {
+    symbol,
+    stockName,
+    market,
+    stageId,
+    stageName,
+    currentPrice,
+    relationLevel,
+    relationReason,
+    checkMetrics,
+    risks,
+    tags,
+    relationScore: 0,
+    evidenceCount: 0,
+    scoreFactors: [],
+    evidenceNews: [],
+    aiExplanation: {
+      summary: `${stockName}은 ${stageName} 관점에서 함께 확인할 후보입니다.`,
+      evidence: ['seed 데이터 기준 공급망 관계가 있습니다.'],
+      checkpoints: checkMetrics,
+      risks,
+      verdict: '실제 뉴스와 실적 연결 여부를 추가로 확인하세요.',
+      generatedBy: 'local-fallback',
+    },
+  }
+}

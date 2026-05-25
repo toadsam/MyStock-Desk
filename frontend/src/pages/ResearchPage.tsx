@@ -7,12 +7,12 @@ import {
   getResearchRisks,
   getResearchSentiment,
 } from '../api/researchApi'
+import { BeginnerNewsExplainer } from '../components/beginner/BeginnerNewsExplainer'
 import { DonutChart } from '../components/charts/DonutChart'
 import { Sparkline } from '../components/charts/Sparkline'
 import { NewsBriefing } from '../components/stock/NewsBriefing'
 import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
-import { StatCard } from '../components/ui/StatCard'
 import {
   indexPrices,
   mockBriefing,
@@ -24,7 +24,7 @@ import {
 } from '../data/mockData'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { cn } from '../utils/cn'
-import { formatNumber, formatPercent, formatWon, isUp } from '../utils/format'
+import { formatNumber, formatPercent, isUp } from '../utils/format'
 
 export default function ResearchPage() {
   const { data: briefing } = useAsyncData(getResearchBriefing, mockBriefing)
@@ -46,8 +46,8 @@ export default function ResearchPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-black text-slate-50 md:text-3xl">AI 리서치 브리핑</h1>
-              <span className="text-sm text-slate-500">AI가 분석한 오늘의 시장과 종목 인사이트</span>
+              <h1 className="text-2xl font-black text-slate-50 md:text-3xl">AI 체크포인트 브리핑</h1>
+              <span className="text-sm text-slate-500">AI가 정리한 확인 항목과 포트폴리오 영향도</span>
             </div>
             <div className="mt-6 rounded-2xl border border-blue-500/20 bg-blue-600/8 p-4">
               <div className="flex items-center gap-3">
@@ -110,7 +110,7 @@ export default function ResearchPage() {
           </div>
           <p className="mt-4 text-xs text-slate-500">AI 분석은 오늘 발행된 뉴스 2,300건 기준입니다.</p>
         </Card>
-        <Card title="AI 리스크 경고">
+        <Card title="주의할 리스크">
           <div className="space-y-3">
             {risks.slice(0, 3).map((risk, index) => (
               <div key={risk.title} className="rounded-xl border border-red-500/20 bg-red-500/8 p-3">
@@ -126,9 +126,13 @@ export default function ResearchPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.9fr]">
-        <Card title="AI 뉴스 인사이트" action={<Badge tone="blue">Beta</Badge>}>
+        <Card title="뉴스 변화 감지" action={<Badge tone="blue">Beta</Badge>}>
           <NewsBriefing news={news.slice(0, 5)} />
         </Card>
+        <BeginnerNewsExplainer news={news.slice(0, 3)} />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.9fr]">
         <Card title="내 포트폴리오 영향도 TOP 뉴스" action={<span className="text-sm text-blue-400">더보기</span>}>
           <div className="space-y-3">
             {impact.map((item) => (
@@ -146,7 +150,7 @@ export default function ResearchPage() {
         </Card>
       </div>
 
-      <Card title="AI 추천 관심 종목" action={<span className="text-sm text-blue-400">더보기</span>}>
+      <Card title="확인해야 할 종목" action={<span className="text-sm text-blue-400">더보기</span>}>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {recommendations.map((item) => (
             <div key={item.symbol} className="rounded-2xl border border-slate-800 bg-slate-950/25 p-4">
@@ -159,8 +163,8 @@ export default function ResearchPage() {
               </div>
               <div className="text-sm text-slate-400">{item.reason}</div>
               <div className="mt-4 flex items-end justify-between">
-                <span className="text-slate-400">적정가 {formatWon(item.targetPrice)}</span>
-                <span className="text-lg font-bold text-emerald-400">+{item.upside.toFixed(1)}%</span>
+                <span className="text-slate-400">현재 확인 기준</span>
+                <span className="text-lg font-bold text-emerald-400">영향도 {item.upside.toFixed(1)}</span>
               </div>
             </div>
           ))}
@@ -169,7 +173,7 @@ export default function ResearchPage() {
 
       <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 text-xs text-slate-500">
         <AlertTriangle className="mr-2 inline h-4 w-4 text-yellow-400" />
-        AI 분석은 mock data 기반의 참고 정보이며 실제 투자 조언이나 주문 권유가 아닙니다.
+        AI 분석은 mock data 기반의 참고 정보이며 매수·매도 추천이나 실제 주문 권유가 아닙니다.
       </div>
     </div>
   )

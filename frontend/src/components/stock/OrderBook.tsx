@@ -1,5 +1,4 @@
 import type { OrderBook as OrderBookType } from '../../types/stock'
-import { cn } from '../../utils/cn'
 import { formatNumber, formatPercent } from '../../utils/format'
 
 export function OrderBook({ orderBook }: { orderBook: OrderBookType }) {

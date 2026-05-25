@@ -37,13 +37,22 @@ public class Portfolio {
 
     public void withdraw(BigDecimal amount) {
         if (cash.compareTo(amount) < 0) {
-            throw new IllegalArgumentException("주문 가능 금액이 부족합니다.");
+            throw new IllegalArgumentException("사용 가능한 현금이 부족합니다.");
         }
         cash = cash.subtract(amount);
     }
 
     public void deposit(BigDecimal amount) {
         cash = cash.add(amount);
+    }
+
+    public void resetForRecordRecalculation(BigDecimal cash) {
+        this.cash = cash.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+        this.totalAsset = this.cash;
+        this.totalPurchaseAmount = BigDecimal.ZERO;
+        this.totalEvaluationAmount = BigDecimal.ZERO;
+        this.totalProfitLoss = BigDecimal.ZERO;
+        this.totalReturnRate = BigDecimal.ZERO;
     }
 
     public void refreshTotals(BigDecimal totalPurchaseAmount, BigDecimal totalEvaluationAmount) {

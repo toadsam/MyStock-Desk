@@ -1,7 +1,7 @@
 package com.stockflow.portfolio.service;
 
 import com.stockflow.auth.security.CurrentMemberProvider;
-import com.stockflow.global.type.OrderType;
+import com.stockflow.global.type.TransactionType;
 import com.stockflow.portfolio.dto.AllocationDto;
 import com.stockflow.portfolio.dto.HoldingDto;
 import com.stockflow.portfolio.dto.PerformancePointDto;
@@ -13,9 +13,8 @@ import com.stockflow.portfolio.repository.PortfolioRepository;
 import com.stockflow.stock.dto.StockDto;
 import com.stockflow.stock.entity.Stock;
 import com.stockflow.stock.repository.StockRepository;
-import com.stockflow.trade.entity.TradeOrder;
-import com.stockflow.trade.repository.TradeLedgerRepository;
-import com.stockflow.trade.repository.TradeOrderRepository;
+import com.stockflow.transaction.entity.InvestmentTransaction;
+import com.stockflow.transaction.repository.InvestmentTransactionRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -31,8 +30,7 @@ public class PortfolioService {
     private final PortfolioRepository portfolioRepository;
     private final HoldingRepository holdingRepository;
     private final StockRepository stockRepository;
-    private final TradeOrderRepository tradeOrderRepository;
-    private final TradeLedgerRepository tradeLedgerRepository;
+    private final InvestmentTransactionRepository transactionRepository;
     private final CurrentMemberProvider currentMemberProvider;
     private final PortfolioSnapshotService portfolioSnapshotService;
 
@@ -89,30 +87,27 @@ public class PortfolioService {
     }
 
     public List<TransactionDto> getTransactions() {
-        return tradeOrderRepository.findTop10ByMemberIdOrderByCreatedAtDesc(currentMemberProvider.currentMemberId()).stream()
+        return transactionRepository.findByMemberIdOrderByTransactionDateDescCreatedAtDesc(currentMemberProvider.currentMemberId()).stream()
+                .limit(10)
                 .map(this::toTransaction)
                 .toList();
     }
 
-    private TransactionDto toTransaction(TradeOrder order) {
-        Stock stock = findStock(order.getStockId());
-        BigDecimal amount = order.getEstimatedAmount();
-        if (order.getOrderType() == OrderType.SELL) {
+    private TransactionDto toTransaction(InvestmentTransaction transaction) {
+        BigDecimal amount = transaction.getTotalAmount();
+        if (transaction.getTransactionType() == TransactionType.BUY || transaction.getTransactionType() == TransactionType.WITHDRAWAL) {
             amount = amount.negate();
         }
         return new TransactionDto(
-                order.getId(),
-                stock.getName(),
-                stock.getSymbol(),
-                order.getOrderType(),
-                order.getOrderPrice(),
-                order.getQuantity(),
+                transaction.getId(),
+                transaction.getStockName(),
+                transaction.getSymbol(),
+                transaction.getTransactionType(),
+                transaction.getPrice(),
+                transaction.getQuantity(),
                 amount,
-                tradeLedgerRepository.findFirstByOrderId(order.getId())
-                        .map(ledger -> ledger.getRealizedProfitLoss())
-                        .orElse(BigDecimal.ZERO),
-                order.getStatus(),
-                order.getCreatedAt()
+                transaction.getRealizedProfitLoss(),
+                transaction.getCreatedAt()
         );
     }
 

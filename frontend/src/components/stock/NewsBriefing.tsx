@@ -1,5 +1,4 @@
 import type { News } from '../../types/news'
-import { cn } from '../../utils/cn'
 import { formatDateTime } from '../../utils/format'
 import { Badge } from '../ui/Badge'
 

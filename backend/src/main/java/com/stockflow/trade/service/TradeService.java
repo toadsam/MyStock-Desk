@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Deprecated(since = "transaction-records")
 public class TradeService {
 
     private static final BigDecimal FEE_RATE = new BigDecimal("0.00015");
@@ -139,7 +140,7 @@ public class TradeService {
             throw new IllegalArgumentException("취소할 수 없는 주문입니다.");
         }
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new IllegalArgumentException("미체결 주문만 취소할 수 있습니다.");
+            throw new IllegalArgumentException("대기 상태의 기록만 변경할 수 있습니다.");
         }
         order.cancel();
         return toOrderDto(order);

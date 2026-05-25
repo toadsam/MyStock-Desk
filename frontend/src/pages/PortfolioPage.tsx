@@ -1,5 +1,8 @@
 import { Eye, Info } from 'lucide-react'
 import { getAllocation, getHoldings, getPerformance, getPortfolio, getTransactions } from '../api/portfolioApi'
+import { MistakeAlerts } from '../components/beginner/MistakeAlerts'
+import { PortfolioHealthCard } from '../components/beginner/PortfolioHealthCard'
+import { ReviewPromptCard } from '../components/beginner/ReviewPromptCard'
 import { BarChartList } from '../components/charts/BarChartCard'
 import { DonutChart } from '../components/charts/DonutChart'
 import { PortfolioLineChart } from '../components/charts/LineAreaChart'
@@ -7,7 +10,7 @@ import { AiSummaryCard } from '../components/stock/AiSummaryCard'
 import { HoldingsTable } from '../components/stock/HoldingsTable'
 import { Card } from '../components/ui/Card'
 import { StatCard } from '../components/ui/StatCard'
-import { mockAllocation, mockHoldings, mockPerformance, mockPortfolio, mockTransactions } from '../data/mockData'
+import { mockAllocation, mockHoldings, mockInvestmentTransactions, mockPerformance, mockPortfolio, mockTransactions } from '../data/mockData'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { cn } from '../utils/cn'
 import { formatNumber, formatPercent, formatWon, isUp } from '../utils/format'
@@ -35,6 +38,11 @@ export default function PortfolioPage() {
         <StatCard label="일간 수익" value={formatWon(portfolio.dailyProfitLoss)} change={portfolio.dailyReturnRate} />
         <StatCard label="누적 수익" value={formatWon(portfolio.totalProfitLoss)} change={portfolio.totalReturnRate} />
         <StatCard label="예수금" value={formatWon(portfolio.cash)} detail="총 자산 대비 5.49%" />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+        <PortfolioHealthCard portfolio={portfolio} holdings={holdings} allocation={allocation} />
+        <MistakeAlerts holdings={holdings} transactions={mockInvestmentTransactions} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.65fr_0.9fr]">
@@ -80,7 +88,7 @@ export default function PortfolioPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <Card title="최근 거래 내역" action={<span className="text-sm text-blue-400">더보기</span>}>
+        <Card title="최근 투자 기록" action={<span className="text-sm text-blue-400">더보기</span>}>
           <div className="overflow-x-auto">
             <table className="compact-table text-sm">
               <thead>
@@ -89,7 +97,7 @@ export default function PortfolioPage() {
                   <th>종목명</th>
                   <th>구분</th>
                   <th>수량</th>
-                  <th>체결가</th>
+                  <th>기록 가격</th>
                   <th>금액</th>
                 </tr>
               </thead>
@@ -98,8 +106,8 @@ export default function PortfolioPage() {
                   <tr key={transaction.id}>
                     <td>{transaction.createdAt.slice(0, 10)}</td>
                     <td>{transaction.stockName}</td>
-                    <td className={transaction.orderType === 'BUY' ? 'text-red-400' : 'text-blue-400'}>
-                      {transaction.orderType === 'BUY' ? '매수' : '매도'}
+                    <td className={transaction.transactionType === 'BUY' ? 'text-red-400' : transaction.transactionType === 'SELL' ? 'text-blue-400' : 'text-emerald-400'}>
+                      {transaction.transactionType === 'BUY' ? '매수' : transaction.transactionType === 'SELL' ? '매도' : transaction.transactionType === 'DIVIDEND' ? '배당' : transaction.transactionType === 'DEPOSIT' ? '입금' : '출금'}
                     </td>
                     <td>{formatNumber(transaction.quantity)}</td>
                     <td>{formatNumber(transaction.price)}</td>
@@ -111,11 +119,14 @@ export default function PortfolioPage() {
           </div>
         </Card>
 
-        <AiSummaryCard
-          title="AI 리밸런싱 인사이트"
-          content="현재 포트폴리오는 전기전자 섹터 비중이 높습니다. 금융/헬스케어 섹터 비중을 5~10% 확대하고 단기 변동성이 큰 일부 종목은 분산을 검토하세요."
-          score={76}
-        />
+        <div className="space-y-4">
+          <AiSummaryCard
+            title="AI 체크포인트"
+            content="현재 포트폴리오는 전기전자 섹터 비중이 높습니다. 추가 기록을 남기기 전 특정 섹터 쏠림, 최근 뉴스 변화, 보유 이유의 유효성을 함께 확인하세요."
+            score={76}
+          />
+          <ReviewPromptCard transactions={mockInvestmentTransactions} />
+        </div>
       </div>
     </div>
   )

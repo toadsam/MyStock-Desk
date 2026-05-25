@@ -8,6 +8,7 @@ import com.stockflow.global.type.OrderType;
 import com.stockflow.global.type.SectorPerformanceType;
 import com.stockflow.global.type.Sentiment;
 import com.stockflow.global.type.TargetType;
+import com.stockflow.global.type.TransactionType;
 import com.stockflow.market.entity.MarketIndex;
 import com.stockflow.market.entity.PricePoint;
 import com.stockflow.market.entity.SectorPerformance;
@@ -32,6 +33,8 @@ import com.stockflow.trade.entity.TradeOrder;
 import com.stockflow.trade.repository.ExecutionRepository;
 import com.stockflow.trade.repository.TradeLedgerRepository;
 import com.stockflow.trade.repository.TradeOrderRepository;
+import com.stockflow.transaction.entity.InvestmentTransaction;
+import com.stockflow.transaction.repository.InvestmentTransactionRepository;
 import com.stockflow.watchlist.entity.Watchlist;
 import com.stockflow.watchlist.repository.WatchlistRepository;
 import java.math.BigDecimal;
@@ -60,6 +63,7 @@ public class DataSeeder implements CommandLineRunner {
     private final TradeOrderRepository tradeOrderRepository;
     private final TradeLedgerRepository tradeLedgerRepository;
     private final ExecutionRepository executionRepository;
+    private final InvestmentTransactionRepository transactionRepository;
     private final NewsRepository newsRepository;
     private final AiInsightRepository aiInsightRepository;
     private final SectorPerformanceRepository sectorPerformanceRepository;
@@ -88,6 +92,7 @@ public class DataSeeder implements CommandLineRunner {
         Portfolio portfolio = seedPortfolio(member.getId());
         seedHoldings(portfolio.getId(), stocks);
         seedOrdersAndExecutions(member.getId(), portfolio, stocks);
+        seedInvestmentTransactions(member.getId(), stocks);
         seedNews();
         seedInsights();
     }
@@ -360,6 +365,75 @@ public class DataSeeder implements CommandLineRunner {
                 .fee(estimated.multiply(new BigDecimal("0.00015")).setScale(0, RoundingMode.HALF_UP))
                 .status(status)
                 .createdAt(LocalDateTime.now().minusDays(daysAgo))
+                .build();
+    }
+
+    private void seedInvestmentTransactions(Long memberId, Map<String, Stock> stocks) {
+        transactionRepository.saveAll(List.of(
+                transaction(memberId, stocks.get("005930"), TransactionType.BUY, 50, 78200, 587, 0, 0, 2, "HBM 수요 증가 기대", "6개월 이상 보유 예정", "반도체,장기보유"),
+                transaction(memberId, stocks.get("360750"), TransactionType.BUY, 30, 12480, 56, 0, 0, 3, "해외지수 분산 목적", "월 적립 후보", "ETF,분산"),
+                transaction(memberId, stocks.get("035720"), TransactionType.SELL, 40, 44800, 269, 2790, 88000, 4, "단기 목표가 도달", "플랫폼 규제 뉴스 확인 후 일부 정리", "플랫폼,리스크관리"),
+                transaction(memberId, stocks.get("000660"), TransactionType.BUY, 1, 196500, 29, 0, 0, 8, "HBM 매출 비중 확대", "실적 발표 전까지 뉴스 흐름 확인", "반도체,실적개선"),
+                transaction(memberId, stocks.get("005380"), TransactionType.BUY, 20, 236500, 710, 0, 0, 13, "북미 판매 회복 기대", "환율과 전기차 판매량 체크", "자동차,환율"),
+                cashTransaction(memberId, TransactionType.DEPOSIT, 1_000_000, 15, "월 투자금 입금", "정기 현금 유입"),
+                cashTransaction(memberId, TransactionType.DIVIDEND, 124_000, 22, "배당금 입금", "현금흐름 기록")
+        ));
+    }
+
+    private InvestmentTransaction transaction(
+            Long memberId,
+            Stock stock,
+            TransactionType type,
+            int quantity,
+            long price,
+            long fee,
+            long tax,
+            long realizedProfitLoss,
+            int daysAgo,
+            String reason,
+            String memo,
+            String tags
+    ) {
+        BigDecimal amount = bd(price).multiply(BigDecimal.valueOf(quantity));
+        return InvestmentTransaction.builder()
+                .memberId(memberId)
+                .stockId(stock.getId())
+                .symbol(stock.getSymbol())
+                .stockName(stock.getName())
+                .transactionType(type)
+                .quantity(quantity)
+                .price(bd(price))
+                .fee(bd(fee))
+                .tax(bd(tax))
+                .totalAmount(amount)
+                .realizedProfitLoss(bd(realizedProfitLoss))
+                .transactionDate(LocalDateTime.now().minusDays(daysAgo).toLocalDate())
+                .reason(reason)
+                .memo(memo)
+                .tags(tags)
+                .createdAt(LocalDateTime.now().minusDays(daysAgo))
+                .updatedAt(LocalDateTime.now().minusDays(daysAgo))
+                .build();
+    }
+
+    private InvestmentTransaction cashTransaction(Long memberId, TransactionType type, long amount, int daysAgo, String reason, String memo) {
+        return InvestmentTransaction.builder()
+                .memberId(memberId)
+                .symbol(type.name())
+                .stockName(type == TransactionType.DEPOSIT ? "입금" : "배당")
+                .transactionType(type)
+                .quantity(0)
+                .price(bd(amount))
+                .fee(BigDecimal.ZERO)
+                .tax(BigDecimal.ZERO)
+                .totalAmount(bd(amount))
+                .realizedProfitLoss(BigDecimal.ZERO)
+                .transactionDate(LocalDateTime.now().minusDays(daysAgo).toLocalDate())
+                .reason(reason)
+                .memo(memo)
+                .tags("현금흐름")
+                .createdAt(LocalDateTime.now().minusDays(daysAgo))
+                .updatedAt(LocalDateTime.now().minusDays(daysAgo))
                 .build();
     }
 
