@@ -9,6 +9,7 @@ const topNav = [
   { label: '포트폴리오', to: '/portfolio' },
   { label: '관심종목', to: '/watchlist' },
   { label: '실적 캘린더', to: '/earnings-calendar' },
+  { label: '재무분석', to: '/financial-analysis' },
   { label: '테마탐색', to: '/themes' },
   { label: '리서치', to: '/research' },
   { label: 'AI 리포트', to: '/ai-report' },

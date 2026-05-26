@@ -82,6 +82,11 @@ export default function StockDetailPage() {
           <InfoRow label="52주 최고" value={formatNumber(stock.week52High)} />
           <InfoRow label="52주 최저" value={formatNumber(stock.week52Low)} />
           <InfoRow label="업종" value={stock.industry} />
+          <div className="mt-4">
+            <Link to={`/financial-analysis?symbol=${stock.symbol}`}>
+              <Button variant="outline" className="w-full">재무제표 분석하기</Button>
+            </Link>
+          </div>
         </Card>
 
         <AiSummaryCard

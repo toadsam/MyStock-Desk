@@ -4,6 +4,7 @@ import AppLayout from './layouts/AppLayout'
 import AiReportPage from './pages/AiReportPage'
 import AuthPage from './pages/AuthPage'
 import EarningsCalendarPage from './pages/EarningsCalendarPage'
+import FinancialAnalysisPage from './pages/FinancialAnalysisPage'
 import HomePage from './pages/HomePage'
 import MarketPage from './pages/MarketPage'
 import PortfolioPage from './pages/PortfolioPage'
@@ -21,6 +22,7 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route path="market" element={<MarketPage />} />
+        <Route path="financial-analysis" element={<FinancialAnalysisPage />} />
         <Route path="themes" element={<ThemeDiscoveryPage />} />
         <Route path="stock/:symbol" element={<StockDetailPage />} />
         <Route element={<ProtectedRoute />}>

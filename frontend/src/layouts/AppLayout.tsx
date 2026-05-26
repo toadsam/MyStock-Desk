@@ -38,7 +38,7 @@ export default function AppLayout() {
         </div>
       </div>
       <Sidebar />
-      <main className="mobile-safe-bottom px-4 py-4 md:px-6 lg:ml-24 lg:px-5 lg:py-4">
+      <main className="mobile-safe-bottom min-w-0 px-4 py-4 md:px-6 lg:ml-24 lg:px-5 lg:py-4">
         <Outlet />
       </main>
       <footer className="hidden border-t border-slate-800 px-6 py-3 text-xs text-slate-500 lg:ml-24 lg:block">
