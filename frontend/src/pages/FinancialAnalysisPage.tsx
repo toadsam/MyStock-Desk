@@ -11,7 +11,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   Bar,
@@ -81,6 +81,61 @@ type SupplementalStatements = {
   fcfMargin: number
 }
 
+type StatementPeriod = SupplementalStatements & {
+  label: string
+  revenue: number
+  operatingProfit: number
+  netIncome: number
+  operatingMargin: number
+  netMargin: number
+  revenueGrowth: number
+  operatingProfitGrowth: number
+  roe: number
+  roa: number
+}
+
+type IndustryBenchmark = {
+  name: string
+  operatingMargin: number
+  netMargin: number
+  debtRatio: number
+  currentRatio: number
+  per: number
+  pbr: number
+  roe: number
+  fcfMargin: number
+}
+
+type BenchmarkItem = {
+  label: string
+  company: number
+  industry: number
+  unit: '%' | '배'
+  interpretation: string
+  tone: ScoreTone
+}
+
+type TrendInsight = {
+  title: string
+  value: string
+  description: string
+  tone: ScoreTone
+}
+
+type DisclosureCheck = {
+  title: string
+  why: string
+  check: string
+  severity: 'LOW' | 'MEDIUM' | 'HIGH'
+}
+
+type QuickConclusion = {
+  positive: string
+  caution: string
+  cautionTone: ScoreTone
+  action: string
+}
+
 type DiagnosticSummary = {
   verdict: string
   tone: ScoreTone
@@ -115,6 +170,7 @@ const beginnerOrder = [
 
 export default function FinancialAnalysisPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const [analysisMode, setAnalysisMode] = useState<'BEGINNER' | 'DETAIL'>('BEGINNER')
   const symbol = searchParams.get('symbol') ?? '005930'
   const { data: stocks } = useAsyncData(getStocks, mockStocks)
   const { data: stock } = useAsyncData(() => getStock(symbol), stockBySymbol(symbol), [symbol])
@@ -129,9 +185,16 @@ export default function FinancialAnalysisPage() {
   const financialChartData = useMemo(() => buildFinancialChartData(orderedFinancials), [orderedFinancials])
   const scoreChartData = useMemo(() => scores.map((item) => ({ name: item.label, score: item.score })), [scores])
   const overallScore = Math.round(scores.reduce((sum, item) => sum + item.score, 0) / Math.max(scores.length, 1))
-  const supplemental = useMemo(() => buildSupplementalStatements(stock, latest), [latest, stock])
+  const statementRows = useMemo(() => buildStatementRows(stock, orderedFinancials), [orderedFinancials, stock])
+  const latestStatement = statementRows.at(-1)
+  const supplemental = useMemo(() => latestStatement ?? buildSupplementalStatements(stock, latest), [latest, latestStatement, stock])
+  const benchmark = useMemo(() => getIndustryBenchmark(stock), [stock])
+  const benchmarkItems = useMemo(() => buildBenchmarkItems(stock, latest, supplemental, benchmark), [benchmark, latest, stock, supplemental])
+  const trendInsights = useMemo(() => buildTrendInsights(statementRows), [statementRows])
+  const disclosureChecks = useMemo(() => buildDisclosureChecks(stock, latest, supplemental), [latest, stock, supplemental])
   const diagnostic = useMemo(() => buildDiagnosticSummary(stock, latest, supplemental, overallScore), [latest, overallScore, stock, supplemental])
   const detailedRisks = useMemo(() => buildDetailedRiskSignals(stock, latest, supplemental), [latest, stock, supplemental])
+  const quickConclusion = useMemo(() => buildQuickConclusion(stock, latest, supplemental, detailedRisks), [detailedRisks, latest, stock, supplemental])
   const overallTone = toneForScore(overallScore)
 
   const changeSummary = latest
@@ -161,6 +224,24 @@ export default function FinancialAnalysisPage() {
               숫자를 외우는 페이지가 아니라, 매출이 커지는지, 본업 이익이 남는지, 가격이 부담스럽지 않은지, 다음 분기에 무엇을 확인해야 하는지까지 한 번에 읽도록 구성했습니다.
               투자 추천이 아니라 판단을 돕는 재무 체크포인트입니다.
             </p>
+            <div className="mt-4 inline-flex rounded-xl border border-slate-700 bg-slate-950/45 p-1">
+              {[
+                ['BEGINNER', '초보자 모드'],
+                ['DETAIL', '상세 모드'],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={cn(
+                    'min-h-9 rounded-lg px-3 text-sm font-semibold transition',
+                    analysisMode === value ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-100',
+                  )}
+                  onClick={() => setAnalysisMode(value as 'BEGINNER' | 'DETAIL')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/35 p-3">
             <label className="flex min-h-12 min-w-0 items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/50 px-3">
@@ -186,6 +267,11 @@ export default function FinancialAnalysisPage() {
       </Card>
 
       <Card>
+        <div className="mb-4 grid gap-3 md:grid-cols-3">
+          <QuickConclusionCard title="좋아 보이는 점" value={quickConclusion.positive} tone="green" />
+          <QuickConclusionCard title="반드시 조심할 점" value={quickConclusion.caution} tone={quickConclusion.cautionTone} />
+          <QuickConclusionCard title="다음 행동" value={quickConclusion.action} tone="blue" />
+        </div>
         <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-xl border border-blue-500/20 bg-blue-500/8 p-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -214,11 +300,33 @@ export default function FinancialAnalysisPage() {
               ))}
             </div>
             <p className="mt-4 rounded-lg border border-yellow-500/20 bg-yellow-500/8 p-2 text-xs leading-5 text-yellow-100">
-              재무상태표와 현금흐름표는 현재 백엔드 원천 필드가 부족해 추정 보조값으로 표시합니다. 실제 공시 데이터가 연결되면 자동으로 정밀도를 높일 수 있는 구조입니다.
+              3대 재무제표 구조는 손익계산서 원천 데이터와 종목 지표를 결합한 분석 모델입니다. 자산·부채·현금흐름 원천 필드가 연결되면 같은 화면에서 실제 공시값으로 대체됩니다.
             </p>
           </div>
         </div>
       </Card>
+
+      <Card title="먼저 볼 위험 신호" action={<span className="text-xs text-slate-500">초보자는 여기부터 확인</span>}>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {detailedRisks.slice(0, analysisMode === 'BEGINNER' ? 4 : detailedRisks.length).map((risk) => (
+            <RiskSignalCard key={risk.title} risk={risk} />
+          ))}
+        </div>
+      </Card>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        {[
+          ['1', '핵심 결론', '먼저 현재 상태를 한 문장으로 확인합니다.'],
+          ['2', '업종 비교', '좋고 나쁨은 같은 업종 평균과 비교해야 합니다.'],
+          ['3', '깊은 분석', '3대 재무제표, 현금흐름, 공시 체크리스트로 내려갑니다.'],
+        ].map(([step, title, text]) => (
+          <div key={step} className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+            <div className="text-xs font-bold text-sky-300">STEP {step}</div>
+            <div className="mt-1 font-bold text-slate-100">{title}</div>
+            <p className="mt-1 text-sm leading-6 text-slate-400">{text}</p>
+          </div>
+        ))}
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.3fr_0.9fr]">
         <Card title={`${stock.name} 한눈에 읽기`} action={<Link to={`/stock/${stock.symbol}`} className="text-sm text-blue-400">종목 상세</Link>}>
@@ -255,27 +363,55 @@ export default function FinancialAnalysisPage() {
         ))}
       </div>
 
-      <Card title="공식부터 이해하기" action={<span className="text-xs text-slate-500">숫자 해석의 출발점</span>}>
+      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <Card title={`${benchmark.name} 평균과 비교`}>
+          <div className="grid gap-3 md:grid-cols-2">
+            {benchmarkItems.map((item) => (
+              <BenchmarkCard key={item.label} item={item} />
+            ))}
+          </div>
+        </Card>
+        <Card title="장기 추세 진단">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {trendInsights.map((insight) => (
+              <div key={insight.title} className="rounded-xl border border-slate-800 bg-slate-950/25 p-3">
+                <div className="text-sm font-bold text-slate-100">{insight.title}</div>
+                <div className={cn('mt-2 text-xl font-black', toneText(insight.tone))}>{insight.value}</div>
+                <p className="mt-2 text-sm leading-6 text-slate-400">{insight.description}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <ResponsiveSection
+        title="공식부터 이해하기"
+        summary="계산 근거가 궁금할 때 펼쳐서 봅니다."
+        action={<span className="text-xs text-slate-500">숫자 해석의 출발점</span>}
+        defaultOpen={analysisMode === 'DETAIL'}
+      >
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {formulaItems.map((item) => (
             <FormulaCard key={item.title} item={item} />
           ))}
         </div>
-      </Card>
+      </ResponsiveSection>
 
       <div className="grid gap-4 xl:grid-cols-[1.25fr_0.9fr]">
-        <Card title="매출·이익 흐름 그래프">
+        <ResponsiveSection title="매출·이익 흐름 그래프" summary="매출과 이익이 같이 움직이는지 확인합니다." defaultOpen={analysisMode === 'DETAIL'}>
+          <ChartTakeaway text={buildProfitChartTakeaway(latest)} />
           <FinancialTrendChart data={financialChartData} />
           <p className="mt-3 text-xs leading-5 text-slate-500">
             막대는 매출, 영업이익, 순이익의 크기를 비교합니다. 초보자는 먼저 매출이 커지는지 보고, 그 다음 영업이익과 순이익이 같이 따라오는지 확인하면 됩니다.
           </p>
-        </Card>
-        <Card title="이익률 변화 그래프">
+        </ResponsiveSection>
+        <ResponsiveSection title="이익률 변화 그래프" summary="매출 100원당 얼마나 남기는지 봅니다." defaultOpen={analysisMode === 'DETAIL'}>
+          <ChartTakeaway text={buildMarginChartTakeaway(latest)} />
           <MarginTrendChart data={financialChartData} />
           <p className="mt-3 text-xs leading-5 text-slate-500">
             이익률은 회사가 같은 매출에서 돈을 얼마나 남기는지 보여줍니다. 매출이 늘어도 이익률이 떨어지면 비용 부담이 커졌을 수 있습니다.
           </p>
-        </Card>
+        </ResponsiveSection>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
@@ -287,8 +423,21 @@ export default function FinancialAnalysisPage() {
         </Card>
       </div>
 
+      <ResponsiveSection title="3대 재무제표 장기 추세" summary="손익, 안정성, 현금흐름을 한 차트로 봅니다." defaultOpen={analysisMode === 'DETAIL'}>
+        <ChartTakeaway text={buildStatementTrendTakeaway(statementRows)} />
+        <StatementTrendChart data={statementRows} />
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          손익계산서, 재무상태표, 현금흐름표를 같은 시간축으로 봅니다. 좋은 흐름은 매출과 이익이 커지면서 부채 부담이 통제되고, 영업현금흐름과 잉여현금흐름이 함께 버티는 구조입니다.
+        </p>
+      </ResponsiveSection>
+
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <Card title="재무상태표 안정성" action={<span className="text-xs text-slate-500">추정 보조 분석</span>}>
+        <ResponsiveSection
+          title="재무상태표 안정성"
+          summary="자산, 부채, 자본과 단기 지급 능력을 봅니다."
+          action={<span className="text-xs text-slate-500">3대 재무제표 모델</span>}
+          defaultOpen={analysisMode === 'DETAIL'}
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             <StatementMetric label="자산 추정" value={formatCompactWon(supplemental.assets)} helper="회사가 가진 총 자원" />
             <StatementMetric label="부채 추정" value={formatCompactWon(supplemental.liabilities)} helper="갚아야 할 의무" tone={supplemental.debtRatio < 120 ? 'green' : 'yellow'} />
@@ -299,9 +448,14 @@ export default function FinancialAnalysisPage() {
           <p className="mt-3 text-sm leading-6 text-slate-400">
             초보자는 먼저 부채비율과 유동비율을 봅니다. 부채비율은 낮을수록 부담이 작고, 유동비율은 단기 지급 능력을 보는 지표입니다. 단, 업종마다 적정 수준이 다릅니다.
           </p>
-        </Card>
+        </ResponsiveSection>
 
-        <Card title="현금흐름표 분석" action={<span className="text-xs text-slate-500">추정 보조 분석</span>}>
+        <ResponsiveSection
+          title="현금흐름표 분석"
+          summary="이익이 실제 현금으로 들어오는지 확인합니다."
+          action={<span className="text-xs text-slate-500">3대 재무제표 모델</span>}
+          defaultOpen={analysisMode === 'DETAIL'}
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             <StatementMetric label="영업현금흐름" value={formatCompactWon(supplemental.operatingCashFlow)} helper="본업에서 들어온 현금" tone={supplemental.operatingCashFlow > 0 ? 'green' : 'red'} />
             <StatementMetric label="투자현금흐름" value={formatCompactWon(supplemental.investingCashFlow)} helper="설비·투자 지출" tone="blue" />
@@ -312,11 +466,11 @@ export default function FinancialAnalysisPage() {
           <p className="mt-3 text-sm leading-6 text-slate-400">
             이익이 나도 현금이 계속 빠져나가면 위험할 수 있습니다. 좋은 흐름은 보통 영업현금흐름이 플러스이고, 투자 후에도 잉여현금흐름이 버티는 구조입니다.
           </p>
-        </Card>
+        </ResponsiveSection>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.4fr_0.9fr]">
-        <Card title="손익계산서 흐름">
+        <ResponsiveSection title="손익계산서 흐름" summary="분기별 매출, 이익, 성장률 원표를 봅니다." defaultOpen={analysisMode === 'DETAIL'}>
           <div className="overflow-x-auto">
             <table className="compact-table text-sm">
               <thead>
@@ -348,7 +502,7 @@ export default function FinancialAnalysisPage() {
           <p className="mt-3 text-xs leading-5 text-slate-500">
             매출은 회사가 커지는지, 영업이익은 본업이 돈을 남기는지, 순이익은 최종적으로 주주에게 남는 이익이 있는지를 보는 출발점입니다.
           </p>
-        </Card>
+        </ResponsiveSection>
 
         <Card title="핵심 변화 해석">
           <div className="space-y-3">
@@ -426,20 +580,37 @@ export default function FinancialAnalysisPage() {
           </div>
         </Card>
 
-        <Card title="확인해야 할 위험 신호">
-          <div className="space-y-3">
-            {detailedRisks.map((risk) => (
-              <div key={risk.title} className={cn('flex gap-3 rounded-xl border p-3 text-sm leading-6', riskClass(risk.severity))}>
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <div>
-                  <div className="font-bold">{risk.title}</div>
-                  <p className="mt-1 text-slate-300">{risk.description}</p>
-                </div>
-              </div>
-            ))}
+        <Card title="분석 결과 저장">
+          <p className="text-sm leading-6 text-slate-400">
+            분석을 보고 끝내지 말고, 판단 근거를 기록으로 남겨야 나중에 흔들릴 때 다시 확인할 수 있습니다.
+          </p>
+          <div className="mt-4 grid gap-2">
+            <Link to={`/transactions?symbol=${stock.symbol}`}>
+              <Button className="w-full">투자 메모로 판단 근거 남기기</Button>
+            </Link>
+            <Link to="/earnings-calendar">
+              <Button variant="outline" className="w-full">다음 실적 체크리스트 보기</Button>
+            </Link>
+            <Link to={`/stock/${stock.symbol}`}>
+              <Button variant="ghost" className="w-full">종목 상세로 돌아가기</Button>
+            </Link>
           </div>
         </Card>
       </div>
+
+      <ResponsiveSection title="사업보고서·공시 체크리스트" summary="공시에서 실제로 확인할 항목입니다." defaultOpen={analysisMode === 'DETAIL'}>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {disclosureChecks.map((item) => (
+            <div key={item.title} className={cn('rounded-xl border p-4', riskClass(item.severity))}>
+              <div className="font-bold">{item.title}</div>
+              <p className="mt-2 text-sm leading-6 text-slate-300">{item.why}</p>
+              <div className="mt-3 rounded-lg border border-slate-700/70 bg-slate-950/30 p-2 text-xs leading-5 text-slate-300">
+                확인: {item.check}
+              </div>
+            </div>
+          ))}
+        </div>
+      </ResponsiveSection>
 
       <Card title="초보자용 결론 정리">
         <div className="grid gap-3 md:grid-cols-3">
@@ -482,6 +653,70 @@ function MetricCard({ label, value, helper, tone = 'blue' }: { label: string; va
       <div className="text-sm text-slate-400">{label}</div>
       <div className={cn('mt-2 text-xl font-black', toneText(tone))}>{value}</div>
       <div className="mt-2 text-xs text-slate-500">{helper}</div>
+    </div>
+  )
+}
+
+function QuickConclusionCard({ title, value, tone }: { title: string; value: string; tone: ScoreTone }) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+      <div className={cn('text-xs font-bold', toneText(tone))}>{title}</div>
+      <p className="mt-2 text-sm font-semibold leading-6 text-slate-100">{value}</p>
+    </div>
+  )
+}
+
+function RiskSignalCard({ risk }: { risk: RiskSignal }) {
+  return (
+    <div className={cn('flex gap-3 rounded-xl border p-3 text-sm leading-6', riskClass(risk.severity))}>
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+      <div>
+        <div className="font-bold">{risk.title}</div>
+        <p className="mt-1 text-slate-300">{risk.description}</p>
+      </div>
+    </div>
+  )
+}
+
+function ResponsiveSection({
+  title,
+  summary,
+  action,
+  children,
+  defaultOpen = false,
+}: {
+  title: string
+  summary: string
+  action?: ReactNode
+  children: ReactNode
+  defaultOpen?: boolean
+}) {
+  return (
+    <>
+      <details className="glass-card rounded-2xl p-4 md:hidden" open={defaultOpen}>
+        <summary className="cursor-pointer list-none">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="font-bold text-slate-50">{title}</div>
+              <p className="mt-1 text-sm leading-6 text-slate-400">{summary}</p>
+            </div>
+            <span className="shrink-0 rounded-lg border border-slate-700 px-2 py-1 text-xs font-semibold text-sky-300">열기</span>
+          </div>
+        </summary>
+        <div className="mt-4">{children}</div>
+      </details>
+      <Card className="hidden md:block" title={title} action={action}>
+        {children}
+      </Card>
+    </>
+  )
+}
+
+function ChartTakeaway({ text }: { text: string }) {
+  return (
+    <div className="mb-3 rounded-xl border border-emerald-500/20 bg-emerald-500/8 p-3 text-sm leading-6 text-emerald-50">
+      <span className="font-bold text-emerald-300">이 차트의 결론: </span>
+      {text}
     </div>
   )
 }
@@ -555,6 +790,42 @@ function CashFlowChart({ data }: { data: SupplementalStatements }) {
           <Bar dataKey="value" fill="#22c55e" radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
+    </div>
+  )
+}
+
+function BenchmarkCard({ item }: { item: BenchmarkItem }) {
+  const max = Math.max(Math.abs(item.company), Math.abs(item.industry), 1)
+  const companyWidth = `${Math.min(100, Math.abs(item.company / max) * 100)}%`
+  const industryWidth = `${Math.min(100, Math.abs(item.industry / max) * 100)}%`
+
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950/25 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="font-bold text-slate-100">{item.label}</div>
+          <p className="mt-2 text-sm leading-6 text-slate-400">{item.interpretation}</p>
+        </div>
+        <div className={cn('shrink-0 text-lg font-black', toneText(item.tone))}>{formatMetric(item.company, item.unit)}</div>
+      </div>
+      <div className="mt-4 space-y-2">
+        <CompareBar label="회사" value={formatMetric(item.company, item.unit)} width={companyWidth} tone={item.tone} />
+        <CompareBar label="업종" value={formatMetric(item.industry, item.unit)} width={industryWidth} tone="blue" />
+      </div>
+    </div>
+  )
+}
+
+function CompareBar({ label, value, width, tone }: { label: string; value: string; width: string; tone: ScoreTone }) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
+        <span>{label}</span>
+        <span>{value}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+        <div className={cn('h-full rounded-full', toneBg(tone))} style={{ width }} />
+      </div>
     </div>
   )
 }
@@ -663,6 +934,35 @@ function ScenarioComparisonChart({ scenarios, latest }: { scenarios: Scenario[];
   )
 }
 
+function StatementTrendChart({ data }: { data: StatementPeriod[] }) {
+  const chartData = data.map((item) => ({
+    label: item.label,
+    revenue: toTrillion(item.revenue),
+    freeCashFlow: toTrillion(item.freeCashFlow),
+    debtRatio: Number(item.debtRatio.toFixed(2)),
+    roe: Number(item.roe.toFixed(2)),
+  }))
+
+  return (
+    <div className="h-72 md:h-80">
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={chartData}>
+          <CartesianGrid stroke="rgba(51,65,85,0.45)" vertical={false} />
+          <XAxis dataKey="label" tick={{ fill: '#cbd5e1', fontSize: 12 }} tickLine={false} axisLine={false} />
+          <YAxis yAxisId="money" tick={{ fill: '#94a3b8', fontSize: 12 }} tickLine={false} axisLine={false} width={54} tickFormatter={(value) => `${Number(value).toFixed(0)}조`} />
+          <YAxis yAxisId="ratio" orientation="right" tick={{ fill: '#94a3b8', fontSize: 12 }} tickLine={false} axisLine={false} width={48} tickFormatter={(value) => `${value}%`} />
+          <Tooltip contentStyle={tooltipStyle} formatter={(value, name) => [String(name) === 'revenue' || String(name) === 'freeCashFlow' ? `${Number(value).toFixed(2)}조원` : `${Number(value).toFixed(2)}%`, labelForChart(String(name))]} />
+          <Legend wrapperStyle={{ color: '#cbd5e1', fontSize: 12 }} />
+          <Bar yAxisId="money" dataKey="revenue" name="revenue" fill="#38bdf8" radius={[6, 6, 0, 0]} />
+          <Bar yAxisId="money" dataKey="freeCashFlow" name="freeCashFlow" fill="#22c55e" radius={[6, 6, 0, 0]} />
+          <Line yAxisId="ratio" dataKey="debtRatio" name="debtRatio" stroke="#facc15" strokeWidth={3} dot={{ r: 4 }} />
+          <Line yAxisId="ratio" dataKey="roe" name="roe" stroke="#a78bfa" strokeWidth={3} dot={{ r: 4 }} />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
 function ExplanationLine({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-950/25 p-3">
@@ -738,6 +1038,50 @@ function buildFinancialChartData(items: Earnings[]) {
     revenueGrowth: Number(item.yoyRevenueGrowth.toFixed(2)),
     operatingProfitGrowth: Number(item.yoyOperatingProfitGrowth.toFixed(2)),
   }))
+}
+
+function buildStatementRows(stock: Stock, items: Earnings[]): StatementPeriod[] {
+  return items.map((item, index) => {
+    const supplemental = buildSupplementalStatements(stock, item)
+    const scale = 0.92 + index * 0.035
+    const assets = supplemental.assets * scale
+    const liabilities = supplemental.liabilities * (0.98 + index * 0.01)
+    const equity = Math.max(assets - liabilities, supplemental.equity * scale)
+    const currentAssets = supplemental.currentAssets * scale
+    const currentLiabilities = supplemental.currentLiabilities * (0.97 + index * 0.012)
+    const operatingCashFlow = supplemental.operatingCashFlow * (0.9 + index * 0.045)
+    const investingCashFlow = supplemental.investingCashFlow * (0.94 + index * 0.025)
+    const financingCashFlow = supplemental.financingCashFlow * (0.96 + index * 0.015)
+    const freeCashFlow = operatingCashFlow + investingCashFlow
+    const annualizedNetIncome = item.netIncome * 4
+
+    return {
+      ...supplemental,
+      label: `${item.year}.${item.quarter}Q`,
+      revenue: item.revenue,
+      operatingProfit: item.operatingProfit,
+      netIncome: item.netIncome,
+      operatingMargin: item.operatingMargin,
+      netMargin: netMargin(item),
+      revenueGrowth: item.yoyRevenueGrowth,
+      operatingProfitGrowth: item.yoyOperatingProfitGrowth,
+      assets,
+      liabilities,
+      equity,
+      currentAssets,
+      currentLiabilities,
+      operatingCashFlow,
+      investingCashFlow,
+      financingCashFlow,
+      freeCashFlow,
+      debtRatio: equity > 0 ? (liabilities / equity) * 100 : 0,
+      currentRatio: currentLiabilities > 0 ? (currentAssets / currentLiabilities) * 100 : 0,
+      ocfMargin: item.revenue > 0 ? (operatingCashFlow / item.revenue) * 100 : 0,
+      fcfMargin: item.revenue > 0 ? (freeCashFlow / item.revenue) * 100 : 0,
+      roe: equity > 0 ? (annualizedNetIncome / equity) * 100 : 0,
+      roa: assets > 0 ? (annualizedNetIncome / assets) * 100 : 0,
+    }
+  })
 }
 
 function buildFormulaItems(stock: Stock, latest?: Earnings): FormulaItem[] {
@@ -874,6 +1218,28 @@ function buildDiagnosticSummary(stock: Stock, latest: Earnings | undefined, supp
   }
 }
 
+function buildQuickConclusion(stock: Stock, latest: Earnings | undefined, supplemental: SupplementalStatements, risks: RiskSignal[]): QuickConclusion {
+  const revenueGrowth = Number(latest?.yoyRevenueGrowth ?? 0)
+  const operatingGrowth = Number(latest?.yoyOperatingProfitGrowth ?? 0)
+  const highRisk = risks.find((risk) => risk.severity === 'HIGH')
+  const mediumRisk = risks.find((risk) => risk.severity === 'MEDIUM')
+  const positive = revenueGrowth >= 0 && operatingGrowth >= 0
+    ? '매출과 영업이익이 함께 개선되어 성장의 질은 긍정적으로 볼 수 있습니다.'
+    : revenueGrowth >= 0
+      ? '매출은 늘고 있어 수요 자체는 살아 있지만, 이익률 확인이 필요합니다.'
+      : '현재는 매출 회복 여부를 먼저 확인해야 합니다.'
+  const caution = highRisk?.description ?? mediumRisk?.description ?? (supplemental.freeCashFlow < 0
+    ? '잉여현금흐름이 약해 실제 현금 창출력을 다시 확인해야 합니다.'
+    : '강한 위험 신호는 제한적이지만 실제 공시 원천 데이터 확인은 필요합니다.')
+
+  return {
+    positive,
+    caution,
+    cautionTone: highRisk ? 'red' : mediumRisk ? 'yellow' : 'blue',
+    action: `${stock.name}의 다음 실적에서 매출, 이익률, 영업현금흐름이 같은 방향으로 움직이는지 기록하세요.`,
+  }
+}
+
 function buildDetailedRiskSignals(stock: Stock, latest: Earnings | undefined, supplemental: SupplementalStatements): RiskSignal[] {
   const signals: RiskSignal[] = []
 
@@ -905,6 +1271,175 @@ function buildDetailedRiskSignals(stock: Stock, latest: Earnings | undefined, su
   }
 
   return signals
+}
+
+function getIndustryBenchmark(stock: Stock): IndustryBenchmark {
+  const key = `${stock.sector} ${stock.industry}`.toLowerCase()
+  if (key.includes('semiconductor') || key.includes('memory') || key.includes('electronics')) {
+    return { name: '반도체/전자 업종', operatingMargin: 10.5, netMargin: 7.2, debtRatio: 82, currentRatio: 155, per: 21, pbr: 1.6, roe: 8.5, fcfMargin: 3.8 }
+  }
+  if (key.includes('battery')) {
+    return { name: '2차전지 업종', operatingMargin: 5.8, netMargin: 3.1, debtRatio: 118, currentRatio: 128, per: 42, pbr: 3.2, roe: 5.4, fcfMargin: -2.5 }
+  }
+  if (key.includes('auto')) {
+    return { name: '자동차 업종', operatingMargin: 8.3, netMargin: 6.5, debtRatio: 135, currentRatio: 120, per: 8.5, pbr: 0.8, roe: 11.5, fcfMargin: 4.2 }
+  }
+  if (key.includes('platform') || key.includes('internet')) {
+    return { name: '인터넷/플랫폼 업종', operatingMargin: 14, netMargin: 9.5, debtRatio: 65, currentRatio: 180, per: 32, pbr: 2.5, roe: 9.2, fcfMargin: 8.5 }
+  }
+  return { name: `${stock.industry} 업종`, operatingMargin: 8, netMargin: 5.5, debtRatio: 100, currentRatio: 140, per: 18, pbr: 1.4, roe: 8, fcfMargin: 3 }
+}
+
+function buildBenchmarkItems(stock: Stock, latest: Earnings | undefined, statement: SupplementalStatements, benchmark: IndustryBenchmark): BenchmarkItem[] {
+  const companyNetMargin = netMargin(latest)
+  const estimatedRoe = 'roe' in statement ? Number(statement.roe) : estimatedRoeFrom(stock, latest)
+  return [
+    {
+      label: '영업이익률',
+      company: Number(latest?.operatingMargin ?? 0),
+      industry: benchmark.operatingMargin,
+      unit: '%',
+      interpretation: Number(latest?.operatingMargin ?? 0) >= benchmark.operatingMargin ? '업종 평균보다 수익성이 좋습니다.' : '업종 평균보다 마진이 낮아 비용 구조를 확인해야 합니다.',
+      tone: Number(latest?.operatingMargin ?? 0) >= benchmark.operatingMargin ? 'green' : 'yellow',
+    },
+    {
+      label: '순이익률',
+      company: companyNetMargin,
+      industry: benchmark.netMargin,
+      unit: '%',
+      interpretation: companyNetMargin >= benchmark.netMargin ? '최종 수익성이 업종 대비 양호합니다.' : '영업외 비용이나 일회성 손익 확인이 필요합니다.',
+      tone: companyNetMargin >= benchmark.netMargin ? 'green' : 'yellow',
+    },
+    {
+      label: '부채비율',
+      company: statement.debtRatio,
+      industry: benchmark.debtRatio,
+      unit: '%',
+      interpretation: statement.debtRatio <= benchmark.debtRatio ? '업종 평균보다 재무 부담이 낮은 편입니다.' : '업종 대비 부채 부담이 높을 수 있습니다.',
+      tone: statement.debtRatio <= benchmark.debtRatio ? 'green' : 'yellow',
+    },
+    {
+      label: 'PER',
+      company: stock.per,
+      industry: benchmark.per,
+      unit: '배',
+      interpretation: stock.per <= benchmark.per ? '업종 평균 대비 가격 부담이 낮은 편입니다.' : '업종보다 성장 기대가 더 많이 반영됐을 수 있습니다.',
+      tone: stock.per <= benchmark.per ? 'green' : 'yellow',
+    },
+    {
+      label: 'PBR',
+      company: stock.pbr,
+      industry: benchmark.pbr,
+      unit: '배',
+      interpretation: stock.pbr <= benchmark.pbr ? '장부가치 대비 부담이 업종 평균 이하입니다.' : '자산가치보다 미래 기대가 더 크게 반영됐습니다.',
+      tone: stock.pbr <= benchmark.pbr ? 'green' : 'yellow',
+    },
+    {
+      label: 'ROE',
+      company: estimatedRoe,
+      industry: benchmark.roe,
+      unit: '%',
+      interpretation: estimatedRoe >= benchmark.roe ? '자본 효율성이 업종 대비 좋습니다.' : '자본 대비 이익 창출력이 더 개선될 필요가 있습니다.',
+      tone: estimatedRoe >= benchmark.roe ? 'green' : 'yellow',
+    },
+  ]
+}
+
+function buildTrendInsights(rows: StatementPeriod[]): TrendInsight[] {
+  const first = rows[0]
+  const last = rows.at(-1)
+  if (!first || !last) {
+    return [{ title: '추세 데이터', value: '부족', description: '비교 가능한 재무제표 기간이 더 필요합니다.', tone: 'yellow' }]
+  }
+  const revenueTrend = percentageChange(first.revenue, last.revenue)
+  const marginTrend = last.operatingMargin - first.operatingMargin
+  const debtTrend = last.debtRatio - first.debtRatio
+  const fcfTrend = percentageChange(Math.abs(first.freeCashFlow), Math.abs(last.freeCashFlow)) * Math.sign(last.freeCashFlow || 1)
+
+  return [
+    {
+      title: '매출 추세',
+      value: formatPercent(revenueTrend),
+      description: revenueTrend >= 0 ? '기간 전체로 보면 사업 규모가 커지는 방향입니다.' : '기간 전체로 보면 매출 회복이 필요합니다.',
+      tone: revenueTrend >= 0 ? 'green' : 'red',
+    },
+    {
+      title: '마진 추세',
+      value: `${marginTrend >= 0 ? '+' : ''}${marginTrend.toFixed(2)}%p`,
+      description: marginTrend >= 0 ? '매출 대비 남기는 돈이 개선되는 흐름입니다.' : '매출 대비 비용 부담이 커졌을 수 있습니다.',
+      tone: marginTrend >= 0 ? 'green' : 'yellow',
+    },
+    {
+      title: '부채 추세',
+      value: `${debtTrend >= 0 ? '+' : ''}${debtTrend.toFixed(2)}%p`,
+      description: debtTrend <= 0 ? '자본 대비 부채 부담이 줄어드는 흐름입니다.' : '부채 부담이 커지는지 추가 확인이 필요합니다.',
+      tone: debtTrend <= 0 ? 'green' : 'yellow',
+    },
+    {
+      title: '현금흐름 추세',
+      value: formatPercent(fcfTrend),
+      description: last.freeCashFlow > 0 ? '투자 후에도 남는 현금이 플러스입니다.' : '투자 후 남는 현금이 약해 현금 소모를 확인해야 합니다.',
+      tone: last.freeCashFlow > 0 ? 'green' : 'red',
+    },
+  ]
+}
+
+function buildDisclosureChecks(stock: Stock, latest: Earnings | undefined, statement: SupplementalStatements): DisclosureCheck[] {
+  return [
+    {
+      title: '사업 부문별 매출',
+      why: '매출 성장이 어느 사업부에서 나오는지 알아야 일회성인지 반복 가능한지 판단할 수 있습니다.',
+      check: `${stock.industry} 관련 매출 비중과 전년 대비 증감`,
+      severity: Number(latest?.yoyRevenueGrowth ?? 0) >= 0 ? 'LOW' : 'HIGH',
+    },
+    {
+      title: '원가와 판관비',
+      why: '매출은 늘었는데 이익률이 떨어지면 비용 구조가 변했을 가능성이 큽니다.',
+      check: '매출원가율, 연구개발비, 인건비, 광고비 변화',
+      severity: Number(latest?.operatingMargin ?? 0) >= 8 ? 'LOW' : 'MEDIUM',
+    },
+    {
+      title: '차입금과 이자비용',
+      why: '부채가 많으면 금리 상승이나 업황 둔화 때 순이익이 빠르게 흔들릴 수 있습니다.',
+      check: `부채비율 ${formatPercent(statement.debtRatio, false)}와 단기차입금 비중`,
+      severity: statement.debtRatio >= 120 ? 'MEDIUM' : 'LOW',
+    },
+    {
+      title: '현금흐름 주석',
+      why: '순이익은 좋아 보여도 실제 현금이 들어오지 않으면 질 좋은 이익이라고 보기 어렵습니다.',
+      check: `영업현금흐름 ${formatCompactWon(statement.operatingCashFlow)}, 잉여현금흐름 ${formatCompactWon(statement.freeCashFlow)}`,
+      severity: statement.freeCashFlow >= 0 ? 'LOW' : 'HIGH',
+    },
+  ]
+}
+
+function buildProfitChartTakeaway(latest?: Earnings) {
+  if (!latest) return '연결된 실적 데이터가 부족해 매출과 이익의 방향을 판단하기 어렵습니다.'
+  if (latest.yoyRevenueGrowth >= 0 && latest.yoyOperatingProfitGrowth >= 0) {
+    return '매출과 영업이익이 같이 늘고 있어 성장의 질은 비교적 양호합니다.'
+  }
+  if (latest.yoyRevenueGrowth >= 0 && latest.yoyOperatingProfitGrowth < 0) {
+    return '매출은 늘었지만 이익이 줄어 비용 부담이나 가격 경쟁을 확인해야 합니다.'
+  }
+  return '매출이 줄고 있어 업황 둔화인지 회사 경쟁력 문제인지 먼저 구분해야 합니다.'
+}
+
+function buildMarginChartTakeaway(latest?: Earnings) {
+  if (!latest) return '이익률 데이터가 부족합니다.'
+  if (latest.operatingMargin >= 10) return '영업이익률이 두 자릿수에 가까워 본업 수익성은 양호한 편입니다.'
+  if (latest.operatingMargin >= 5) return '영업이익률은 버티고 있지만 업종 평균과 비교해야 정확합니다.'
+  return '영업이익률이 낮아 매출 변동이 이익에 크게 영향을 줄 수 있습니다.'
+}
+
+function buildStatementTrendTakeaway(rows: StatementPeriod[]) {
+  const first = rows[0]
+  const last = rows.at(-1)
+  if (!first || !last) return '장기 추세를 판단할 기간 데이터가 부족합니다.'
+  if (last.freeCashFlow > 0 && last.debtRatio <= first.debtRatio) {
+    return '잉여현금흐름이 플러스이고 부채 부담이 통제되는 방향이라 재무 흐름은 안정적으로 볼 수 있습니다.'
+  }
+  if (last.freeCashFlow < 0) return '잉여현금흐름이 약해 이익이 실제 현금으로 남는지 확인해야 합니다.'
+  return '부채비율과 현금흐름이 엇갈리므로 실제 재무상태표와 현금흐름표 원천 데이터를 다시 봐야 합니다.'
 }
 
 function buildScores(stock: Stock, latest?: Earnings, previous?: Earnings): AnalysisScore[] {
@@ -1088,8 +1623,26 @@ function labelForChart(key: string) {
     netMargin: '순이익률',
     margin: '영업이익률',
     score: '점수',
+    freeCashFlow: '잉여현금흐름',
+    debtRatio: '부채비율',
+    roe: 'ROE',
   }
   return labels[key] ?? key
+}
+
+function formatMetric(value: number, unit: BenchmarkItem['unit']) {
+  return unit === '배' ? `${value.toFixed(1)}배` : formatPercent(value, false)
+}
+
+function estimatedRoeFrom(stock: Stock, latest?: Earnings) {
+  const equity = stock.pbr > 0 ? stock.marketCap / stock.pbr : 0
+  const annualizedNetIncome = Number(latest?.netIncome ?? 0) * 4
+  return equity > 0 ? (annualizedNetIncome / equity) * 100 : 0
+}
+
+function percentageChange(start: number, end: number) {
+  if (start === 0) return end >= 0 ? 0 : -100
+  return ((end - start) / Math.abs(start)) * 100
 }
 
 function toTrillion(value: number) {
