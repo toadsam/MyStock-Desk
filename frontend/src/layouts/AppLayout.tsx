@@ -1,4 +1,5 @@
-import { Bell, Menu, Search } from 'lucide-react'
+import { AlertTriangle, Bell, Menu, Search, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import { getCurrentMember } from '../api/memberApi'
 import { useAuth } from '../auth/useAuth'
@@ -12,6 +13,16 @@ export default function AppLayout() {
   const auth = useAuth()
   const { data: apiMember } = useAsyncData(getCurrentMember, mockMember)
   const member = auth.member ?? apiMember
+  const [dataError, setDataError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const handleDataError = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string }>).detail
+      setDataError(detail?.message ?? '데이터를 불러오지 못했습니다.')
+    }
+    window.addEventListener('stockflow:data-error', handleDataError)
+    return () => window.removeEventListener('stockflow:data-error', handleDataError)
+  }, [])
 
   return (
     <div className="min-h-screen text-slate-100">
@@ -39,6 +50,18 @@ export default function AppLayout() {
       </div>
       <Sidebar />
       <main className="mobile-safe-bottom min-w-0 px-4 py-4 md:px-6 lg:ml-24 lg:px-5 lg:py-4">
+        {dataError && (
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-100">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold">실사용 데이터 로드 실패</div>
+              <div className="mt-1 text-red-100/80">{dataError}</div>
+            </div>
+            <button type="button" aria-label="닫기" onClick={() => setDataError(null)} className="rounded-lg p-1 text-red-100/70 hover:bg-red-500/15 hover:text-red-50">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <Outlet />
       </main>
       <footer className="hidden border-t border-slate-800 px-6 py-3 text-xs text-slate-500 lg:ml-24 lg:block">

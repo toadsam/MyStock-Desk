@@ -3,6 +3,7 @@ package com.stockflow.disclosure.provider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stockflow.disclosure.dto.DisclosureDto;
+import com.stockflow.global.exception.ExternalDataException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -42,7 +43,10 @@ public class SecDisclosureProvider {
     private String userAgent;
 
     public List<DisclosureDto> fetchRecent(List<String> symbols, int limitPerSymbol) {
-        if (!enabled || symbols.isEmpty() || limitPerSymbol <= 0) {
+        if (!enabled) {
+            throw new ExternalDataException("SEC_PROVIDER_DISABLED", "SEC 공시 Provider가 비활성화되어 있습니다.");
+        }
+        if (symbols.isEmpty() || limitPerSymbol <= 0) {
             return List.of();
         }
 
@@ -95,8 +99,10 @@ public class SecDisclosureProvider {
                 ));
             }
             return result;
-        } catch (Exception ignored) {
-            return List.of();
+        } catch (ExternalDataException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new ExternalDataException("SEC_PROVIDER_ERROR", company.ticker() + " SEC 공시 조회에 실패했습니다.", exception);
         }
     }
 
@@ -125,8 +131,10 @@ public class SecDisclosureProvider {
                     ));
                 }
             });
-        } catch (Exception ignored) {
-            return result;
+        } catch (ExternalDataException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new ExternalDataException("SEC_TICKER_LOAD_FAILED", "SEC ticker 목록을 불러오지 못했습니다.", exception);
         }
         return result;
     }
@@ -170,7 +178,7 @@ public class SecDisclosureProvider {
                 .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("SEC HTTP " + response.statusCode());
+            throw new ExternalDataException("SEC_HTTP_ERROR", "SEC 응답 오류: HTTP " + response.statusCode());
         }
         return objectMapper.readTree(response.body());
     }

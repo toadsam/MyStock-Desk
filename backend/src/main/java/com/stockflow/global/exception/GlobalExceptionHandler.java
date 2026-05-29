@@ -25,6 +25,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.fail("BAD_REQUEST", exception.getMessage()));
     }
 
+    @ExceptionHandler(ExternalDataException.class)
+    public ResponseEntity<ApiResponse<Void>> handleExternalData(ExternalDataException exception) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.fail(exception.getCode(), exception.getMessage()));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleInvalidJson(HttpMessageNotReadableException exception) {
         return ResponseEntity.badRequest().body(ApiResponse.fail("INVALID_JSON", "요청 본문 형식이 올바르지 않습니다."));

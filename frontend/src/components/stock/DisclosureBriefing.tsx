@@ -1,15 +1,25 @@
-import { Clock3, ExternalLink, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, Clock3, ExternalLink, Loader2, ShieldCheck } from 'lucide-react'
 import type { Disclosure } from '../../types/disclosure'
 import { formatDateTime } from '../../utils/format'
 import { Badge } from '../ui/Badge'
 
-export function DisclosureBriefing({ disclosures }: { disclosures: Disclosure[] }) {
+interface DisclosureBriefingProps {
+  disclosures: Disclosure[]
+  loading?: boolean
+  error?: string | null
+}
+
+export function DisclosureBriefing({ disclosures, loading = false, error = null }: DisclosureBriefingProps) {
+  if (loading && disclosures.length === 0) {
+    return <DataMessage tone="slate" spinning message="공식 공시 데이터를 불러오는 중입니다." />
+  }
+
+  if (error) {
+    return <DataMessage tone="red" message={`공식 공시 데이터를 불러오지 못했습니다. ${error}`} />
+  }
+
   if (disclosures.length === 0) {
-    return (
-      <div className="rounded-xl border border-slate-800 bg-slate-950/25 p-4 text-sm text-slate-400">
-        공식 공시를 불러오지 못했습니다. 연결 상태와 SEC Provider 설정을 확인하세요.
-      </div>
-    )
+    return <DataMessage tone="slate" message="표시할 공식 공시가 없습니다. SEC Provider 설정과 조회 심볼을 확인하세요." />
   }
 
   return (
@@ -50,6 +60,16 @@ export function DisclosureBriefing({ disclosures }: { disclosures: Disclosure[] 
           </div>
         </article>
       ))}
+    </div>
+  )
+}
+
+function DataMessage({ tone, message, spinning = false }: { tone: 'red' | 'slate'; message: string; spinning?: boolean }) {
+  const Icon = tone === 'red' ? AlertTriangle : Loader2
+  return (
+    <div className={`rounded-xl border p-4 text-sm ${tone === 'red' ? 'border-red-500/30 bg-red-500/10 text-red-200' : 'border-slate-800 bg-slate-950/25 text-slate-400'}`}>
+      <Icon className={`mr-2 inline h-4 w-4 ${spinning ? 'animate-spin' : ''}`} />
+      {message}
     </div>
   )
 }

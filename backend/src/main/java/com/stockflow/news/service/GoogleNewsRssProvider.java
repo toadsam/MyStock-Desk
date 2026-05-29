@@ -1,5 +1,6 @@
 package com.stockflow.news.service;
 
+import com.stockflow.global.exception.ExternalDataException;
 import com.stockflow.global.type.ImpactType;
 import com.stockflow.news.dto.NewsDto;
 import java.io.ByteArrayInputStream;
@@ -36,7 +37,10 @@ public class GoogleNewsRssProvider {
     private boolean enabled;
 
     public List<NewsDto> search(String query, String relatedStockSymbol, int limit) {
-        if (!enabled || !StringUtils.hasText(query) || limit <= 0) {
+        if (!enabled) {
+            throw new ExternalDataException("NEWS_PROVIDER_DISABLED", "Google News RSS Provider가 비활성화되어 있습니다.");
+        }
+        if (!StringUtils.hasText(query) || limit <= 0) {
             return List.of();
         }
         try {
@@ -49,7 +53,7 @@ public class GoogleNewsRssProvider {
                     .build();
             HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                return List.of();
+                throw new ExternalDataException("NEWS_HTTP_ERROR", "Google News RSS 응답 오류: HTTP " + response.statusCode());
             }
 
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -82,17 +86,19 @@ public class GoogleNewsRssProvider {
                 ));
             }
             return result;
-        } catch (Exception ignored) {
-            return List.of();
+        } catch (ExternalDataException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new ExternalDataException("NEWS_PROVIDER_ERROR", "Google News RSS 조회에 실패했습니다.", exception);
         }
     }
 
     private ImpactType classify(String title) {
         String value = title == null ? "" : title;
-        if (containsAny(value, "하락", "부진", "손실", "적자", "우려", "리스크", "소송", "규제")) {
+        if (containsAny(value, "하락", "부진", "적자", "우려", "리스크", "소송", "규제", "감소")) {
             return ImpactType.NEGATIVE;
         }
-        if (containsAny(value, "상승", "호조", "증가", "수주", "확대", "개선", "성장", "흑자")) {
+        if (containsAny(value, "상승", "호조", "증가", "수주", "개선", "성장", "흑자")) {
             return ImpactType.POSITIVE;
         }
         return ImpactType.NEUTRAL;

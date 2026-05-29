@@ -26,7 +26,7 @@ export default function HomePage() {
   const { data: watchlist } = useAsyncData(getWatchlist, mockWatchlist)
   const { data: indices } = useAsyncData(getMarketIndices, mockIndices)
   const { data: chartData } = useAsyncData(() => getIndexPrices('KOSPI'), indexPrices('KOSPI'))
-  const { data: news } = useAsyncData(getNewsBriefing, mockNews.slice(0, 6))
+  const { data: news, loading: newsLoading, error: newsError } = useAsyncData(getNewsBriefing, mockNews.slice(0, 6))
   const { data: breadth } = useAsyncData(getMarketBreadth, mockBreadth)
   const { data: allocation } = useAsyncData(getAllocation, mockAllocation)
   const { data: holdings } = useAsyncData(getHoldings, mockHoldings)
@@ -135,7 +135,7 @@ export default function HomePage() {
         <MistakeAlerts holdings={holdings} transactions={mockInvestmentTransactions} />
         <ReviewPromptCard transactions={mockInvestmentTransactions} />
         <Card title="뉴스 브리핑" action={<Link to="/research" className="text-sm text-blue-400">더보기</Link>}>
-          <NewsBriefing news={news.slice(0, 5)} />
+          <NewsBriefing news={news.slice(0, 5)} loading={newsLoading} error={newsError} />
         </Card>
         <AiSummaryCard content="시장 강세가 이어지고 있으며 반도체와 AI 인프라 업종의 수급 개선이 확인됩니다. 다만 현재 보유 비중과 최근 뉴스 변화를 함께 점검해 기록 기반 판단을 보완하세요." />
       </div>

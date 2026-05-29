@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -21,13 +22,18 @@ public class NewsService {
     private final StockRepository stockRepository;
     private final GoogleNewsRssProvider googleNewsRssProvider;
 
+    @Value("${stockflow.news.seed-fallback.enabled:false}")
+    private boolean seedFallbackEnabled;
+
     public List<NewsDto> getNews(String category, ImpactType impactType, String symbol) {
-        List<NewsDto> stored = newsRepository.findAllByOrderByPublishedAtDesc().stream()
-                .filter(news -> !StringUtils.hasText(category) || news.getCategory().equalsIgnoreCase(category))
-                .filter(news -> impactType == null || news.getImpactType() == impactType)
-                .filter(news -> !StringUtils.hasText(symbol) || symbol.equals(news.getRelatedStockSymbol()))
-                .map(NewsDto::from)
-                .toList();
+        List<NewsDto> stored = seedFallbackEnabled
+                ? newsRepository.findAllByOrderByPublishedAtDesc().stream()
+                        .filter(news -> !StringUtils.hasText(category) || news.getCategory().equalsIgnoreCase(category))
+                        .filter(news -> impactType == null || news.getImpactType() == impactType)
+                        .filter(news -> !StringUtils.hasText(symbol) || symbol.equals(news.getRelatedStockSymbol()))
+                        .map(NewsDto::from)
+                        .toList()
+                : List.of();
         List<NewsDto> live = liveNewsForSymbol(symbol, 8).stream()
                 .filter(news -> impactType == null || news.impactType() == impactType)
                 .toList();
@@ -35,26 +41,27 @@ public class NewsService {
     }
 
     public List<NewsDto> getBriefing() {
-        List<NewsDto> live = googleNewsRssProvider.search("국내 증시 실적 반도체 AI 환율", null, 6);
-        List<NewsDto> stored = newsRepository.findAllByOrderByPublishedAtDesc().stream()
-                .map(NewsDto::from)
-                .toList();
-        return merge(live, stored, 6);
+        List<NewsDto> live = googleNewsRssProvider.search("국내 증시 실적 반도체 AI 수익", null, 6);
+        return merge(live, storedNewsByPublishedAt(), 6);
     }
 
     public List<NewsDto> getResearchNews() {
         List<NewsDto> live = googleNewsRssProvider.search("주식시장 실적 공시 업종 리스크", null, 8);
-        List<NewsDto> stored = newsRepository.findAllByOrderByPublishedAtDesc().stream()
-                .sorted(Comparator.comparing(News::getAiImportanceScore).reversed())
-                .map(NewsDto::from)
-                .toList();
+        List<NewsDto> stored = seedFallbackEnabled
+                ? newsRepository.findAllByOrderByPublishedAtDesc().stream()
+                        .sorted(Comparator.comparing(News::getAiImportanceScore).reversed())
+                        .map(NewsDto::from)
+                        .toList()
+                : List.of();
         return merge(live, stored, 8);
     }
 
     public List<NewsDto> getStockNews(String symbol) {
-        List<NewsDto> stored = newsRepository.findByRelatedStockSymbolOrderByPublishedAtDesc(symbol).stream()
-                .map(NewsDto::from)
-                .toList();
+        List<NewsDto> stored = seedFallbackEnabled
+                ? newsRepository.findByRelatedStockSymbolOrderByPublishedAtDesc(symbol).stream()
+                        .map(NewsDto::from)
+                        .toList()
+                : List.of();
         return merge(liveNewsForSymbol(symbol, 8), stored, 12);
     }
 
@@ -65,6 +72,15 @@ public class NewsService {
         return stockRepository.findBySymbol(symbol)
                 .map(stock -> googleNewsRssProvider.search(stock.getName() + " " + stock.getSymbol() + " 실적 공시 주가", symbol, limit))
                 .orElseGet(List::of);
+    }
+
+    private List<NewsDto> storedNewsByPublishedAt() {
+        if (!seedFallbackEnabled) {
+            return List.of();
+        }
+        return newsRepository.findAllByOrderByPublishedAtDesc().stream()
+                .map(NewsDto::from)
+                .toList();
     }
 
     private List<NewsDto> merge(List<NewsDto> live, List<NewsDto> stored, int limit) {

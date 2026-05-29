@@ -34,17 +34,18 @@ import { formatNumber, formatPercent, isUp } from '../utils/format'
 export default function ResearchPage() {
   const { data: briefing } = useAsyncData(getResearchBriefing, mockBriefing)
   const { data: sentiment } = useAsyncData(getResearchSentiment, mockSentiment)
-  const { data: news } = useAsyncData(getResearchNews, mockNews)
-  const { data: secDisclosures } = useAsyncData(() => getSecDisclosures({ limit: 8 }), [])
+  const { data: news, loading: newsLoading, error: newsError } = useAsyncData(getResearchNews, mockNews)
+  const { data: secDisclosures, loading: disclosuresLoading, error: disclosuresError } = useAsyncData(() => getSecDisclosures({ limit: 8 }), [])
   const { data: risks } = useAsyncData(getResearchRisks, mockRisks)
   const { data: impact } = useAsyncData(getPortfolioImpact, mockPortfolioImpact)
   const { data: studyCandidates } = useAsyncData(getStudyCandidates, mockStudyCandidates)
   const { data: portfolioReport } = useAsyncData(getLatestPortfolioReport, mockPortfolioReport)
 
+  const sentimentTotal = Math.max(sentiment.total, 1)
   const sentimentDonut = [
-    { name: '호재', value: sentiment.positive, rate: Math.round((sentiment.positive / sentiment.total) * 100) },
-    { name: '악재', value: sentiment.negative, rate: Math.round((sentiment.negative / sentiment.total) * 100) },
-    { name: '중립', value: sentiment.neutral, rate: Math.round((sentiment.neutral / sentiment.total) * 100) },
+    { name: '호재', value: sentiment.positive, rate: Math.round((sentiment.positive / sentimentTotal) * 100) },
+    { name: '악재', value: sentiment.negative, rate: Math.round((sentiment.negative / sentimentTotal) * 100) },
+    { name: '중립', value: sentiment.neutral, rate: Math.round((sentiment.neutral / sentimentTotal) * 100) },
   ]
 
   return (
@@ -134,10 +135,10 @@ export default function ResearchPage() {
 
       <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr]">
         <Card title="SEC 공식 공시" action={<Badge tone="green">Official</Badge>}>
-          <DisclosureBriefing disclosures={secDisclosures.slice(0, 5)} />
+          <DisclosureBriefing disclosures={secDisclosures.slice(0, 5)} loading={disclosuresLoading} error={disclosuresError} />
         </Card>
         <Card title="뉴스 변화 감지" action={<Badge tone="blue">Beta</Badge>}>
-          <NewsBriefing news={news.slice(0, 5)} />
+          <NewsBriefing news={news.slice(0, 5)} loading={newsLoading} error={newsError} />
         </Card>
       </div>
 

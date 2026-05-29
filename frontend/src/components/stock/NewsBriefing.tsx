@@ -1,15 +1,25 @@
-import { Clock3, ExternalLink } from 'lucide-react'
+import { AlertTriangle, Clock3, ExternalLink, Loader2 } from 'lucide-react'
 import type { News } from '../../types/news'
 import { formatDateTime } from '../../utils/format'
 import { Badge } from '../ui/Badge'
 
-export function NewsBriefing({ news }: { news: News[] }) {
+interface NewsBriefingProps {
+  news: News[]
+  loading?: boolean
+  error?: string | null
+}
+
+export function NewsBriefing({ news, loading = false, error = null }: NewsBriefingProps) {
+  if (loading && news.length === 0) {
+    return <DataMessage tone="slate" spinning message="뉴스 데이터를 불러오는 중입니다." />
+  }
+
+  if (error) {
+    return <DataMessage tone="red" message={`뉴스 데이터를 불러오지 못했습니다. ${error}`} />
+  }
+
   if (news.length === 0) {
-    return (
-      <div className="rounded-xl border border-slate-800 bg-slate-950/25 p-4 text-sm text-slate-400">
-        뉴스를 불러오지 못했습니다. mock fallback은 현재 비활성화되어 있습니다.
-      </div>
-    )
+    return <DataMessage tone="slate" message="표시할 뉴스가 없습니다. 실사용 모드에서는 mock 뉴스가 자동으로 대체 표시되지 않습니다." />
   }
 
   return (
@@ -44,6 +54,16 @@ export function NewsBriefing({ news }: { news: News[] }) {
           </Badge>
         </article>
       ))}
+    </div>
+  )
+}
+
+function DataMessage({ tone, message, spinning = false }: { tone: 'red' | 'slate'; message: string; spinning?: boolean }) {
+  const Icon = tone === 'red' ? AlertTriangle : Loader2
+  return (
+    <div className={`rounded-xl border p-4 text-sm ${tone === 'red' ? 'border-red-500/30 bg-red-500/10 text-red-200' : 'border-slate-800 bg-slate-950/25 text-slate-400'}`}>
+      <Icon className={`mr-2 inline h-4 w-4 ${spinning ? 'animate-spin' : ''}`} />
+      {message}
     </div>
   )
 }

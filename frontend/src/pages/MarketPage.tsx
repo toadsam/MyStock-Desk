@@ -33,7 +33,7 @@ export default function MarketPage() {
   const { data: heatmap } = useAsyncData(getMarketHeatmap, mockHeatmap, [refreshKey])
   const { data: sectors } = useAsyncData(getMarketSectors, mockSectors, [refreshKey])
   const { data: breadth } = useAsyncData(getMarketBreadth, mockBreadth, [refreshKey])
-  const { data: news } = useAsyncData(getNewsBriefing, mockNews)
+  const { data: news, loading: newsLoading, error: newsError } = useAsyncData(getNewsBriefing, mockNews)
   const visibleSectors = sectors.filter((item) => item.type === sectorTab)
 
   const refresh = async () => {
@@ -105,7 +105,7 @@ export default function MarketPage() {
         </Card>
 
         <Card title="마켓 속보" action={<Link to="/research" className="text-sm text-blue-400">더보기</Link>}>
-          <NewsBriefing news={news.slice(0, 6)} />
+          <NewsBriefing news={news.slice(0, 6)} loading={newsLoading} error={newsError} />
         </Card>
       </div>
 

@@ -27,7 +27,7 @@ export default function StockDetailPage() {
   const [period, setPeriod] = useState('1D')
   const { data: stock } = useAsyncData(() => getStock(symbol), stockBySymbol(symbol))
   const { data: prices } = useAsyncData(() => getStockPrices(symbol), stockPrices(symbol))
-  const { data: news } = useAsyncData(() => getStockNews(symbol), mockNews.filter((item) => item.relatedStockSymbol === symbol))
+  const { data: news, loading: newsLoading, error: newsError } = useAsyncData(() => getStockNews(symbol), mockNews.filter((item) => item.relatedStockSymbol === symbol))
   const { data: earnings } = useAsyncData(() => getStockEarnings(symbol), mockEarningsBySymbol(symbol))
   const { data: financials } = useAsyncData(() => getStockFinancials(symbol), mockEarningsBySymbol(symbol))
   const { data: memos } = useAsyncData(getInvestmentMemos, [])
@@ -115,7 +115,7 @@ export default function StockDetailPage() {
 
       <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
         <Card title="관련 뉴스" action={<span className="text-sm text-blue-400">더보기</span>}>
-          <NewsBriefing news={news} />
+          <NewsBriefing news={news} loading={newsLoading} error={newsError} />
         </Card>
         <BeginnerNewsExplainer news={news} />
       </div>

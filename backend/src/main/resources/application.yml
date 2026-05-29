@@ -34,6 +34,8 @@ stockflow:
     enabled: true
     api-key: ${DART_API_KEY:}
   news:
+    seed-fallback:
+      enabled: false
     google-rss:
       enabled: true
   sec:
