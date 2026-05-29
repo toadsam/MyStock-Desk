@@ -115,9 +115,9 @@ export default function StockDetailPage() {
 
       <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
         <Card title="관련 뉴스" action={<span className="text-sm text-blue-400">더보기</span>}>
-          <NewsBriefing news={news.length ? news : mockNews.slice(0, 4)} />
+          <NewsBriefing news={news} />
         </Card>
-        <BeginnerNewsExplainer news={news.length ? news : mockNews.slice(0, 4)} />
+        <BeginnerNewsExplainer news={news} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">

@@ -28,11 +28,16 @@ public class News {
     private String summary;
     private String category;
     private String source;
+    private String sourceUrl;
+    private String dataProvider;
+    private String reliability;
+    private Boolean officialSource;
 
     @Enumerated(EnumType.STRING)
     private ImpactType impactType;
 
     private String relatedStockSymbol;
     private LocalDateTime publishedAt;
+    private LocalDateTime fetchedAt;
     private Integer aiImportanceScore;
 }

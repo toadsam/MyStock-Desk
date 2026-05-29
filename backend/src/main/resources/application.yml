@@ -36,6 +36,10 @@ stockflow:
   news:
     google-rss:
       enabled: true
+  sec:
+    enabled: true
+    default-symbols: NVDA,AAPL,MSFT,TSLA,AMD
+    user-agent: ${SEC_USER_AGENT:StockFlow/1.0 contact@example.com}
   ai:
     provider: local
     openai:

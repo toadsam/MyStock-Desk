@@ -1,6 +1,7 @@
 import { AlertTriangle, Bot, CalendarClock, Settings2, Star } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getLatestPortfolioReport } from '../api/aiApi'
+import { getSecDisclosures } from '../api/disclosureApi'
 import { getResearchNews } from '../api/newsApi'
 import {
   getPortfolioImpact,
@@ -12,6 +13,7 @@ import {
 import { BeginnerNewsExplainer } from '../components/beginner/BeginnerNewsExplainer'
 import { DonutChart } from '../components/charts/DonutChart'
 import { Sparkline } from '../components/charts/Sparkline'
+import { DisclosureBriefing } from '../components/stock/DisclosureBriefing'
 import { NewsBriefing } from '../components/stock/NewsBriefing'
 import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
@@ -33,6 +35,7 @@ export default function ResearchPage() {
   const { data: briefing } = useAsyncData(getResearchBriefing, mockBriefing)
   const { data: sentiment } = useAsyncData(getResearchSentiment, mockSentiment)
   const { data: news } = useAsyncData(getResearchNews, mockNews)
+  const { data: secDisclosures } = useAsyncData(() => getSecDisclosures({ limit: 8 }), [])
   const { data: risks } = useAsyncData(getResearchRisks, mockRisks)
   const { data: impact } = useAsyncData(getPortfolioImpact, mockPortfolioImpact)
   const { data: studyCandidates } = useAsyncData(getStudyCandidates, mockStudyCandidates)
@@ -129,10 +132,16 @@ export default function ResearchPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.9fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr]">
+        <Card title="SEC 공식 공시" action={<Badge tone="green">Official</Badge>}>
+          <DisclosureBriefing disclosures={secDisclosures.slice(0, 5)} />
+        </Card>
         <Card title="뉴스 변화 감지" action={<Badge tone="blue">Beta</Badge>}>
           <NewsBriefing news={news.slice(0, 5)} />
         </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
         <BeginnerNewsExplainer news={news.slice(0, 3)} />
       </div>
 

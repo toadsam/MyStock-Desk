@@ -6,6 +6,10 @@ export const api = axios.create({
   timeout: 6000,
 })
 
+export function isMockFallbackEnabled() {
+  return import.meta.env.VITE_ALLOW_MOCK_FALLBACK === 'true'
+}
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('stockflow.accessToken')
   if (token) {
@@ -33,7 +37,13 @@ export async function requestData<T>(request: Promise<{ data: ApiResponse<T> }>,
       throw new Error(response.data.error?.message ?? 'API 요청 실패')
     }
     return response.data.data
-  } catch {
+  } catch (error) {
+    if (!isMockFallbackEnabled()) {
+      if (axios.isAxiosError<ApiResponse<unknown>>(error)) {
+        throw new Error(error.response?.data.error?.message ?? error.message, { cause: error })
+      }
+      throw error
+    }
     return fallback
   }
 }

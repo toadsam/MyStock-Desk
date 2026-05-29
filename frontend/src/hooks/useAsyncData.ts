@@ -1,7 +1,9 @@
 import { useEffect, useState, type DependencyList } from 'react'
+import { isMockFallbackEnabled } from '../api/axios'
 
 export function useAsyncData<T>(loader: () => Promise<T>, initialValue: T, deps: DependencyList = []) {
-  const [data, setData] = useState<T>(initialValue)
+  const effectiveInitialValue = !isMockFallbackEnabled() && Array.isArray(initialValue) ? ([] as T) : initialValue
+  const [data, setData] = useState<T>(effectiveInitialValue)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -17,6 +19,9 @@ export function useAsyncData<T>(loader: () => Promise<T>, initialValue: T, deps:
       .catch((exception: unknown) => {
         if (mounted) {
           setError(exception instanceof Error ? exception.message : '데이터를 불러오지 못했습니다.')
+          if (!isMockFallbackEnabled() && Array.isArray(initialValue)) {
+            setData([] as T)
+          }
         }
       })
       .finally(() => {
