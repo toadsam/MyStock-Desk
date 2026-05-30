@@ -2,6 +2,7 @@ HELP.md
 .gradle
 build/
 *.log
+src/main/resources/application-local.yml
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
