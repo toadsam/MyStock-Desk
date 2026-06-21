@@ -24,7 +24,7 @@ import {
   WalletCards,
   X,
 } from 'lucide-react'
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ComponentType, ReactNode } from 'react'
 import { NavLink, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
@@ -45,32 +45,64 @@ import waveHero from '../assets/mywave/wave-hero.png'
 import {
   addMyWaveWatchlist,
   chatWithMyWaveCoach,
+  createMyWaveAccount,
+  createMyWaveExpense,
   createMyWaveGoal,
+  createMyWaveTransaction,
+  deleteMyWaveAccount,
+  deleteMyWaveExpense,
+  deleteMyWaveGoal,
   deleteMyWaveNotification,
   deleteReadMyWaveNotifications,
+  deleteMyWaveTransaction,
+  getMyWaveAccounts,
+  getMyWaveAssetSummary,
   getMyWaveCompanyAnalysis,
   getMyWaveActions,
   getMyWaveCoachMessages,
   getMyWaveDashboard,
+  getMyWaveExpenses,
+  getMyWaveExpenseSummary,
   getMyWaveGoals,
+  getMyWaveHoldings,
   getMyWaveMember,
   getMyWaveNotifications,
+  getMyWavePortfolio,
+  getMyWaveTransactions,
   markAllMyWaveNotificationsRead,
   markMyWaveNotificationRead,
   removeMyWaveWatchlist,
   saveMyWavePortfolioRiskAction,
   searchMyWave,
   simulateMyWaveSaving,
+  saveMyWaveMonthlyBudget,
+  updateMyWaveAccount,
+  updateMyWaveExpense,
+  updateMyWaveGoal,
+  updateMyWaveTransaction,
   updateMyWaveMembership,
+  changeMyWavePassword,
+  logoutMyWaveSession,
+  updateMyWaveProfile,
   type MyWaveActionResponse,
   type MyWaveCompanyAnalysisResponse,
   type MyWaveCoachMessageResponse,
   type MyWaveDashboardResponse,
+  type MyWaveExpenseResponse,
+  type MyWaveExpenseSummaryResponse,
+  type MyWaveFinancialAccountResponse,
   type MyWaveGoalResponse,
+  type MyWaveHoldingResponse,
+  type MyWaveInvestmentTransactionResponse,
   type MyWaveMemberResponse,
+  type MyWaveMonthlyBudgetResponse,
   type MyWaveNotificationResponse,
+  type MyWavePortfolioResponse,
   type MyWaveSearchResultResponse,
 } from './myWaveApi'
+import AuthPage from '../pages/AuthPage'
+import { ProtectedRoute } from '../auth/ProtectedRoute'
+import { useAuth } from '../auth/useAuth'
 import {
   Area,
   AreaChart,
@@ -132,35 +164,39 @@ function useMyWaveData() {
 export default function MyWaveApp() {
   return (
     <Routes>
-      <Route element={<Shell />}>
-        <Route index element={<HomePage />} />
-        <Route path="goals" element={<GoalsPage />} />
-        <Route path="spending" element={<SpendingPage />} />
-        <Route path="portfolio" element={<PortfolioPage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="coach" element={<CoachPage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="profile" element={<ProfilePage />} />
-        <Route path="onboarding" element={<OnboardingPage />} />
-        <Route path="search" element={<SearchResultsPage />} />
-        <Route path="goals/new" element={<GoalEditorPage />} />
-        <Route path="spending/detail" element={<SpendingDetailPage />} />
-        <Route path="spending/simulation" element={<SimulationDetailPage />} />
-        <Route path="portfolio/detail" element={<PortfolioDetailPage />} />
-        <Route path="portfolio/allocation" element={<PortfolioAllocationDetailPage />} />
-        <Route path="portfolio/risk" element={<RiskDetailPage />} />
-        <Route path="assets" element={<AssetDetailPage />} />
-        <Route path="company/:symbol" element={<CompanyDetailPage />} />
-        <Route path="transactions" element={<Navigate to="/spending" replace />} />
-        <Route path="ai-report" element={<Navigate to="/coach" replace />} />
-        <Route path="financial-analysis" element={<Navigate to="/reports" replace />} />
-        <Route path="watchlist" element={<Navigate to="/portfolio" replace />} />
-        <Route path="earnings-calendar" element={<Navigate to="/reports" replace />} />
-        <Route path="market" element={<Navigate to="/portfolio" replace />} />
-        <Route path="research" element={<Navigate to="/reports" replace />} />
-        <Route path="themes" element={<Navigate to="/portfolio" replace />} />
-        <Route path="stock/:symbol" element={<Navigate to="/company/005930" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="login" element={<AuthPage />} />
+      <Route path="register" element={<AuthPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<Shell />}>
+          <Route index element={<HomePage />} />
+          <Route path="goals" element={<GoalsPage />} />
+          <Route path="spending" element={<SpendingPage />} />
+          <Route path="portfolio" element={<PortfolioPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="coach" element={<CoachPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="onboarding" element={<OnboardingPage />} />
+          <Route path="search" element={<SearchResultsPage />} />
+          <Route path="goals/new" element={<GoalEditorPage />} />
+          <Route path="spending/detail" element={<SpendingDetailPage />} />
+          <Route path="spending/simulation" element={<SimulationDetailPage />} />
+          <Route path="portfolio/detail" element={<PortfolioDetailPage />} />
+          <Route path="portfolio/allocation" element={<PortfolioAllocationDetailPage />} />
+          <Route path="portfolio/risk" element={<RiskDetailPage />} />
+          <Route path="assets" element={<AssetDetailPage />} />
+          <Route path="company/:symbol" element={<CompanyDetailPage />} />
+          <Route path="transactions" element={<Navigate to="/spending" replace />} />
+          <Route path="ai-report" element={<Navigate to="/coach" replace />} />
+          <Route path="financial-analysis" element={<Navigate to="/reports" replace />} />
+          <Route path="watchlist" element={<Navigate to="/portfolio" replace />} />
+          <Route path="earnings-calendar" element={<Navigate to="/reports" replace />} />
+          <Route path="market" element={<Navigate to="/portfolio" replace />} />
+          <Route path="research" element={<Navigate to="/reports" replace />} />
+          <Route path="themes" element={<Navigate to="/portfolio" replace />} />
+          <Route path="stock/:symbol" element={<Navigate to="/company/005930" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
       </Route>
     </Routes>
   )
@@ -554,6 +590,7 @@ function GoalsPage() {
           <MainGoalCard />
           <ActionPanel />
           <GoalsList />
+          <GoalManagementPanel />
         </div>
         <div className="space-y-5">
           <GoalPrediction />
@@ -619,6 +656,7 @@ function PortfolioPage() {
             <CompanyPreview />
           </div>
         </div>
+        <InvestmentTransactionManager />
       </div>
     </>
   )
@@ -1268,6 +1306,85 @@ function GoalsList() {
   )
 }
 
+function GoalManagementPanel() {
+  const navigate = useNavigate()
+  const [goals, setGoals] = useState<MyWaveGoalResponse[]>([])
+  const [message, setMessage] = useState('')
+
+  async function loadGoals() {
+    try {
+      const result = await getMyWaveGoals()
+      setGoals(result)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '목표 목록을 불러오지 못했습니다.')
+    }
+  }
+
+  useEffect(() => {
+    void loadGoals()
+  }, [])
+
+  async function changeGoalStatus(goal: MyWaveGoalResponse, status: string) {
+    try {
+      await updateMyWaveGoal(goal.id, {
+        title: goal.title,
+        targetAmount: Number(goal.targetAmount),
+        currentAmount: status === 'COMPLETED' ? Number(goal.targetAmount) : Number(goal.currentAmount),
+        targetDate: goal.targetDate,
+        status,
+        priority: goal.priority,
+      })
+      setMessage(status === 'COMPLETED' ? '목표를 완료 처리했습니다.' : '목표 상태가 변경되었습니다.')
+      await loadGoals()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '목표 상태 변경에 실패했습니다.')
+    }
+  }
+
+  async function removeGoal(id: number) {
+    try {
+      await deleteMyWaveGoal(id)
+      setMessage('목표가 삭제되었습니다.')
+      await loadGoals()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '목표 삭제에 실패했습니다.')
+    }
+  }
+
+  return (
+    <Card
+      title="목표 관리"
+      action={<button onClick={() => navigate('/goals/new')} className="pressable rounded-full bg-blue-700 px-4 py-2 text-sm font-black text-white">+ 목표 추가</button>}
+    >
+      {message && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{message}</div>}
+      <div className="space-y-3">
+        {goals.map((goal) => (
+          <div key={goal.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base font-black">{goal.title}</h3>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-500">{goal.status}</span>
+                </div>
+                <div className="mt-2 text-sm font-bold text-slate-500">{won(Number(goal.currentAmount))} / {won(Number(goal.targetAmount))} · D-{goal.remainingDays}일</div>
+              </div>
+              <div className="text-right text-lg font-black text-blue-700">{Math.round(Number(goal.progressRate))}%</div>
+            </div>
+            <Progress value={Number(goal.progressRate)} className="mt-4" />
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button onClick={() => navigate(`/goals/new?id=${goal.id}`)} className="pressable rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-600">수정</button>
+              <button onClick={() => changeGoalStatus(goal, 'ACTIVE')} className="pressable rounded-full border border-blue-100 bg-white px-3 py-2 text-sm font-black text-blue-700">진행</button>
+              <button onClick={() => changeGoalStatus(goal, 'PAUSED')} className="pressable rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-600">일시정지</button>
+              <button onClick={() => changeGoalStatus(goal, 'COMPLETED')} className="pressable rounded-full border border-emerald-100 bg-white px-3 py-2 text-sm font-black text-emerald-700">완료</button>
+              <button onClick={() => removeGoal(goal.id)} className="pressable rounded-full border border-red-100 bg-white px-3 py-2 text-sm font-black text-red-500">삭제</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
 function GoalPrediction() {
   const { spendingTrend } = useMyWaveData()
 
@@ -1603,6 +1720,263 @@ function HoldingsTable() {
   )
 }
 
+type InvestmentTransactionFormState = {
+  symbol: string
+  stockName: string
+  transactionType: string
+  quantity: number
+  price: number
+  fee: number
+  tax: number
+  transactionDate: string
+  memo: string
+  reason: string
+  tagsText: string
+}
+
+function defaultInvestmentTransactionForm(): InvestmentTransactionFormState {
+  return {
+    symbol: '005930',
+    stockName: '삼성전자',
+    transactionType: 'BUY',
+    quantity: 1,
+    price: 79600,
+    fee: 0,
+    tax: 0,
+    transactionDate: todayDateString(),
+    memo: '',
+    reason: '',
+    tagsText: '',
+  }
+}
+
+function transactionLabel(type: string) {
+  const labels: Record<string, string> = {
+    BUY: '매수',
+    SELL: '매도',
+    DEPOSIT: '입금',
+    WITHDRAWAL: '출금',
+    DIVIDEND: '배당',
+  }
+  return labels[type] ?? type
+}
+
+function InvestmentTransactionManager() {
+  const [portfolio, setPortfolio] = useState<MyWavePortfolioResponse | null>(null)
+  const [holdings, setHoldings] = useState<MyWaveHoldingResponse[]>([])
+  const [transactions, setTransactions] = useState<MyWaveInvestmentTransactionResponse[]>([])
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [form, setForm] = useState<InvestmentTransactionFormState>(() => defaultInvestmentTransactionForm())
+  const [message, setMessage] = useState('')
+
+  const refreshPortfolioRecords = useCallback(async () => {
+    try {
+      const [portfolioResult, holdingResult, transactionResult] = await Promise.all([
+        getMyWavePortfolio(),
+        getMyWaveHoldings(),
+        getMyWaveTransactions(),
+      ])
+      setPortfolio(portfolioResult)
+      setHoldings(holdingResult)
+      setTransactions(transactionResult)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '포트폴리오 데이터를 불러오지 못했습니다.')
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshPortfolioRecords()
+  }, [refreshPortfolioRecords])
+
+  function editTransaction(transaction: MyWaveInvestmentTransactionResponse) {
+    setEditingId(transaction.id)
+    setForm({
+      symbol: transaction.symbol,
+      stockName: transaction.stockName,
+      transactionType: transaction.transactionType,
+      quantity: Number(transaction.quantity),
+      price: Number(transaction.price),
+      fee: Number(transaction.fee),
+      tax: Number(transaction.tax),
+      transactionDate: transaction.transactionDate,
+      memo: transaction.memo ?? '',
+      reason: transaction.reason ?? '',
+      tagsText: transaction.tags.join(', '),
+    })
+    setMessage('')
+  }
+
+  function resetTransactionForm() {
+    setEditingId(null)
+    setForm(defaultInvestmentTransactionForm())
+  }
+
+  function transactionRequest() {
+    const moneyOnly = ['DEPOSIT', 'WITHDRAWAL', 'DIVIDEND'].includes(form.transactionType)
+    return {
+      symbol: moneyOnly ? form.transactionType : form.symbol.trim(),
+      stockName: moneyOnly ? transactionLabel(form.transactionType) : form.stockName.trim(),
+      transactionType: form.transactionType,
+      quantity: moneyOnly ? 0 : form.quantity,
+      price: form.price,
+      fee: form.fee,
+      tax: form.tax,
+      transactionDate: form.transactionDate,
+      memo: form.memo,
+      reason: form.reason,
+      tags: form.tagsText.split(',').map((tag) => tag.trim()).filter(Boolean),
+    }
+  }
+
+  async function saveTransaction() {
+    if (!['DEPOSIT', 'WITHDRAWAL', 'DIVIDEND'].includes(form.transactionType) && (!form.symbol.trim() || form.quantity <= 0)) {
+      setMessage('매수/매도 기록에는 종목코드와 수량이 필요합니다.')
+      return
+    }
+    if (form.price < 0 || !form.transactionDate) {
+      setMessage('금액과 거래일을 확인해주세요.')
+      return
+    }
+    try {
+      const request = transactionRequest()
+      if (editingId) {
+        await updateMyWaveTransaction(editingId, request)
+        setMessage('거래 기록이 수정되었습니다.')
+      } else {
+        await createMyWaveTransaction(request)
+        setMessage('거래 기록이 추가되었습니다.')
+      }
+      resetTransactionForm()
+      await refreshPortfolioRecords()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '거래 기록 저장에 실패했습니다.')
+    }
+  }
+
+  async function removeTransaction(id: number) {
+    try {
+      await deleteMyWaveTransaction(id)
+      if (editingId === id) resetTransactionForm()
+      setMessage('거래 기록이 삭제되었습니다.')
+      await refreshPortfolioRecords()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '거래 기록 삭제에 실패했습니다.')
+    }
+  }
+
+  return (
+    <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
+      <Card
+        title="투자 거래 기록"
+        action={<button onClick={refreshPortfolioRecords} className="pressable rounded-full border border-blue-100 px-3 py-1.5 text-xs font-black text-blue-700">새로고침</button>}
+      >
+        {portfolio && (
+          <div className="mb-4 grid gap-3 sm:grid-cols-3">
+            <MiniStat label="총 평가금액" value={won(Number(portfolio.totalEvaluationAmount))} />
+            <MiniStat label="예수금" value={won(Number(portfolio.cash))} />
+            <MiniStat label="총 수익률" value={`${Number(portfolio.totalReturnRate).toFixed(2)}%`} />
+          </div>
+        )}
+        {message && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{message}</div>}
+        <div className="space-y-3">
+          {transactions.map((transaction) => (
+            <div key={transaction.id} className="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+              <button onClick={() => editTransaction(transaction)} className="pressable min-w-0 text-left">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-blue-700">{transactionLabel(transaction.transactionType)}</span>
+                  <span className="text-base font-black">{transaction.stockName}</span>
+                  <span className="text-sm font-bold text-slate-400">{transaction.symbol}</span>
+                </div>
+                <div className="mt-2 text-sm font-bold text-slate-500">{transaction.transactionDate} · {transaction.reason || transaction.memo || '거래 기록'}</div>
+              </button>
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                <div className="text-right">
+                  <div className="text-lg font-black">{won(Number(transaction.totalAmount))}</div>
+                  <div className="text-xs font-bold text-slate-400">{transaction.quantity}주 · {won(Number(transaction.price))}</div>
+                </div>
+                <button onClick={() => removeTransaction(transaction.id)} className="pressable grid h-9 w-9 place-items-center rounded-full text-red-500 hover:bg-red-50">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <div className="space-y-5">
+        <Card title={editingId ? '거래 기록 수정' : '거래 기록 추가'}>
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="거래 유형">
+                <select value={form.transactionType} onChange={(event) => setForm((value) => ({ ...value, transactionType: event.target.value }))} className="form-input">
+                  <option value="BUY">매수</option>
+                  <option value="SELL">매도</option>
+                  <option value="DEPOSIT">입금</option>
+                  <option value="WITHDRAWAL">출금</option>
+                  <option value="DIVIDEND">배당</option>
+                </select>
+              </Field>
+              <Field label="거래일">
+                <input type="date" value={form.transactionDate} onChange={(event) => setForm((value) => ({ ...value, transactionDate: event.target.value }))} className="form-input" />
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="종목코드">
+                <input value={form.symbol} onChange={(event) => setForm((value) => ({ ...value, symbol: event.target.value }))} className="form-input" disabled={['DEPOSIT', 'WITHDRAWAL', 'DIVIDEND'].includes(form.transactionType)} />
+              </Field>
+              <Field label="종목명">
+                <input value={form.stockName} onChange={(event) => setForm((value) => ({ ...value, stockName: event.target.value }))} className="form-input" disabled={['DEPOSIT', 'WITHDRAWAL', 'DIVIDEND'].includes(form.transactionType)} />
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="수량">
+                <input type="number" value={form.quantity} onChange={(event) => setForm((value) => ({ ...value, quantity: Number(event.target.value) }))} className="form-input" disabled={['DEPOSIT', 'WITHDRAWAL', 'DIVIDEND'].includes(form.transactionType)} />
+              </Field>
+              <Field label={['DEPOSIT', 'WITHDRAWAL', 'DIVIDEND'].includes(form.transactionType) ? '금액' : '단가'}>
+                <input type="number" value={form.price} onChange={(event) => setForm((value) => ({ ...value, price: Number(event.target.value) }))} className="form-input" />
+              </Field>
+              <Field label="수수료">
+                <input type="number" value={form.fee} onChange={(event) => setForm((value) => ({ ...value, fee: Number(event.target.value) }))} className="form-input" />
+              </Field>
+            </div>
+            <Field label="투자 이유">
+              <input value={form.reason} onChange={(event) => setForm((value) => ({ ...value, reason: event.target.value }))} className="form-input" />
+            </Field>
+            <Field label="메모">
+              <input value={form.memo} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} className="form-input" />
+            </Field>
+            <Field label="태그">
+              <input value={form.tagsText} onChange={(event) => setForm((value) => ({ ...value, tagsText: event.target.value }))} className="form-input" placeholder="반도체, 장기보유" />
+            </Field>
+            <div className="flex gap-3">
+              {editingId && <button onClick={resetTransactionForm} className="pressable h-13 flex-1 rounded-2xl border border-slate-200 font-black text-slate-600">취소</button>}
+              <button onClick={saveTransaction} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
+                <Save className="inline h-5 w-5" /> {editingId ? '수정 저장' : '거래 추가'}
+              </button>
+            </div>
+          </div>
+        </Card>
+        <Card title="API 보유 종목">
+          <div className="space-y-3">
+            {holdings.length === 0 && <div className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-500">아직 API 기준 보유 종목이 없습니다.</div>}
+            {holdings.map((holding) => (
+              <div key={holding.symbol} className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl bg-slate-50 p-3">
+                <div>
+                  <div className="font-black">{holding.stockName} <span className="text-sm text-slate-400">{holding.symbol}</span></div>
+                  <div className="mt-1 text-xs font-bold text-slate-500">{holding.quantity}주 · 평균 {won(Number(holding.averagePrice))}</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-black">{won(Number(holding.evaluationAmount))}</div>
+                  <div className={Number(holding.profitLoss) >= 0 ? 'text-sm font-black text-red-500' : 'text-sm font-black text-blue-700'}>{Number(holding.returnRate).toFixed(2)}%</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
 function PortfolioInsight() {
   return (
     <Card className="bg-blue-50/70" title="포트폴리오 인사이트" action={<InlineAction to="/coach" label="AI 코치" primary />}>
@@ -1889,10 +2263,19 @@ function NotificationsPage() {
 
 function ProfilePage() {
   const navigate = useNavigate()
+  const auth = useAuth()
   const { financeSummary } = useMyWaveData()
   const [membershipOpen, setMembershipOpen] = useState(false)
-  const [logoutReady, setLogoutReady] = useState(false)
   const [member, setMember] = useState<MyWaveMemberResponse | null>(null)
+  const [profileName, setProfileName] = useState(auth.member?.name ?? '')
+  const [profileEmail, setProfileEmail] = useState(auth.member?.email ?? '')
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileMessage, setProfileMessage] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState('')
+  const [logoutSaving, setLogoutSaving] = useState(false)
   const rows = [
     { icon: UserRound, title: '계정 설정', detail: '프로필, 이메일, 비밀번호 변경', to: '/profile' },
     { icon: Bell, title: '알림 설정', detail: '푸시 알림 및 이메일 알림 관리', to: '/notifications' },
@@ -1902,23 +2285,99 @@ function ProfilePage() {
     { icon: CircleHelp, title: '도움말', detail: 'FAQ 및 고객센터', to: '/onboarding' },
   ]
 
+  function syncAuthMember(updated: MyWaveMemberResponse) {
+    auth.updateMember({
+      id: auth.member?.id ?? updated.id,
+      name: updated.name,
+      email: updated.email,
+      profileImageUrl: updated.profileImageUrl ?? auth.member?.profileImageUrl ?? '',
+      membershipGrade: updated.membershipGrade ?? auth.member?.membershipGrade ?? 'Wave 사용자',
+      createdAt: auth.member?.createdAt ?? new Date().toISOString(),
+    })
+  }
+
   async function toggleMembership() {
     const open = !membershipOpen
     setMembershipOpen(open)
     try {
       const updated = await updateMyWaveMembership(open ? '프리미엄' : 'Wave 사용자')
       setMember(updated)
+      syncAuthMember(updated)
     } catch {
       // 백엔드가 꺼져 있어도 멤버십 패널 흐름은 유지합니다.
+    }
+  }
+
+  async function saveProfile() {
+    const name = profileName.trim()
+    const email = profileEmail.trim()
+    if (!name || !email) {
+      setProfileMessage('이름과 이메일을 모두 입력해주세요.')
+      return
+    }
+    setProfileSaving(true)
+    setProfileMessage('')
+    try {
+      const updated = await updateMyWaveProfile({
+        name,
+        email,
+        profileImageUrl: member?.profileImageUrl ?? auth.member?.profileImageUrl,
+      })
+      setMember(updated)
+      setProfileName(updated.name)
+      setProfileEmail(updated.email)
+      syncAuthMember(updated)
+      setProfileMessage('프로필이 저장되었습니다.')
+    } catch (error) {
+      setProfileMessage(error instanceof Error ? error.message : '프로필 저장에 실패했습니다.')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
+  async function savePassword() {
+    if (newPassword.length < 8) {
+      setPasswordMessage('새 비밀번호는 8자 이상이어야 합니다.')
+      return
+    }
+    setPasswordSaving(true)
+    setPasswordMessage('')
+    try {
+      await changeMyWavePassword({ currentPassword, newPassword })
+      setCurrentPassword('')
+      setNewPassword('')
+      setPasswordMessage('비밀번호가 변경되었습니다.')
+    } catch (error) {
+      setPasswordMessage(error instanceof Error ? error.message : '비밀번호 변경에 실패했습니다.')
+    } finally {
+      setPasswordSaving(false)
+    }
+  }
+
+  async function handleLogout() {
+    setLogoutSaving(true)
+    try {
+      await logoutMyWaveSession()
+    } catch {
+      // 서버 세션 만료 상태여도 로컬 인증 정보는 정리합니다.
+    } finally {
+      auth.logout()
+      navigate('/login', { replace: true })
     }
   }
 
   useEffect(() => {
     let ignore = false
     getMyWaveMember().then((profile) => {
-      if (!ignore) setMember(profile)
+      if (!ignore) {
+        setMember(profile)
+        setProfileName(profile.name)
+        setProfileEmail(profile.email)
+      }
     }).catch(() => {
-      if (!ignore) setMember(null)
+      if (!ignore) {
+        setMember(null)
+      }
     })
     return () => {
       ignore = true
@@ -1958,6 +2417,36 @@ function ProfilePage() {
           <MiniStat label="저축률" value={`${financeSummary.savingRate}%`} change="이번 달" />
         </div>
       </Card>
+      <div className="grid gap-5 xl:grid-cols-2">
+        <Card title="프로필 수정">
+          <div className="space-y-4">
+            <Field label="이름">
+              <input value={profileName} onChange={(event) => setProfileName(event.target.value)} className="form-input" />
+            </Field>
+            <Field label="이메일">
+              <input type="email" value={profileEmail} onChange={(event) => setProfileEmail(event.target.value)} className="form-input" />
+            </Field>
+            {profileMessage && <p className="rounded-2xl bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700">{profileMessage}</p>}
+            <button onClick={saveProfile} disabled={profileSaving} className="pressable h-13 w-full rounded-2xl bg-blue-700 font-black text-white shadow-blue disabled:opacity-60">
+              <Save className="inline h-5 w-5" /> {profileSaving ? '저장 중' : '프로필 저장'}
+            </button>
+          </div>
+        </Card>
+        <Card title="비밀번호 변경">
+          <div className="space-y-4">
+            <Field label="현재 비밀번호">
+              <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className="form-input" autoComplete="current-password" />
+            </Field>
+            <Field label="새 비밀번호">
+              <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="form-input" autoComplete="new-password" />
+            </Field>
+            {passwordMessage && <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">{passwordMessage}</p>}
+            <button onClick={savePassword} disabled={passwordSaving || !currentPassword || !newPassword} className="pressable h-13 w-full rounded-2xl border border-blue-100 bg-blue-50 font-black text-blue-700 disabled:opacity-50">
+              <ShieldAlert className="inline h-5 w-5" /> {passwordSaving ? '변경 중' : '비밀번호 변경'}
+            </button>
+          </div>
+        </Card>
+      </div>
       <Card>
         <div className="divide-y divide-slate-100">
           {rows.map((row) => {
@@ -1975,8 +2464,8 @@ function ProfilePage() {
           })}
         </div>
       </Card>
-      <button onClick={() => setLogoutReady((value) => !value)} className="pressable flex w-full items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white py-4 font-black text-red-500 shadow-card">
-        <LogOut className="h-5 w-5" /> {logoutReady ? '로그아웃 확인됨' : '로그아웃'}
+      <button onClick={handleLogout} disabled={logoutSaving} className="pressable flex w-full items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white py-4 font-black text-red-500 shadow-card disabled:opacity-60">
+        <LogOut className="h-5 w-5" /> {logoutSaving ? '로그아웃 중' : '로그아웃'}
       </button>
     </div>
   )
@@ -2088,18 +2577,55 @@ function SearchResultRow({ title, detail, to }: { title: string; detail: string;
 
 function GoalEditorPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const editingId = Number(searchParams.get('id') ?? 0)
   const [title, setTitle] = useState('새 저축 목표')
   const [targetAmount, setTargetAmount] = useState(1_000_000)
   const [currentAmount, setCurrentAmount] = useState(0)
   const [targetDate, setTargetDate] = useState('2026-07-21')
+  const [goalStatus, setGoalStatus] = useState('ACTIVE')
+  const [priority, setPriority] = useState(1)
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    if (!editingId) return
+    let ignore = false
+    getMyWaveGoals().then((items) => {
+      if (ignore) return
+      const goal = items.find((item) => item.id === editingId)
+      if (!goal) {
+        setMessage('수정할 목표를 찾지 못했습니다.')
+        return
+      }
+      setTitle(goal.title)
+      setTargetAmount(Number(goal.targetAmount))
+      setCurrentAmount(Number(goal.currentAmount))
+      setTargetDate(goal.targetDate)
+      setGoalStatus(goal.status)
+      setPriority(goal.priority)
+    }).catch((error) => {
+      if (!ignore) setMessage(error instanceof Error ? error.message : '목표를 불러오지 못했습니다.')
+    })
+    return () => {
+      ignore = true
+    }
+  }, [editingId])
 
   async function submit() {
     setStatus('saving')
+    setMessage('')
     try {
-      await createMyWaveGoal({ title, targetAmount, currentAmount, targetDate, status: 'ACTIVE', priority: 1 })
-    } catch {
-      // 백엔드가 꺼져 있어도 화면 흐름은 확인할 수 있게 저장 완료 처리합니다.
+      const request = { title, targetAmount, currentAmount, targetDate, status: goalStatus, priority }
+      if (editingId) {
+        await updateMyWaveGoal(editingId, request)
+      } else {
+        await createMyWaveGoal(request)
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '목표 저장에 실패했습니다.')
+      setStatus('idle')
+      return
     }
     setStatus('saved')
     window.setTimeout(() => navigate('/goals'), 500)
@@ -2107,7 +2633,8 @@ function GoalEditorPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <MobileTitle title="새 목표 만들기" />
+      <MobileTitle title={editingId ? '목표 수정' : '새 목표 만들기'} />
+      {message && <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-black text-red-500">{message}</div>}
       <Card title="목표 정보">
         <div className="space-y-4">
           <Field label="목표 이름">
@@ -2124,6 +2651,18 @@ function GoalEditorPage() {
           <Field label="목표 날짜">
             <input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} className="form-input" />
           </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="상태">
+              <select value={goalStatus} onChange={(event) => setGoalStatus(event.target.value)} className="form-input">
+                <option value="ACTIVE">진행 중</option>
+                <option value="PAUSED">일시정지</option>
+                <option value="COMPLETED">완료</option>
+              </select>
+            </Field>
+            <Field label="우선순위">
+              <input type="number" min="1" value={priority} onChange={(event) => setPriority(Number(event.target.value))} className="form-input" />
+            </Field>
+          </div>
         </div>
       </Card>
       <Card title="예상 결과">
@@ -2136,7 +2675,7 @@ function GoalEditorPage() {
       <div className="flex gap-3">
         <button onClick={() => navigate('/goals')} className="pressable h-13 flex-1 rounded-2xl border border-slate-200 font-black text-slate-600">취소</button>
         <button onClick={submit} disabled={status === 'saving'} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue disabled:opacity-60">
-          <Save className="inline h-5 w-5" /> {status === 'saving' ? '저장 중' : status === 'saved' ? '저장 완료' : '저장하기'}
+          <Save className="inline h-5 w-5" /> {status === 'saving' ? '저장 중' : status === 'saved' ? '저장 완료' : editingId ? '수정 저장' : '저장하기'}
         </button>
       </div>
     </div>
@@ -2192,6 +2731,172 @@ function SpendingDetailPage() {
           <MiniStat label="예산 대비" value={`${financeSummary.budgetRate}%`} change="조정 필요" />
         </div>
       </Card>
+      <ExpenseRecordsManager />
+    </div>
+  )
+}
+
+type ExpenseFormState = {
+  category: string
+  merchant: string
+  amount: number
+  spentDate: string
+  memo: string
+}
+
+function todayDateString() {
+  const today = new Date()
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+}
+
+function monthStringFromDate(value: string) {
+  return value.slice(0, 7)
+}
+
+function ExpenseRecordsManager() {
+  const [expenses, setExpenses] = useState<MyWaveExpenseResponse[]>([])
+  const [summary, setSummary] = useState<MyWaveExpenseSummaryResponse | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [form, setForm] = useState<ExpenseFormState>({
+    category: '배달비',
+    merchant: '',
+    amount: 0,
+    spentDate: todayDateString(),
+    memo: '',
+  })
+  const [message, setMessage] = useState('')
+
+  async function loadExpenses(month = monthStringFromDate(form.spentDate)) {
+    try {
+      const [items, monthlySummary] = await Promise.all([
+        getMyWaveExpenses(month),
+        getMyWaveExpenseSummary(month),
+      ])
+      setExpenses(items)
+      setSummary(monthlySummary)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '소비 내역을 불러오지 못했습니다.')
+    }
+  }
+
+  useEffect(() => {
+    void loadExpenses()
+  }, [])
+
+  function editExpense(expense: MyWaveExpenseResponse) {
+    setEditingId(expense.id)
+    setForm({
+      category: expense.category,
+      merchant: expense.merchant,
+      amount: Number(expense.amount),
+      spentDate: expense.spentDate,
+      memo: expense.memo ?? '',
+    })
+    setMessage('')
+  }
+
+  function resetExpenseForm() {
+    setEditingId(null)
+    setForm({ category: '배달비', merchant: '', amount: 0, spentDate: todayDateString(), memo: '' })
+  }
+
+  async function saveExpense() {
+    if (!form.category.trim() || !form.merchant.trim() || form.amount <= 0) {
+      setMessage('카테고리, 사용처, 금액을 입력해주세요.')
+      return
+    }
+    try {
+      if (editingId) {
+        await updateMyWaveExpense(editingId, form)
+        setMessage('소비 내역이 수정되었습니다.')
+      } else {
+        await createMyWaveExpense(form)
+        setMessage('소비 내역이 추가되었습니다.')
+      }
+      const month = monthStringFromDate(form.spentDate)
+      resetExpenseForm()
+      await loadExpenses(month)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '소비 내역 저장에 실패했습니다.')
+    }
+  }
+
+  async function removeExpense(id: number) {
+    try {
+      await deleteMyWaveExpense(id)
+      if (editingId === id) resetExpenseForm()
+      setMessage('소비 내역이 삭제되었습니다.')
+      await loadExpenses()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '소비 내역 삭제에 실패했습니다.')
+    }
+  }
+
+  return (
+    <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
+      <Card
+        title="소비 내역"
+        action={<button onClick={() => loadExpenses()} className="pressable rounded-full border border-blue-100 px-3 py-1.5 text-xs font-black text-blue-700">새로고침</button>}
+      >
+        {summary && (
+          <div className="mb-4 grid gap-3 sm:grid-cols-3">
+            <MiniStat label="월 총 지출" value={won(Number(summary.totalAmount))} />
+            <MiniStat label="전월 대비" value={`${Number(summary.changeRate).toFixed(1)}%`} />
+            <MiniStat label="일평균" value={won(Number(summary.dailyAverageAmount))} />
+          </div>
+        )}
+        {message && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{message}</div>}
+        <div className="space-y-3">
+          {expenses.map((expense) => (
+            <div key={expense.id} className="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+              <button onClick={() => editExpense(expense)} className="pressable min-w-0 text-left">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-blue-700">{expense.category}</span>
+                  <span className="text-base font-black">{expense.merchant}</span>
+                </div>
+                <div className="mt-2 text-sm font-bold text-slate-500">{expense.spentDate}{expense.memo ? ` · ${expense.memo}` : ''}</div>
+              </button>
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                <div className="text-right text-lg font-black">{won(Number(expense.amount))}</div>
+                <button onClick={() => removeExpense(expense.id)} className="pressable grid h-9 w-9 place-items-center rounded-full text-red-500 hover:bg-red-50">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card title={editingId ? '소비 내역 수정' : '소비 내역 추가'}>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="카테고리">
+              <select value={form.category} onChange={(event) => setForm((value) => ({ ...value, category: event.target.value }))} className="form-input">
+                {['배달비', '쇼핑', '식비', '카페', '교통', '구독', '기타'].map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </Field>
+            <Field label="사용처">
+              <input value={form.merchant} onChange={(event) => setForm((value) => ({ ...value, merchant: event.target.value }))} className="form-input" />
+            </Field>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="금액">
+              <input type="number" value={form.amount} onChange={(event) => setForm((value) => ({ ...value, amount: Number(event.target.value) }))} className="form-input" />
+            </Field>
+            <Field label="사용일">
+              <input type="date" value={form.spentDate} onChange={(event) => setForm((value) => ({ ...value, spentDate: event.target.value }))} className="form-input" />
+            </Field>
+          </div>
+          <Field label="메모">
+            <input value={form.memo} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} className="form-input" />
+          </Field>
+          <div className="flex gap-3">
+            {editingId && <button onClick={resetExpenseForm} className="pressable h-13 flex-1 rounded-2xl border border-slate-200 font-black text-slate-600">취소</button>}
+            <button onClick={saveExpense} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
+              <Save className="inline h-5 w-5" /> {editingId ? '수정 저장' : '내역 추가'}
+            </button>
+          </div>
+        </div>
+      </Card>
     </div>
   )
 }
@@ -2220,6 +2925,7 @@ function PortfolioDetailPage() {
       <PortfolioHero />
       <HoldingsTable />
       <CompanyPreview />
+      <InvestmentTransactionManager />
     </div>
   )
 }
@@ -2274,17 +2980,293 @@ function RiskDetailPage() {
   )
 }
 
+type AccountFormState = {
+  name: string
+  accountType: string
+  institutionName: string
+  balance: number
+  includedInAssets: boolean
+}
+
+type BudgetFormState = {
+  budgetMonth: string
+  incomeAmount: number
+  livingBudgetAmount: number
+  fixedExpenseAmount: number
+  plannedSavingAmount: number
+  plannedInvestmentAmount: number
+}
+
+const emptyAccountForm: AccountFormState = {
+  name: '',
+  accountType: 'BANK',
+  institutionName: '',
+  balance: 0,
+  includedInAssets: true,
+}
+
+function toAccountForm(account: MyWaveFinancialAccountResponse): AccountFormState {
+  return {
+    name: account.name,
+    accountType: account.accountType,
+    institutionName: account.institutionName,
+    balance: Number(account.balance),
+    includedInAssets: Boolean(account.includedInAssets),
+  }
+}
+
+function toBudgetForm(budget: MyWaveMonthlyBudgetResponse): BudgetFormState {
+  return {
+    budgetMonth: budget.budgetMonth,
+    incomeAmount: Number(budget.incomeAmount),
+    livingBudgetAmount: Number(budget.livingBudgetAmount),
+    fixedExpenseAmount: Number(budget.fixedExpenseAmount),
+    plannedSavingAmount: Number(budget.plannedSavingAmount),
+    plannedInvestmentAmount: Number(budget.plannedInvestmentAmount),
+  }
+}
+
+function defaultBudgetForm(): BudgetFormState {
+  const now = new Date()
+  return {
+    budgetMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+    incomeAmount: 4_200_000,
+    livingBudgetAmount: 2_100_000,
+    fixedExpenseAmount: 620_000,
+    plannedSavingAmount: 630_000,
+    plannedInvestmentAmount: 530_000,
+  }
+}
+
+function accountTypeLabel(type: string) {
+  const labels: Record<string, string> = {
+    BANK: '입출금',
+    SAVINGS: '저축',
+    INVESTMENT: '증권',
+    CASH: '현금',
+  }
+  return labels[type] ?? type
+}
+
 function AssetDetailPage() {
   const { financeSummary, activities } = useMyWaveData()
+  const [accounts, setAccounts] = useState<MyWaveFinancialAccountResponse[]>([])
+  const [accountForm, setAccountForm] = useState<AccountFormState>(emptyAccountForm)
+  const [editingAccountId, setEditingAccountId] = useState<number | null>(null)
+  const [budgetForm, setBudgetForm] = useState<BudgetFormState>(() => defaultBudgetForm())
+  const [assetMetrics, setAssetMetrics] = useState({
+    totalAsset: financeSummary.totalAsset,
+    accountBalance: 0,
+    investmentAsset: financeSummary.totalAsset,
+    monthlyExpense: financeSummary.totalSpending,
+    remainingLivingBudget: financeSummary.livingBudgetLeft,
+    investmentAvailableAmount: financeSummary.investableAmount,
+    savingRate: financeSummary.savingRate,
+  })
+  const [statusMessage, setStatusMessage] = useState('')
+
+  async function refreshAssets(month = budgetForm.budgetMonth) {
+    const summary = await getMyWaveAssetSummary(month)
+    setAccounts(summary.accounts)
+    setBudgetForm(toBudgetForm(summary.budget))
+    setAssetMetrics({
+      totalAsset: Number(summary.totalAsset),
+      accountBalance: Number(summary.accountBalance),
+      investmentAsset: Number(summary.investmentAsset),
+      monthlyExpense: Number(summary.monthlyExpense),
+      remainingLivingBudget: Number(summary.remainingLivingBudget),
+      investmentAvailableAmount: Number(summary.investmentAvailableAmount),
+      savingRate: Number(summary.savingRate),
+    })
+  }
+
+  useEffect(() => {
+    let ignore = false
+    getMyWaveAssetSummary().then((summary) => {
+      if (ignore) return
+      setAccounts(summary.accounts)
+      setBudgetForm(toBudgetForm(summary.budget))
+      setAssetMetrics({
+        totalAsset: Number(summary.totalAsset),
+        accountBalance: Number(summary.accountBalance),
+        investmentAsset: Number(summary.investmentAsset),
+        monthlyExpense: Number(summary.monthlyExpense),
+        remainingLivingBudget: Number(summary.remainingLivingBudget),
+        investmentAvailableAmount: Number(summary.investmentAvailableAmount),
+        savingRate: Number(summary.savingRate),
+      })
+    }).catch(() => {
+      if (!ignore) setStatusMessage('자산 데이터를 불러오지 못했습니다.')
+    })
+    return () => {
+      ignore = true
+    }
+  }, [])
+
+  function editAccount(account: MyWaveFinancialAccountResponse) {
+    setEditingAccountId(account.id)
+    setAccountForm(toAccountForm(account))
+    setStatusMessage('')
+  }
+
+  function resetAccountForm() {
+    setEditingAccountId(null)
+    setAccountForm(emptyAccountForm)
+  }
+
+  async function saveAccount() {
+    if (!accountForm.name.trim() || !accountForm.institutionName.trim()) {
+      setStatusMessage('계좌명과 금융기관을 입력해주세요.')
+      return
+    }
+    try {
+      if (editingAccountId) {
+        await updateMyWaveAccount(editingAccountId, accountForm)
+        setStatusMessage('계좌가 수정되었습니다.')
+      } else {
+        await createMyWaveAccount(accountForm)
+        setStatusMessage('새 계좌가 연결되었습니다.')
+      }
+      resetAccountForm()
+      await refreshAssets()
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : '계좌 저장에 실패했습니다.')
+    }
+  }
+
+  async function removeAccount(id: number) {
+    try {
+      await deleteMyWaveAccount(id)
+      if (editingAccountId === id) resetAccountForm()
+      setStatusMessage('계좌가 삭제되었습니다.')
+      await refreshAssets()
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : '계좌 삭제에 실패했습니다.')
+    }
+  }
+
+  async function saveBudget() {
+    try {
+      await saveMyWaveMonthlyBudget(budgetForm)
+      setStatusMessage('이번 달 예산이 저장되었습니다.')
+      await refreshAssets(budgetForm.budgetMonth)
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : '예산 저장에 실패했습니다.')
+    }
+  }
+
+  async function loadAccountsOnly() {
+    try {
+      const result = await getMyWaveAccounts()
+      setAccounts(result)
+      setStatusMessage('계좌 목록을 새로고침했습니다.')
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : '계좌 목록 새로고침에 실패했습니다.')
+    }
+  }
+
   return (
     <div className="space-y-5">
       <MobileTitle title="자산" />
       <Card title="이번 달 재무 상태">
         <div className="grid gap-4 sm:grid-cols-4">
-          <MiniStat label="총 자산" value={won(financeSummary.totalAsset)} change="+1.8%" />
-          <MiniStat label="총 지출" value={won(financeSummary.totalSpending)} change="-8.5%" />
-          <MiniStat label="저축률" value={`${financeSummary.savingRate}%`} change="+5%" />
-          <MiniStat label="투자 가능 금액" value={won(financeSummary.investableAmount)} />
+          <MiniStat label="총 자산" value={won(assetMetrics.totalAsset)} change="계좌+투자" />
+          <MiniStat label="계좌 잔액" value={won(assetMetrics.accountBalance)} change={`${accounts.length}개 연결`} />
+          <MiniStat label="남은 생활비" value={won(assetMetrics.remainingLivingBudget)} change={`저축률 ${assetMetrics.savingRate}%`} />
+          <MiniStat label="투자 가능 금액" value={won(assetMetrics.investmentAvailableAmount)} />
+        </div>
+      </Card>
+      {statusMessage && <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{statusMessage}</div>}
+      <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
+        <Card
+          title="연결 계좌"
+          action={<button onClick={loadAccountsOnly} className="pressable rounded-full border border-blue-100 px-3 py-1.5 text-xs font-black text-blue-700">새로고침</button>}
+        >
+          <div className="space-y-3">
+            {accounts.map((account) => (
+              <div key={account.id} className="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                <button onClick={() => editAccount(account)} className="pressable flex min-w-0 items-center gap-3 text-left">
+                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-blue-700 shadow-sm">
+                    <WalletCards className="h-5 w-5" />
+                  </div>
+                  <span className="min-w-0">
+                    <span className="block text-base font-black">{account.name}</span>
+                    <span className="mt-1 block text-sm font-bold text-slate-500">{account.institutionName} · {accountTypeLabel(account.accountType)} · {account.includedInAssets ? '자산 포함' : '자산 제외'}</span>
+                  </span>
+                </button>
+                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                  <div className="text-right">
+                    <div className="text-lg font-black">{won(Number(account.balance))}</div>
+                    <div className="text-xs font-bold text-slate-400">ID {account.id}</div>
+                  </div>
+                  <button onClick={() => removeAccount(account.id)} className="pressable grid h-9 w-9 place-items-center rounded-full text-red-500 hover:bg-red-50">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card title={editingAccountId ? '계좌 수정' : '새 계좌 연결'}>
+          <div className="space-y-4">
+            <Field label="계좌명">
+              <input value={accountForm.name} onChange={(event) => setAccountForm((value) => ({ ...value, name: event.target.value }))} className="form-input" />
+            </Field>
+            <Field label="금융기관">
+              <input value={accountForm.institutionName} onChange={(event) => setAccountForm((value) => ({ ...value, institutionName: event.target.value }))} className="form-input" />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="계좌 유형">
+                <select value={accountForm.accountType} onChange={(event) => setAccountForm((value) => ({ ...value, accountType: event.target.value }))} className="form-input">
+                  <option value="BANK">입출금</option>
+                  <option value="SAVINGS">저축</option>
+                  <option value="INVESTMENT">증권</option>
+                  <option value="CASH">현금</option>
+                </select>
+              </Field>
+              <Field label="잔액">
+                <input type="number" value={accountForm.balance} onChange={(event) => setAccountForm((value) => ({ ...value, balance: Number(event.target.value) }))} className="form-input" />
+              </Field>
+            </div>
+            <label className="flex items-center justify-between rounded-2xl border border-slate-200 p-4 text-sm font-black">
+              총자산 계산에 포함
+              <input type="checkbox" checked={accountForm.includedInAssets} onChange={(event) => setAccountForm((value) => ({ ...value, includedInAssets: event.target.checked }))} className="h-5 w-5 accent-blue-700" />
+            </label>
+            <div className="flex gap-3">
+              {editingAccountId && <button onClick={resetAccountForm} className="pressable h-13 flex-1 rounded-2xl border border-slate-200 font-black text-slate-600">취소</button>}
+              <button onClick={saveAccount} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
+                <Save className="inline h-5 w-5" /> {editingAccountId ? '수정 저장' : '계좌 연결'}
+              </button>
+            </div>
+          </div>
+        </Card>
+      </div>
+      <Card title="월 예산 설정">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="기준 월">
+            <input type="month" value={budgetForm.budgetMonth} onChange={(event) => setBudgetForm((value) => ({ ...value, budgetMonth: event.target.value }))} className="form-input" />
+          </Field>
+          <Field label="월 수입">
+            <input type="number" value={budgetForm.incomeAmount} onChange={(event) => setBudgetForm((value) => ({ ...value, incomeAmount: Number(event.target.value) }))} className="form-input" />
+          </Field>
+          <Field label="생활비 예산">
+            <input type="number" value={budgetForm.livingBudgetAmount} onChange={(event) => setBudgetForm((value) => ({ ...value, livingBudgetAmount: Number(event.target.value) }))} className="form-input" />
+          </Field>
+          <Field label="고정 지출">
+            <input type="number" value={budgetForm.fixedExpenseAmount} onChange={(event) => setBudgetForm((value) => ({ ...value, fixedExpenseAmount: Number(event.target.value) }))} className="form-input" />
+          </Field>
+          <Field label="목표 저축액">
+            <input type="number" value={budgetForm.plannedSavingAmount} onChange={(event) => setBudgetForm((value) => ({ ...value, plannedSavingAmount: Number(event.target.value) }))} className="form-input" />
+          </Field>
+          <Field label="계획 투자액">
+            <input type="number" value={budgetForm.plannedInvestmentAmount} onChange={(event) => setBudgetForm((value) => ({ ...value, plannedInvestmentAmount: Number(event.target.value) }))} className="form-input" />
+          </Field>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 p-4">
+          <div className="text-sm font-bold text-slate-500">예산 저장 후 남은 생활비와 투자 가능 금액이 다시 계산됩니다.</div>
+          <button onClick={saveBudget} className="pressable rounded-2xl bg-blue-700 px-5 py-3 font-black text-white shadow-blue">
+            <Save className="inline h-5 w-5" /> 예산 저장
+          </button>
         </div>
       </Card>
       <Card title="최근 활동">

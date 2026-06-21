@@ -51,14 +51,17 @@ export type MyWaveDashboardResponse = {
 }
 
 export type MyWaveGoalResponse = {
-  id?: number
+  id: number
   title: string
   targetAmount: number
   currentAmount: number
+  remainingAmount: number
   progressRate: number
   targetDate: string
   remainingDays: number
+  dailyRequiredAmount: number
   status: string
+  priority: number
 }
 
 export type MyWaveActionResponse = {
@@ -111,6 +114,26 @@ export type MyWaveSavingSimulationResponse = {
   categorySavings: Record<string, number>
 }
 
+export type MyWaveExpenseResponse = {
+  id: number
+  category: string
+  merchant: string
+  amount: number
+  spentDate: string
+  memo?: string | null
+}
+
+export type MyWaveExpenseSummaryResponse = {
+  month: string
+  totalAmount: number
+  previousMonthAmount: number
+  changeRate: number
+  dailyAverageAmount: number
+  categories: Array<{ category: string; amount: number; ratio: number; count: number; averageAmount: number }>
+  goalBlockers: Array<{ rank: number; category: string; amount: number; count: number; goalImpactRate: number }>
+  trends: Array<{ month: string; amount: number; budget: number; goalImpactAmount: number }>
+}
+
 export type MyWaveMemberResponse = {
   id: number
   name: string
@@ -119,11 +142,94 @@ export type MyWaveMemberResponse = {
   membershipGrade?: string | null
 }
 
+export type MyWaveFinancialAccountResponse = {
+  id: number
+  name: string
+  accountType: string
+  institutionName: string
+  balance: number
+  includedInAssets: boolean
+}
+
+export type MyWaveMonthlyBudgetResponse = {
+  budgetMonth: string
+  incomeAmount: number
+  livingBudgetAmount: number
+  fixedExpenseAmount: number
+  plannedSavingAmount: number
+  plannedInvestmentAmount: number
+}
+
+export type MyWaveAssetSummaryResponse = {
+  month: string
+  totalAsset: number
+  accountBalance: number
+  investmentAsset: number
+  monthlyIncome: number
+  monthlyExpense: number
+  remainingLivingBudget: number
+  investmentAvailableAmount: number
+  savingRate: number
+  accounts: MyWaveFinancialAccountResponse[]
+  budget: MyWaveMonthlyBudgetResponse
+}
+
 export type MyWavePortfolioRiskActionResponse = {
   id: number
   action: string
   status: string
   createdAt: string
+}
+
+export type MyWavePortfolioResponse = {
+  id: number
+  memberId: number
+  cash: number
+  totalAsset: number
+  totalPurchaseAmount: number
+  totalEvaluationAmount: number
+  totalProfitLoss: number
+  totalReturnRate: number
+  dailyProfitLoss: number
+  dailyReturnRate: number
+}
+
+export type MyWaveHoldingResponse = {
+  symbol: string
+  stockName: string
+  quantity: number
+  averagePrice: number
+  currentPrice: number
+  evaluationAmount: number
+  profitLoss: number
+  returnRate: number
+  realizedProfitLoss: number
+  weight: number
+}
+
+export type MyWaveInvestmentTransactionResponse = {
+  id: number
+  symbol: string
+  stockName: string
+  transactionType: string
+  quantity: number
+  price: number
+  fee: number
+  tax: number
+  totalAmount: number
+  realizedProfitLoss: number
+  transactionDate: string
+  memo?: string | null
+  reason?: string | null
+  tags: string[]
+  createdAt: string
+}
+
+export type MyWaveTransactionSummaryResponse = {
+  monthlyTransactionCount: number
+  buyAmount: number
+  sellAmount: number
+  realizedProfitLoss: number
 }
 
 export type MyWaveCompanyAnalysisResponse = {
@@ -180,6 +286,21 @@ export async function createMyWaveGoal(request: {
   return unwrap(api.post<ApiResponse<MyWaveGoalResponse>>('/api/goals', request))
 }
 
+export async function updateMyWaveGoal(id: number, request: {
+  title: string
+  targetAmount: number
+  currentAmount: number
+  targetDate: string
+  status?: string
+  priority?: number
+}) {
+  return unwrap(api.patch<ApiResponse<MyWaveGoalResponse>>(`/api/goals/${id}`, request))
+}
+
+export async function deleteMyWaveGoal(id: number) {
+  return unwrap(api.delete<ApiResponse<void>>(`/api/goals/${id}`))
+}
+
 export async function chatWithMyWaveCoach(message: string) {
   return unwrap(api.post<ApiResponse<MyWaveCoachChatResponse>>('/api/ai/financial-coach/chat', { message }))
 }
@@ -215,12 +336,106 @@ export async function simulateMyWaveSaving(request: {
   return unwrap(api.post<ApiResponse<MyWaveSavingSimulationResponse>>('/api/expenses/saving-simulation', request))
 }
 
+export async function getMyWaveExpenses(month?: string) {
+  return unwrap(api.get<ApiResponse<MyWaveExpenseResponse[]>>('/api/expenses', { params: { month } }))
+}
+
+export async function getMyWaveExpenseSummary(month?: string) {
+  return unwrap(api.get<ApiResponse<MyWaveExpenseSummaryResponse>>('/api/expenses/monthly-summary', { params: { month } }))
+}
+
+export async function createMyWaveExpense(request: {
+  category: string
+  merchant: string
+  amount: number
+  spentDate: string
+  memo?: string
+}) {
+  return unwrap(api.post<ApiResponse<MyWaveExpenseResponse>>('/api/expenses', request))
+}
+
+export async function updateMyWaveExpense(id: number, request: {
+  category: string
+  merchant: string
+  amount: number
+  spentDate: string
+  memo?: string
+}) {
+  return unwrap(api.patch<ApiResponse<MyWaveExpenseResponse>>(`/api/expenses/${id}`, request))
+}
+
+export async function deleteMyWaveExpense(id: number) {
+  return unwrap(api.delete<ApiResponse<void>>(`/api/expenses/${id}`))
+}
+
 export async function getMyWaveMember() {
   return unwrap(api.get<ApiResponse<MyWaveMemberResponse>>('/api/members/me'))
 }
 
 export async function updateMyWaveMembership(membershipGrade: string) {
   return unwrap(api.patch<ApiResponse<MyWaveMemberResponse>>('/api/members/me/membership', { membershipGrade }))
+}
+
+export async function updateMyWaveProfile(request: {
+  name: string
+  email: string
+  profileImageUrl?: string | null
+}) {
+  return unwrap(api.patch<ApiResponse<MyWaveMemberResponse>>('/api/members/me/profile', request))
+}
+
+export async function changeMyWavePassword(request: {
+  currentPassword: string
+  newPassword: string
+}) {
+  return unwrap(api.post<ApiResponse<void>>('/api/members/me/password', request))
+}
+
+export async function logoutMyWaveSession() {
+  return unwrap(api.post<ApiResponse<void>>('/api/auth/logout'))
+}
+
+export async function getMyWaveAssetSummary(month?: string) {
+  return unwrap(api.get<ApiResponse<MyWaveAssetSummaryResponse>>('/api/assets/summary', { params: { month } }))
+}
+
+export async function getMyWaveAccounts() {
+  return unwrap(api.get<ApiResponse<MyWaveFinancialAccountResponse[]>>('/api/assets/accounts'))
+}
+
+export async function createMyWaveAccount(request: {
+  name: string
+  accountType: string
+  institutionName: string
+  balance: number
+  includedInAssets: boolean
+}) {
+  return unwrap(api.post<ApiResponse<MyWaveFinancialAccountResponse>>('/api/assets/accounts', request))
+}
+
+export async function updateMyWaveAccount(id: number, request: {
+  name: string
+  accountType: string
+  institutionName: string
+  balance: number
+  includedInAssets: boolean
+}) {
+  return unwrap(api.patch<ApiResponse<MyWaveFinancialAccountResponse>>(`/api/assets/accounts/${id}`, request))
+}
+
+export async function deleteMyWaveAccount(id: number) {
+  return unwrap(api.delete<ApiResponse<void>>(`/api/assets/accounts/${id}`))
+}
+
+export async function saveMyWaveMonthlyBudget(request: {
+  budgetMonth: string
+  incomeAmount: number
+  livingBudgetAmount: number
+  fixedExpenseAmount: number
+  plannedSavingAmount: number
+  plannedInvestmentAmount: number
+}) {
+  return unwrap(api.post<ApiResponse<MyWaveMonthlyBudgetResponse>>('/api/assets/budgets/monthly', request))
 }
 
 export async function addMyWaveWatchlist(symbol: string) {
@@ -233,6 +448,58 @@ export async function removeMyWaveWatchlist(symbol: string) {
 
 export async function saveMyWavePortfolioRiskAction(action: string) {
   return unwrap(api.post<ApiResponse<MyWavePortfolioRiskActionResponse>>('/api/portfolio/risk-actions', { action }))
+}
+
+export async function getMyWavePortfolio() {
+  return unwrap(api.get<ApiResponse<MyWavePortfolioResponse>>('/api/portfolio'))
+}
+
+export async function getMyWaveHoldings() {
+  return unwrap(api.get<ApiResponse<MyWaveHoldingResponse[]>>('/api/holdings'))
+}
+
+export async function getMyWaveTransactions() {
+  return unwrap(api.get<ApiResponse<MyWaveInvestmentTransactionResponse[]>>('/api/transactions'))
+}
+
+export async function getMyWaveTransactionSummary() {
+  return unwrap(api.get<ApiResponse<MyWaveTransactionSummaryResponse>>('/api/transactions/summary'))
+}
+
+export async function createMyWaveTransaction(request: {
+  symbol: string
+  stockName: string
+  transactionType: string
+  quantity: number
+  price: number
+  fee: number
+  tax: number
+  transactionDate: string
+  memo?: string
+  reason?: string
+  tags?: string[]
+}) {
+  return unwrap(api.post<ApiResponse<MyWaveInvestmentTransactionResponse>>('/api/transactions', request))
+}
+
+export async function updateMyWaveTransaction(id: number, request: {
+  symbol: string
+  stockName: string
+  transactionType: string
+  quantity: number
+  price: number
+  fee: number
+  tax: number
+  transactionDate: string
+  memo?: string
+  reason?: string
+  tags?: string[]
+}) {
+  return unwrap(api.patch<ApiResponse<MyWaveInvestmentTransactionResponse>>(`/api/transactions/${id}`, request))
+}
+
+export async function deleteMyWaveTransaction(id: number) {
+  return unwrap(api.delete<ApiResponse<void>>(`/api/transactions/${id}`))
 }
 
 export async function getMyWaveCompanyAnalysis(symbol: string) {

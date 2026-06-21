@@ -1,6 +1,7 @@
 package com.stockflow.transaction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -34,7 +35,7 @@ class TransactionFlowIntegrationTest {
     void loginAndCreateBuyRecordStoresTransaction() throws Exception {
         String token = login("investor@stockflow.com", "stockflow1234");
 
-        mockMvc.perform(post("/api/transactions")
+        MvcResult created = mockMvc.perform(post("/api/transactions")
                         .header("Authorization", bearer(token))
                         .contentType("application/json")
                         .content(json(Map.ofEntries(
@@ -53,12 +54,23 @@ class TransactionFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.transactionType").value("BUY"))
-                .andExpect(jsonPath("$.data.totalAmount").value(78600));
+                .andExpect(jsonPath("$.data.totalAmount").value(78600))
+                .andReturn();
 
-        mockMvc.perform(get("/api/transactions").header("Authorization", bearer(token)))
+        long createdId = read(created, "data", "id").asLong();
+        MvcResult transactions = mockMvc.perform(get("/api/transactions").header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].reason").value("HBM 수요 증가 여부 확인"));
+                .andReturn();
+
+        boolean stored = false;
+        for (JsonNode transaction : read(transactions, "data")) {
+            if (transaction.get("id").asLong() == createdId) {
+                assertEquals("HBM 수요 증가 여부 확인", transaction.get("reason").asText());
+                stored = true;
+            }
+        }
+        assertTrue(stored);
     }
 
     @Test
@@ -82,7 +94,7 @@ class TransactionFlowIntegrationTest {
 
     @Test
     void registerCreatesMemberPortfolioAndToken() throws Exception {
-        String email = "new-investor@test.com";
+        String email = "new-investor-" + System.nanoTime() + "@test.com";
         MvcResult register = mockMvc.perform(post("/api/auth/register")
                         .contentType("application/json")
                         .content(json(Map.of(

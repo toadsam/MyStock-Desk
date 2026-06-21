@@ -38,4 +38,14 @@ public class Member {
     public void updateMembershipGrade(String membershipGrade) {
         this.membershipGrade = membershipGrade;
     }
+
+    public void updateProfile(String name, String email, String profileImageUrl) {
+        this.name = name;
+        this.email = email;
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    public void updatePasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { login as loginApi, register as registerApi } from '../api/authApi'
 import type { Member } from '../types/member'
 import { AuthContext, type AuthContextValue } from './authContextCore'
@@ -13,24 +13,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return stored ? (JSON.parse(stored) as Member) : null
   })
 
-  const persist = (nextToken: string, nextMember: Member) => {
+  const persist = useCallback((nextToken: string, nextMember: Member) => {
     localStorage.setItem(TOKEN_KEY, nextToken)
     localStorage.setItem(MEMBER_KEY, JSON.stringify(nextMember))
     setToken(nextToken)
     setMember(nextMember)
-  }
+  }, [])
 
-  const clear = () => {
+  const updateMember = useCallback((nextMember: Member) => {
+    localStorage.setItem(MEMBER_KEY, JSON.stringify(nextMember))
+    setMember(nextMember)
+  }, [])
+
+  const clear = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(MEMBER_KEY)
     setToken(null)
     setMember(null)
-  }
+  }, [])
 
   useEffect(() => {
     window.addEventListener('stockflow:auth-expired', clear)
     return () => window.removeEventListener('stockflow:auth-expired', clear)
-  }, [])
+  }, [clear])
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -46,8 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         persist(response.accessToken, response.member)
       },
       logout: clear,
+      updateMember,
     }),
-    [member, token],
+    [clear, member, persist, token, updateMember],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
