@@ -47,6 +47,8 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
 
+    private static final LocalDateTime SEED_TRANSACTION_BASE_TIME = LocalDateTime.of(2026, 5, 20, 9, 0);
+
     private final MemberRepository memberRepository;
     private final StockRepository stockRepository;
     private final MarketIndexRepository marketIndexRepository;
@@ -335,12 +337,12 @@ public class DataSeeder implements CommandLineRunner {
                 .tax(bd(tax))
                 .totalAmount(amount)
                 .realizedProfitLoss(bd(realizedProfitLoss))
-                .transactionDate(LocalDateTime.now().minusDays(daysAgo).toLocalDate())
+                .transactionDate(SEED_TRANSACTION_BASE_TIME.minusDays(daysAgo).toLocalDate())
                 .reason(reason)
                 .memo(memo)
                 .tags(tags)
-                .createdAt(LocalDateTime.now().minusDays(daysAgo))
-                .updatedAt(LocalDateTime.now().minusDays(daysAgo))
+                .createdAt(SEED_TRANSACTION_BASE_TIME.minusDays(daysAgo))
+                .updatedAt(SEED_TRANSACTION_BASE_TIME.minusDays(daysAgo))
                 .build();
     }
 
@@ -400,12 +402,12 @@ public class DataSeeder implements CommandLineRunner {
                 .tax(BigDecimal.ZERO)
                 .totalAmount(bd(amount))
                 .realizedProfitLoss(BigDecimal.ZERO)
-                .transactionDate(LocalDateTime.now().minusDays(daysAgo).toLocalDate())
+                .transactionDate(SEED_TRANSACTION_BASE_TIME.minusDays(daysAgo).toLocalDate())
                 .reason(reason)
                 .memo(memo)
                 .tags("현금흐름")
-                .createdAt(LocalDateTime.now().minusDays(daysAgo))
-                .updatedAt(LocalDateTime.now().minusDays(daysAgo))
+                .createdAt(SEED_TRANSACTION_BASE_TIME.minusDays(daysAgo))
+                .updatedAt(SEED_TRANSACTION_BASE_TIME.minusDays(daysAgo))
                 .build();
     }
 
