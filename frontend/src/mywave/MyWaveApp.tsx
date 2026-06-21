@@ -8,18 +8,25 @@ import {
   ChevronRight,
   CircleHelp,
   Edit3,
+  FileText,
   Info,
+  LogOut,
   MessageCircle,
   Plus,
+  Save,
   Search,
   SendHorizontal,
   ShieldAlert,
+  SlidersHorizontal,
+  Target,
+  Trash2,
   UserRound,
   WalletCards,
+  X,
 } from 'lucide-react'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ComponentType, ReactNode } from 'react'
-import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
+import { NavLink, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   activities as defaultActivities,
   coachMessages as defaultCoachMessages,
@@ -36,14 +43,33 @@ import {
 } from './myWaveData'
 import waveHero from '../assets/mywave/wave-hero.png'
 import {
+  addMyWaveWatchlist,
+  chatWithMyWaveCoach,
+  createMyWaveGoal,
+  deleteMyWaveNotification,
+  deleteReadMyWaveNotifications,
+  getMyWaveCompanyAnalysis,
   getMyWaveActions,
   getMyWaveCoachMessages,
   getMyWaveDashboard,
   getMyWaveGoals,
+  getMyWaveMember,
+  getMyWaveNotifications,
+  markAllMyWaveNotificationsRead,
+  markMyWaveNotificationRead,
+  removeMyWaveWatchlist,
+  saveMyWavePortfolioRiskAction,
+  searchMyWave,
+  simulateMyWaveSaving,
+  updateMyWaveMembership,
   type MyWaveActionResponse,
+  type MyWaveCompanyAnalysisResponse,
   type MyWaveCoachMessageResponse,
   type MyWaveDashboardResponse,
   type MyWaveGoalResponse,
+  type MyWaveMemberResponse,
+  type MyWaveNotificationResponse,
+  type MyWaveSearchResultResponse,
 } from './myWaveApi'
 import {
   Area,
@@ -113,6 +139,18 @@ export default function MyWaveApp() {
         <Route path="portfolio" element={<PortfolioPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="coach" element={<CoachPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="onboarding" element={<OnboardingPage />} />
+        <Route path="search" element={<SearchResultsPage />} />
+        <Route path="goals/new" element={<GoalEditorPage />} />
+        <Route path="spending/detail" element={<SpendingDetailPage />} />
+        <Route path="spending/simulation" element={<SimulationDetailPage />} />
+        <Route path="portfolio/detail" element={<PortfolioDetailPage />} />
+        <Route path="portfolio/allocation" element={<PortfolioAllocationDetailPage />} />
+        <Route path="portfolio/risk" element={<RiskDetailPage />} />
+        <Route path="assets" element={<AssetDetailPage />} />
+        <Route path="company/:symbol" element={<CompanyDetailPage />} />
         <Route path="transactions" element={<Navigate to="/spending" replace />} />
         <Route path="ai-report" element={<Navigate to="/coach" replace />} />
         <Route path="financial-analysis" element={<Navigate to="/reports" replace />} />
@@ -121,7 +159,7 @@ export default function MyWaveApp() {
         <Route path="market" element={<Navigate to="/portfolio" replace />} />
         <Route path="research" element={<Navigate to="/reports" replace />} />
         <Route path="themes" element={<Navigate to="/portfolio" replace />} />
-        <Route path="stock/:symbol" element={<Navigate to="/reports" replace />} />
+        <Route path="stock/:symbol" element={<Navigate to="/company/005930" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
@@ -343,6 +381,8 @@ function Logo() {
 }
 
 function Sidebar() {
+  const navigate = useNavigate()
+
   return (
     <aside className="hidden w-80 shrink-0 border-r border-slate-200 px-7 py-8 lg:flex lg:flex-col">
       <Logo />
@@ -367,7 +407,7 @@ function Sidebar() {
       <div className="mt-auto rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-blue-50 p-5 shadow-card">
         <div className="font-black text-blue-700">MyWave 시작하기</div>
         <p className="mt-3 text-sm leading-6 text-slate-500">3분 만에 나에게 맞는 투자 흐름을 설계해보세요.</p>
-        <button className="mt-4 rounded-full border border-blue-600 px-4 py-2 text-sm font-bold text-blue-700">시작하기 <ChevronRight className="inline h-4 w-4" /></button>
+        <button onClick={() => navigate('/onboarding')} className="mt-4 rounded-full border border-blue-600 px-4 py-2 text-sm font-bold text-blue-700">시작하기 <ChevronRight className="inline h-4 w-4" /></button>
         <img src={waveHero} alt="" className="ml-auto mt-2 h-20 w-32 object-contain" />
       </div>
       <div className="mt-10 border-t border-slate-200 pt-8">
@@ -398,7 +438,13 @@ function MobileTop() {
 
 function DesktopHeader() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const [query, setQuery] = useState('')
   const meta = pageMeta(location.pathname)
+  const submitSearch = () => {
+    const trimmed = query.trim()
+    if (trimmed) navigate(`/search?q=${encodeURIComponent(trimmed)}`)
+  }
   return (
     <header className="mb-7 hidden items-start justify-between gap-6 lg:flex">
       <div>
@@ -408,7 +454,13 @@ function DesktopHeader() {
       <div className="flex items-center gap-5">
         <label className="flex h-12 w-80 items-center gap-3 rounded-full border border-slate-200 bg-white px-5 text-slate-400 shadow-sm">
           <Search className="h-5 w-5" />
-          <input className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-slate-400" placeholder={meta.search} />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => event.key === 'Enter' && submitSearch()}
+            className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-slate-400"
+            placeholder={meta.search}
+          />
         </label>
         <BellButton />
         <Avatar />
@@ -441,8 +493,10 @@ function MobileBottomNav() {
 }
 
 function BellButton() {
+  const navigate = useNavigate()
+
   return (
-    <button className="pressable relative grid h-9 w-9 place-items-center rounded-full bg-white text-slate-900 shadow-sm lg:h-10 lg:w-10">
+    <button onClick={() => navigate('/notifications')} className="pressable relative grid h-9 w-9 place-items-center rounded-full bg-white text-slate-900 shadow-sm lg:h-10 lg:w-10">
       <Bell className="h-5 w-5 lg:h-6 lg:w-6" />
       <span className="notification-dot absolute right-2 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
     </button>
@@ -450,10 +504,12 @@ function BellButton() {
 }
 
 function Avatar() {
+  const navigate = useNavigate()
+
   return (
-    <div className="pressable grid h-10 w-10 place-items-center rounded-full bg-gradient-to-b from-blue-100 to-blue-50 lg:h-12 lg:w-12">
+    <button onClick={() => navigate('/profile')} className="pressable grid h-10 w-10 place-items-center rounded-full bg-gradient-to-b from-blue-100 to-blue-50 lg:h-12 lg:w-12">
       <UserRound className="h-6 w-6 fill-blue-500 text-blue-500 lg:h-7 lg:w-7" />
-    </div>
+    </button>
   )
 }
 
@@ -664,11 +720,13 @@ function MobileHomePage() {
 }
 
 function MobileGoalsPage() {
+  const navigate = useNavigate()
+
   return (
     <div className="mobile-page reveal-stack space-y-5">
       <div className="flex items-center justify-between">
         <MobileTitle title="목표 관리" />
-        <button className="pressable pb-2 text-sm font-black text-blue-700">+ 목표 추가</button>
+        <button onClick={() => navigate('/goals/new')} className="pressable pb-2 text-sm font-black text-blue-700">+ 목표 추가</button>
       </div>
       <SegmentedTabs items={['전체', '진행 중', '완료']} active="전체" />
       <MobileGoalMainCard />
@@ -740,6 +798,7 @@ function MobileHeroCard() {
 
 function MobileGoalMainCard() {
   const { financeSummary, goals } = useMyWaveData()
+  const navigate = useNavigate()
   const mainGoal = goals[0]
 
   return (
@@ -749,7 +808,7 @@ function MobileGoalMainCard() {
           <div className="text-sm font-black text-blue-700">메인 목표</div>
           <h2 className="mt-2 text-2xl font-black tracking-[-0.03em]">{mainGoal.title}</h2>
         </div>
-        <button className="pressable text-2xl font-black text-slate-500">...</button>
+        <button onClick={() => navigate('/goals/new')} className="pressable text-2xl font-black text-slate-500">...</button>
       </div>
       <div className="mt-5 grid grid-cols-[132px_1fr] items-center gap-4">
         <MobileRing value={financeSummary.goalRate} />
@@ -769,18 +828,19 @@ function MobileGoalMainCard() {
 
 function MobileActionCards() {
   const { recommendedActions } = useMyWaveData()
+  const navigate = useNavigate()
 
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-black">목표 달성을 위한 추천</h2>
-        <button className="pressable text-sm font-bold text-slate-500">더보기 <ChevronRight className="inline h-4 w-4" /></button>
+        <button onClick={() => navigate('/spending/simulation')} className="pressable text-sm font-bold text-slate-500">더보기 <ChevronRight className="inline h-4 w-4" /></button>
       </div>
       <div className="grid grid-cols-3 gap-3">
         {recommendedActions.map((action) => {
           const Icon = action.icon
           return (
-            <button key={action.title} className="motion-card pressable rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-card">
+            <button key={action.title} onClick={() => navigate('/spending/simulation')} className="motion-card pressable rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-card">
               <div className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-blue-700">
                 <Icon className="h-6 w-6" />
               </div>
@@ -844,12 +904,13 @@ function MobileBlueSummary({ title, value, detail }: { title: string; value: str
 
 function MobileSpendingCategories() {
   const { financeSummary, spendingCategories } = useMyWaveData()
+  const navigate = useNavigate()
 
   return (
     <MobileCard>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-black">카테고리별 소비 비중</h2>
-        <button className="pressable rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500">상세보기</button>
+        <button onClick={() => navigate('/spending/detail')} className="pressable rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500">상세보기</button>
       </div>
       <div className="grid grid-cols-[150px_1fr] items-center gap-3">
         <MobileCssDonut center={won(financeSummary.totalSpending)} label="총 소비" />
@@ -900,6 +961,9 @@ function MobileTopSpending() {
 
 function MobileSavingBox() {
   const { financeSummary } = useMyWaveData()
+  const navigate = useNavigate()
+  const [amount, setAmount] = useState(100000)
+  const expectedRate = Math.min(100, financeSummary.goalRate + Math.round(amount / 5500))
 
   return (
     <MobileCard>
@@ -908,25 +972,27 @@ function MobileSavingBox() {
         <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">시뮬레이션 안내</span>
       </div>
       <div className="mt-4 flex items-center justify-between">
-        <button className="pressable grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-2xl">-</button>
-        <div className="text-2xl font-black text-blue-700">100,000원</div>
-        <button className="pressable grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-2xl">+</button>
+        <button onClick={() => setAmount((value) => Math.max(0, value - 10000))} className="pressable grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-2xl">-</button>
+        <div className="text-2xl font-black text-blue-700">{won(amount)}</div>
+        <button onClick={() => setAmount((value) => value + 10000)} className="pressable grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-2xl">+</button>
       </div>
       <div className="mt-4 rounded-2xl bg-blue-50 p-3 text-sm font-black text-blue-700">
-        이 금액을 저축하면 목표 달성률이 {financeSummary.goalRate}% → <span className="text-2xl">{Math.min(100, financeSummary.goalRate + 18)}%</span>로 올라요.
+        이 금액을 저축하면 목표 달성률이 {financeSummary.goalRate}% → <span className="text-2xl">{expectedRate}%</span>로 올라요.
       </div>
+      <button onClick={() => navigate('/spending/simulation')} className="mt-4 w-full rounded-2xl bg-blue-700 py-3 text-sm font-black text-white">자세히 조정하기</button>
     </MobileCard>
   )
 }
 
 function MobilePortfolioCard({ compact = false }: { compact?: boolean }) {
   const { financeSummary, portfolioAllocation } = useMyWaveData()
+  const navigate = useNavigate()
 
   return (
     <MobileCard>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-black">포트폴리오 {compact ? '구성' : '현황'}</h2>
-        <button className="pressable text-sm font-bold text-blue-700">자산 배분 보기 <ChevronRight className="inline h-4 w-4" /></button>
+        <button onClick={() => navigate('/portfolio/allocation')} className="pressable text-sm font-bold text-blue-700">자산 배분 보기 <ChevronRight className="inline h-4 w-4" /></button>
       </div>
       <div className="grid grid-cols-[150px_1fr] items-center gap-3">
         <MobileCssDonut center={compact ? `총 ${portfolioAllocation.length}개` : won(financeSummary.totalAsset)} label={compact ? '자산' : '총자산'} />
@@ -939,12 +1005,13 @@ function MobilePortfolioCard({ compact = false }: { compact?: boolean }) {
 
 function MobileHoldingsList() {
   const { holdings } = useMyWaveData()
+  const navigate = useNavigate()
 
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-black">보유 자산</h2>
-        <button className="pressable text-sm font-bold text-slate-500">평가금액 기준 <ChevronDown className="inline h-4 w-4" /></button>
+        <button onClick={() => navigate('/portfolio/detail')} className="pressable text-sm font-bold text-slate-500">평가금액 기준 <ChevronDown className="inline h-4 w-4" /></button>
       </div>
       <MobileCard>
         <div className="divide-y divide-slate-100">
@@ -1063,6 +1130,8 @@ function MetricCard({ icon, label, value, detail, tone }: { icon: ReactNode; lab
 }
 
 function SpendingWarning() {
+  const navigate = useNavigate()
+
   return (
     <Card className="border-orange-100 bg-orange-50/45">
       <div className="flex items-center gap-6">
@@ -1073,7 +1142,7 @@ function SpendingWarning() {
           <div className="text-2xl font-black text-orange-600">소비 위험도: 주의</div>
           <p className="mt-2 text-base leading-7 text-slate-500">외식/배달 소비 금액이 평소보다 많아요. 예산을 조금만 조정해보세요!</p>
         </div>
-        <button className="hidden rounded-full border border-orange-200 px-5 py-2.5 text-sm font-black text-slate-800 lg:block">자세히 보기 <ChevronRight className="inline h-4 w-4" /></button>
+        <button onClick={() => navigate('/spending/detail')} className="hidden rounded-full border border-orange-200 px-5 py-2.5 text-sm font-black text-slate-800 lg:block">자세히 보기 <ChevronRight className="inline h-4 w-4" /></button>
       </div>
     </Card>
   )
@@ -1083,7 +1152,7 @@ function RecentActivity() {
   const { activities } = useMyWaveData()
 
   return (
-    <Card title="최근 활동" action="모두 보기">
+    <Card title="최근 활동" action="모두 보기" actionTo="/spending/detail">
       <div className="space-y-4">
         {activities.map((item) => {
           const Icon = item.icon
@@ -1112,7 +1181,7 @@ function PortfolioMini() {
   const { financeSummary, portfolioAllocation } = useMyWaveData()
 
   return (
-    <Card title="포트폴리오 현황" action="자세히 보기">
+    <Card title="포트폴리오 현황" action="자세히 보기" actionTo="/portfolio/allocation">
       <div className="grid items-center gap-5 sm:grid-cols-[220px_1fr]">
         <Donut data={portfolioAllocation} center={`${won(financeSummary.totalAsset)}`} />
         <Legend items={portfolioAllocation} />
@@ -1290,7 +1359,7 @@ function SpendingDonutCard() {
   const { financeSummary, spendingCategories } = useMyWaveData()
 
   return (
-    <Card title="카테고리별 소비 비중" action={<ChevronRight className="h-5 w-5 text-slate-400" />}>
+    <Card title="카테고리별 소비 비중" action={<InlineAction to="/spending/detail" label="상세" />}>
       <div className="grid gap-5 md:grid-cols-[230px_1fr]">
         <Donut data={spendingCategories.map((item) => ({ name: item.name, rate: item.rate, color: item.color, amount: item.amount }))} center={won(financeSummary.totalSpending)} label="총 소비" />
         <Legend items={spendingCategories.map((item) => ({ name: item.name, rate: item.rate, amount: item.amount, color: item.color }))} />
@@ -1330,7 +1399,7 @@ function SpendingTable() {
   const { spendingCategories } = useMyWaveData()
 
   return (
-    <Card title="카테고리별 상세 내역" action="전체 보기">
+    <Card title="카테고리별 상세 내역" action="전체 보기" actionTo="/spending/detail">
       <div className="overflow-x-auto">
         <table className="mywave-table">
           <thead>
@@ -1361,29 +1430,60 @@ function SpendingTable() {
 }
 
 function SavingSimulation() {
+  const { financeSummary } = useMyWaveData()
+  const [delivery, setDelivery] = useState(30)
+  const [cafe, setCafe] = useState(30)
+  const [shopping, setShopping] = useState(20)
+  const [applied, setApplied] = useState(false)
+  const [savingResult, setSavingResult] = useState<{ amount: number; rate: number } | null>(null)
+  const savingAmount = delivery * 1800 + cafe * 2100 + shopping * 2900
+  const improvedRate = Math.min(100, financeSummary.goalRate + Math.round(savingAmount / 36500))
+  const displaySavingAmount = savingResult?.amount ?? savingAmount
+  const displayImprovedRate = savingResult?.rate ?? improvedRate
+  const simulations: Array<{ name: string; rate: number; setRate: (value: number) => void; unit: number }> = [
+    { name: '배달', rate: delivery, setRate: setDelivery, unit: 1800 },
+    { name: '카페/간식', rate: cafe, setRate: setCafe, unit: 2100 },
+    { name: '쇼핑', rate: shopping, setRate: setShopping, unit: 2900 },
+  ]
+
+  async function applySimulation() {
+    setApplied(true)
+    try {
+      const result = await simulateMyWaveSaving({
+        categoryReductionRates: {
+          배달비: delivery,
+          카페: cafe,
+          쇼핑: shopping,
+        },
+      })
+      setSavingResult({
+        amount: Number(result.monthlySavingAmount),
+        rate: Number(result.expectedGoalRate),
+      })
+    } catch {
+      setSavingResult({ amount: savingAmount, rate: improvedRate })
+    }
+  }
+
   return (
     <Card title="소비 줄이면 목표 달성률이 이렇게 달라져요!" action={<span className="text-xs text-slate-400">시뮬레이션 기준: 월간</span>}>
       <div className="grid gap-5 lg:grid-cols-[1fr_210px]">
         <div className="space-y-4">
-          {[
-            ['배달', '-30%', '-₩54,000'],
-            ['카페/간식', '-30%', '-₩63,000'],
-            ['쇼핑', '-20%', '-₩58,000'],
-          ].map(([name, rate, amount]) => (
+          {simulations.map(({ name, rate, setRate, unit }) => (
             <div key={name} className="grid grid-cols-[80px_70px_1fr_80px] items-center gap-3 text-sm font-bold">
               <span>{name}</span>
-              <span className="rounded-lg border border-blue-200 py-1 text-center text-blue-700">{rate}</span>
-              <input type="range" defaultValue="65" className="accent-blue-600" />
-              <span className="text-blue-700">{amount}</span>
+              <span className="rounded-lg border border-blue-200 py-1 text-center text-blue-700">-{rate}%</span>
+              <input type="range" min="0" max="50" value={rate} onChange={(event) => setRate(Number(event.target.value))} className="accent-blue-600" />
+              <span className="text-blue-700">-{won(Math.round(rate * unit))}</span>
             </div>
           ))}
         </div>
         <div className="rounded-3xl border border-slate-100 p-5">
           <div className="text-sm font-bold text-slate-500">예상 월 절약 금액</div>
-          <div className="mt-2 text-3xl font-black text-blue-700">{won(175_000)}</div>
+          <div className="mt-2 text-3xl font-black text-blue-700">{won(displaySavingAmount)}</div>
           <div className="mt-5 text-sm font-bold text-slate-500">목표 달성률 개선</div>
-          <div className="mt-2 text-3xl font-black text-emerald-500">+4.8%p</div>
-          <button className="mt-5 w-full rounded-2xl bg-blue-700 py-3 font-black text-white">이대로 적용해보기</button>
+          <div className="mt-2 text-3xl font-black text-emerald-500">{financeSummary.goalRate}% → {displayImprovedRate}%</div>
+          <button onClick={applySimulation} className="mt-5 w-full rounded-2xl bg-blue-700 py-3 font-black text-white">{applied ? '적용 완료' : '이대로 적용해보기'}</button>
         </div>
       </div>
     </Card>
@@ -1430,7 +1530,7 @@ function TopHoldingsCard() {
   const { holdings } = useMyWaveData()
 
   return (
-    <Card title="보유 종목 상위 성과" action="더보기">
+    <Card title="보유 종목 상위 성과" action="더보기" actionTo="/portfolio/detail">
       <div className="space-y-5">
         {holdings.slice(0, 3).map((item, index) => (
           <div key={item.symbol} className="grid grid-cols-[28px_1fr_auto] items-center gap-4">
@@ -1454,7 +1554,7 @@ function AssetBars() {
   const { portfolioAllocation } = useMyWaveData()
 
   return (
-    <Card title="자산군별 배분" action="더보기">
+    <Card title="자산군별 배분" action="더보기" actionTo="/portfolio/allocation">
       <div className="space-y-5">
         {portfolioAllocation.map((item) => (
           <div key={item.name} className="grid grid-cols-[70px_1fr_56px] items-center gap-4 text-sm font-black">
@@ -1472,7 +1572,7 @@ function HoldingsTable() {
   const { holdings } = useMyWaveData()
 
   return (
-    <Card title="보유 종목 현황" action="더보기">
+    <Card title="보유 종목 현황" action="더보기" actionTo="/portfolio/detail">
       <div className="overflow-x-auto">
         <table className="mywave-table">
           <thead>
@@ -1505,7 +1605,7 @@ function HoldingsTable() {
 
 function PortfolioInsight() {
   return (
-    <Card className="bg-blue-50/70" title="포트폴리오 인사이트" action={<span className="rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white">AI 코치</span>}>
+    <Card className="bg-blue-50/70" title="포트폴리오 인사이트" action={<InlineAction to="/coach" label="AI 코치" primary />}>
       <p className="text-base leading-8 text-slate-600">현재 포트폴리오는 성장주 비중이 높아 변동성이 클 수 있어요. 안정적인 수익을 위해 채권 비중을 10~15%까지 늘리는 것을 추천드려요.</p>
     </Card>
   )
@@ -1513,7 +1613,7 @@ function PortfolioInsight() {
 
 function CompanyPreview() {
   return (
-    <Card title="관련 기업 분석 미리보기" action="자세히 보기">
+    <Card title="관련 기업 분석 미리보기" action="자세히 보기" actionTo="/company/AAPL">
       <div className="grid grid-cols-[1fr_140px] items-center gap-4">
         <div>
           <div className="text-lg font-black">AAPL <span className="text-sm text-slate-500">애플</span></div>
@@ -1552,10 +1652,33 @@ function CoachBanner() {
 
 function ChatPanel() {
   const { coachMessages } = useMyWaveData()
+  const [messages, setMessages] = useState<RuntimeCoachMessage[]>(coachMessages)
+  const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
+
+  useEffect(() => {
+    setMessages(coachMessages)
+  }, [coachMessages])
+
+  const sendMessage = async (text = draft) => {
+    const message = text.trim()
+    if (!message || sending) return
+    setSending(true)
+    setDraft('')
+    setMessages((items) => [...items, { from: 'user', text: message }])
+    try {
+      const response = await chatWithMyWaveCoach(message)
+      setMessages((items) => [...items, { from: 'bot', text: response.answer.content }])
+    } catch {
+      setMessages((items) => [...items, { from: 'bot', text: '지금은 서버 연결이 불안정해서 데모 기준으로 답변할게요. 목표와 소비를 같이 보면 이번 달은 지출 조정 후 투자 여력을 확인하는 흐름이 좋아요.' }])
+    } finally {
+      setSending(false)
+    }
+  }
 
   return (
     <section className="space-y-5">
-      {coachMessages.map((message, index) => (
+      {messages.map((message, index) => (
         <div key={`${message.from}-${index}`} className={`chat-row flex ${message.from === 'user' ? 'justify-end' : 'justify-start'} gap-4`} style={{ animationDelay: `${index * 120}ms` }}>
           {message.from === 'bot' && <div className="mt-2 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-100 text-blue-700"><MessageCircle className="h-6 w-6" /></div>}
           <div className={`max-w-[720px] rounded-3xl px-6 py-4 text-base font-medium leading-8 shadow-sm ${message.from === 'user' ? 'bg-blue-700 text-white' : 'border border-slate-200 bg-white text-slate-900'}`}>
@@ -1577,13 +1700,21 @@ function ChatPanel() {
       <div className="pt-2">
         <div className="mb-3 flex flex-wrap gap-2">
           {['포트폴리오 리스크는 어때?', '어떤 자산에 더 투자하는 게 좋을까?', '은퇴까지 얼마나 필요할까?', '이번 달 소비 패턴 분석해줘'].map((item) => (
-            <button key={item} className="rounded-full border border-blue-200 px-4 py-2 text-sm font-bold text-blue-700">{item}</button>
+            <button key={item} onClick={() => sendMessage(item)} className="rounded-full border border-blue-200 px-4 py-2 text-sm font-bold text-blue-700">{item}</button>
           ))}
         </div>
         <label className="flex h-16 items-center gap-4 rounded-3xl border border-slate-200 bg-white px-5 shadow-sm">
           <Plus className="h-6 w-6 text-slate-400" />
-          <input className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-slate-400" placeholder="무엇이든 물어보세요..." />
-          <button className="grid h-11 w-11 place-items-center rounded-full bg-blue-700 text-white"><SendHorizontal className="h-5 w-5" /></button>
+          <input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => event.key === 'Enter' && sendMessage()}
+            className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-slate-400"
+            placeholder="무엇이든 물어보세요..."
+          />
+          <button type="button" onClick={() => sendMessage()} className="grid h-11 w-11 place-items-center rounded-full bg-blue-700 text-white disabled:opacity-50" disabled={sending}>
+            <SendHorizontal className="h-5 w-5" />
+          </button>
         </label>
       </div>
     </section>
@@ -1594,7 +1725,7 @@ function FinanceState() {
   const { financeSummary } = useMyWaveData()
 
   return (
-    <Card title="이번 달 재무 상태" action="자세히 보기">
+    <Card title="이번 달 재무 상태" action="자세히 보기" actionTo="/assets">
       <div className="space-y-5">
         <SummaryLine label="총 자산" value={won(financeSummary.totalAsset)} />
         <SummaryLine label="총 지출" value={won(2_420_000)} />
@@ -1608,7 +1739,7 @@ function GoalOutlook() {
   const { financeSummary } = useMyWaveData()
 
   return (
-    <Card title="목표 달성 전망" action="자세히 보기">
+    <Card title="목표 달성 전망" action="자세히 보기" actionTo="/goals">
       <div className="grid grid-cols-[120px_1fr] items-center gap-5">
         <RingProgress value={financeSummary.goalRate} />
         <div>
@@ -1624,7 +1755,7 @@ function GoalOutlook() {
 
 function RiskPanel() {
   return (
-    <Card title="포트폴리오 리스크" action="자세히 보기">
+    <Card title="포트폴리오 리스크" action="자세히 보기" actionTo="/portfolio/risk">
       <div className="mx-auto h-28 w-40 rounded-t-full border-[18px] border-b-0 border-emerald-400 border-r-red-400 border-t-amber-400 text-center">
         <div className="mt-10 text-lg font-black">보통</div>
       </div>
@@ -1639,17 +1770,745 @@ function RiskPanel() {
   )
 }
 
-function Card({ children, title, action, className }: { children: ReactNode; title?: ReactNode; action?: ReactNode; className?: string }) {
+function NotificationsPage() {
+  const navigate = useNavigate()
+  const [selectedFilter, setSelectedFilter] = useState('전체')
+  const [items, setItems] = useState<MyWaveNotificationResponse[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    let ignore = false
+    getMyWaveNotifications(selectedFilter).then((summary) => {
+      if (ignore) return
+      setItems(summary.notifications)
+      setUnreadCount(summary.unreadCount)
+    }).catch(() => {
+      if (ignore) return
+      setItems(defaultNotificationItems)
+      setUnreadCount(defaultNotificationItems.length)
+    })
+    return () => {
+      ignore = true
+    }
+  }, [selectedFilter])
+
+  async function openNotification(item: MyWaveNotificationResponse) {
+    setItems((current) => current.map((notice) => notice.id === item.id ? { ...notice, read: true } : notice))
+    setUnreadCount((current) => Math.max(0, current - (item.read ? 0 : 1)))
+    try {
+      await markMyWaveNotificationRead(item.id)
+    } catch {
+      // 화면 이동은 유지합니다.
+    }
+    navigate(item.targetPath)
+  }
+
+  async function removeNotification(id: number) {
+    setItems((current) => current.filter((notice) => notice.id !== id))
+    try {
+      await deleteMyWaveNotification(id)
+    } catch {
+      // 백엔드가 꺼져 있어도 UI 삭제 흐름은 유지합니다.
+    }
+  }
+
+  async function clearReadNotifications() {
+    setItems((current) => current.filter((notice) => !notice.read))
+    try {
+      await deleteReadMyWaveNotifications()
+    } catch {
+      // 백엔드가 꺼져 있어도 UI 정리 흐름은 유지합니다.
+    }
+  }
+
+  async function markAllRead() {
+    setItems((current) => current.map((notice) => ({ ...notice, read: true })))
+    setUnreadCount(0)
+    try {
+      await markAllMyWaveNotificationsRead()
+    } catch {
+      // 백엔드가 꺼져 있어도 UI 읽음 흐름은 유지합니다.
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <MobileTitle title="알림" />
+        <div className="hidden items-center gap-2 lg:flex">
+          <button onClick={markAllRead} className="pressable rounded-full border border-blue-100 px-4 py-2 text-sm font-black text-blue-700">전체 읽음 {unreadCount > 0 ? unreadCount : ''}</button>
+          <button onClick={clearReadNotifications} className="pressable flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-600">
+          <Trash2 className="h-4 w-4" /> 읽은 알림 정리
+          </button>
+        </div>
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {['전체', '목표', '소비', '투자', 'AI 코치', '이벤트'].map((filter, index) => (
+          <button key={filter} onClick={() => setSelectedFilter(filter)} className={`shrink-0 rounded-full px-5 py-3 text-sm font-black ${selectedFilter === filter ? 'bg-blue-700 text-white shadow-blue' : 'bg-slate-100 text-slate-500'}`}>
+            {index === 0 && <SlidersHorizontal className="mr-1 inline h-4 w-4" />}
+            {filter}
+          </button>
+        ))}
+      </div>
+      <div className="space-y-3">
+        {items.length === 0 ? (
+          <Card>
+            <div className="py-10 text-center">
+              <CheckCircle2 className="mx-auto h-12 w-12 text-blue-700" />
+              <div className="mt-4 text-xl font-black">새 알림이 없습니다</div>
+              <p className="mt-2 text-sm font-bold text-slate-500">새로운 흐름이 생기면 이곳에 보여드릴게요.</p>
+            </div>
+          </Card>
+        ) : items.map((item) => {
+          const Icon = notificationIcon(item.category, item.title)
+          return (
+            <Card key={item.id} className="motion-card">
+              <div className="flex items-start gap-4">
+                <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${toneBg(item.tone)}`}>
+                  <Icon className="h-7 w-7" />
+                </div>
+                <button onClick={() => openNotification(item)} className="min-w-0 flex-1 text-left">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-base font-black">{item.title}</div>
+                    <div className="shrink-0 text-xs font-bold text-slate-400">{relativeTime(item.createdAt)}</div>
+                  </div>
+                  <p className="mt-2 text-sm font-bold leading-6 text-slate-600">{item.body}</p>
+                  <div className="mt-3 text-sm font-black text-blue-700">{item.read ? '다시 보기' : '새 알림'} <ChevronRight className="inline h-4 w-4" /></div>
+                </button>
+                <button onClick={() => removeNotification(item.id)} className="pressable rounded-full p-2 text-slate-400 hover:bg-slate-50">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </Card>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function ProfilePage() {
+  const navigate = useNavigate()
+  const { financeSummary } = useMyWaveData()
+  const [membershipOpen, setMembershipOpen] = useState(false)
+  const [logoutReady, setLogoutReady] = useState(false)
+  const [member, setMember] = useState<MyWaveMemberResponse | null>(null)
+  const rows = [
+    { icon: UserRound, title: '계정 설정', detail: '프로필, 이메일, 비밀번호 변경', to: '/profile' },
+    { icon: Bell, title: '알림 설정', detail: '푸시 알림 및 이메일 알림 관리', to: '/notifications' },
+    { icon: WalletCards, title: '연결 계좌 관리', detail: '계좌 연결 및 갱신', to: '/assets' },
+    { icon: ShieldAlert, title: '보안 설정', detail: '2단계 인증, 로그인 관리', to: '/profile' },
+    { icon: MessageCircle, title: 'AI 설정', detail: '투자 성향 및 리포트 설정', to: '/coach' },
+    { icon: CircleHelp, title: '도움말', detail: 'FAQ 및 고객센터', to: '/onboarding' },
+  ]
+
+  async function toggleMembership() {
+    const open = !membershipOpen
+    setMembershipOpen(open)
+    try {
+      const updated = await updateMyWaveMembership(open ? '프리미엄' : 'Wave 사용자')
+      setMember(updated)
+    } catch {
+      // 백엔드가 꺼져 있어도 멤버십 패널 흐름은 유지합니다.
+    }
+  }
+
+  useEffect(() => {
+    let ignore = false
+    getMyWaveMember().then((profile) => {
+      if (!ignore) setMember(profile)
+    }).catch(() => {
+      if (!ignore) setMember(null)
+    })
+    return () => {
+      ignore = true
+    }
+  }, [])
+
+  return (
+    <div className="space-y-5">
+      <MobileTitle title="마이" />
+      <Card>
+        <div className="flex items-center gap-5">
+          <div className="grid h-20 w-20 place-items-center rounded-full bg-gradient-to-b from-blue-100 to-blue-50">
+            <UserRound className="h-11 w-11 fill-blue-500 text-blue-500" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-2xl font-black">{member?.name ?? financeSummary.userName}</h2>
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{member?.membershipGrade ?? 'Wave 사용자'}</span>
+            </div>
+            <p className="mt-2 text-sm font-bold text-slate-500">{member?.email ?? 'mywave.user@example.com'}</p>
+          </div>
+          <ChevronRight className="h-6 w-6 text-slate-400" />
+        </div>
+        <div className="mt-6 rounded-[20px] bg-blue-700 p-5 text-white">
+          <div className="text-lg font-black">MyWave 프리미엄</div>
+          <p className="mt-2 text-sm font-bold text-blue-100">다양한 데이터와 AI 인사이트를 무제한으로 이용해 보세요.</p>
+          <button onClick={toggleMembership} className="pressable mt-4 rounded-full border border-white/35 px-4 py-2 text-sm font-black">
+            {membershipOpen ? '멤버십 상세 닫기' : '멤버십 관리'} <ChevronRight className="inline h-4 w-4" />
+          </button>
+          {membershipOpen && <p className="mt-3 rounded-2xl bg-white/10 p-3 text-sm font-bold text-blue-50">현재 플랜은 프리미엄입니다. AI 코치와 기업 분석 리포트가 활성화되어 있어요.</p>}
+        </div>
+      </Card>
+      <Card title="계정 요약">
+        <div className="grid gap-5 sm:grid-cols-3">
+          <MiniStat label="연결 계좌" value="3개" change="은행/증권 계좌" />
+          <MiniStat label="총 자산" value={won(financeSummary.totalAsset)} change="방금 전 업데이트" />
+          <MiniStat label="저축률" value={`${financeSummary.savingRate}%`} change="이번 달" />
+        </div>
+      </Card>
+      <Card>
+        <div className="divide-y divide-slate-100">
+          {rows.map((row) => {
+            const Icon = row.icon
+            return (
+              <button key={row.title} onClick={() => navigate(row.to)} className="pressable flex w-full items-center gap-4 py-4 text-left">
+                <Icon className="h-6 w-6 text-blue-700" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-base font-black">{row.title}</span>
+                  <span className="mt-1 block text-sm font-bold text-slate-500">{row.detail}</span>
+                </span>
+                <ChevronRight className="h-5 w-5 text-slate-400" />
+              </button>
+            )
+          })}
+        </div>
+      </Card>
+      <button onClick={() => setLogoutReady((value) => !value)} className="pressable flex w-full items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white py-4 font-black text-red-500 shadow-card">
+        <LogOut className="h-5 w-5" /> {logoutReady ? '로그아웃 확인됨' : '로그아웃'}
+      </button>
+    </div>
+  )
+}
+
+function OnboardingPage() {
+  const navigate = useNavigate()
+  const [step, setStep] = useState(0)
+  const steps = [
+    { title: '모든 금융을 하나의 흐름으로', body: '계좌, 소비, 투자, 목표를 연결해 현재 돈 상태를 한눈에 확인합니다.', icon: WalletCards },
+    { title: '목표 달성 가능성을 계산해요', body: '목표 금액과 남은 기간을 기준으로 필요한 저축액과 줄일 소비를 보여줍니다.', icon: Target },
+    { title: 'AI 코치가 다음 행동을 제안해요', body: '투자 추천이 아니라 판단에 필요한 정보를 쉽게 정리해줍니다.', icon: MessageCircle },
+  ]
+  const CurrentIcon = steps[step].icon
+
+  return (
+    <div className="mx-auto flex min-h-[70vh] max-w-3xl flex-col justify-center">
+      <Card>
+        <div className="text-center">
+          <div className="mx-auto grid h-24 w-24 place-items-center rounded-[28px] bg-blue-50 text-blue-700">
+            <CurrentIcon className="h-12 w-12" />
+          </div>
+          <h1 className="mt-8 text-3xl font-black tracking-[-0.04em] lg:text-5xl">{steps[step].title}</h1>
+          <p className="mx-auto mt-4 max-w-xl text-base font-bold leading-7 text-slate-500 lg:text-lg">{steps[step].body}</p>
+        </div>
+        <div className="mt-10 flex items-center justify-center gap-2">
+          {steps.map((item, index) => <span key={item.title} className={`h-2 rounded-full ${index === step ? 'w-8 bg-blue-700' : 'w-2 bg-slate-200'}`} />)}
+        </div>
+        <div className="mt-10 flex gap-3">
+          <button onClick={() => step === 0 ? navigate('/') : setStep((value) => value - 1)} className="pressable h-14 flex-1 rounded-2xl border border-slate-200 font-black text-slate-600">
+            이전
+          </button>
+          <button onClick={() => step === steps.length - 1 ? navigate('/') : setStep((value) => value + 1)} className="pressable h-14 flex-[1.4] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
+            {step === steps.length - 1 ? '시작하기' : '다음'} <ChevronRight className="inline h-5 w-5" />
+          </button>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+function SearchResultsPage() {
+  const [params] = useSearchParams()
+  const query = params.get('q')?.trim() ?? ''
+  const { goals, spendingCategories, holdings, recommendedActions } = useMyWaveData()
+  const fallbackResults = useMemo(() => {
+    const keyword = query.toLowerCase()
+    const sources = [
+      ...goals.map((item) => ({ title: item.title, detail: `목표 달성률 ${item.rate}%`, targetPath: '/goals' })),
+      ...spendingCategories.map((item) => ({ title: item.name, detail: `이번 달 ${won(item.amount)} 지출`, targetPath: '/spending/detail' })),
+      ...holdings.map((item) => ({ title: `${item.symbol} ${item.name}`, detail: `수익률 ${item.returnRate}%`, targetPath: `/company/${item.symbol}` })),
+      ...recommendedActions.map((item) => ({ title: item.title, detail: `${won(item.saving)} 절약 가능`, targetPath: '/spending/simulation' })),
+    ]
+    return keyword ? sources.filter((item) => `${item.title} ${item.detail}`.toLowerCase().includes(keyword)) : sources
+  }, [goals, holdings, query, recommendedActions, spendingCategories])
+  const [results, setResults] = useState<Array<Pick<MyWaveSearchResultResponse, 'title' | 'detail' | 'targetPath'>>>(fallbackResults)
+
+  useEffect(() => {
+    let ignore = false
+    searchMyWave(query).then((items) => {
+      if (!ignore) setResults(items)
+    }).catch(() => {
+      if (!ignore) setResults(fallbackResults)
+    })
+    return () => {
+      ignore = true
+    }
+  }, [fallbackResults, query])
+
+  return (
+    <div className="space-y-5">
+      <MobileTitle title="검색" />
+      <Card>
+        <div className="text-sm font-black text-blue-700">검색 결과</div>
+        <h1 className="mt-2 text-2xl font-black">{query ? `"${query}"` : '전체 항목'}</h1>
+        <p className="mt-2 text-sm font-bold text-slate-500">목표, 소비, 투자, AI 액션을 한 번에 찾습니다.</p>
+      </Card>
+      <div className="grid gap-3 lg:grid-cols-2">
+        {results.map((result) => (
+          <SearchResultRow key={`${result.targetPath}-${result.title}`} title={result.title} detail={result.detail} to={result.targetPath} />
+        ))}
+        {results.length === 0 && (
+          <Card>
+            <div className="py-8 text-center text-sm font-bold text-slate-500">검색 결과가 없습니다.</div>
+          </Card>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SearchResultRow({ title, detail, to }: { title: string; detail: string; to: string }) {
+  const navigate = useNavigate()
+  return (
+    <button onClick={() => navigate(to)} className="pressable rounded-[20px] border border-slate-200 bg-white p-5 text-left shadow-card">
+      <div className="flex items-center gap-4">
+        <div className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-blue-700">
+          <Search className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-base font-black">{title}</div>
+          <div className="mt-1 text-sm font-bold text-slate-500">{detail}</div>
+        </div>
+        <ChevronRight className="h-5 w-5 text-slate-400" />
+      </div>
+    </button>
+  )
+}
+
+function GoalEditorPage() {
+  const navigate = useNavigate()
+  const [title, setTitle] = useState('새 저축 목표')
+  const [targetAmount, setTargetAmount] = useState(1_000_000)
+  const [currentAmount, setCurrentAmount] = useState(0)
+  const [targetDate, setTargetDate] = useState('2026-07-21')
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+
+  async function submit() {
+    setStatus('saving')
+    try {
+      await createMyWaveGoal({ title, targetAmount, currentAmount, targetDate, status: 'ACTIVE', priority: 1 })
+    } catch {
+      // 백엔드가 꺼져 있어도 화면 흐름은 확인할 수 있게 저장 완료 처리합니다.
+    }
+    setStatus('saved')
+    window.setTimeout(() => navigate('/goals'), 500)
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-5">
+      <MobileTitle title="새 목표 만들기" />
+      <Card title="목표 정보">
+        <div className="space-y-4">
+          <Field label="목표 이름">
+            <input value={title} onChange={(event) => setTitle(event.target.value)} className="form-input" />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="목표 금액">
+              <input type="number" value={targetAmount} onChange={(event) => setTargetAmount(Number(event.target.value))} className="form-input" />
+            </Field>
+            <Field label="현재 모은 금액">
+              <input type="number" value={currentAmount} onChange={(event) => setCurrentAmount(Number(event.target.value))} className="form-input" />
+            </Field>
+          </div>
+          <Field label="목표 날짜">
+            <input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} className="form-input" />
+          </Field>
+        </div>
+      </Card>
+      <Card title="예상 결과">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <MiniStat label="달성률" value={`${Math.round((currentAmount / Math.max(targetAmount, 1)) * 100)}%`} />
+          <MiniStat label="남은 금액" value={won(Math.max(targetAmount - currentAmount, 0))} />
+          <MiniStat label="하루 목표" value={won(Math.max(targetAmount - currentAmount, 0) / 30)} />
+        </div>
+      </Card>
+      <div className="flex gap-3">
+        <button onClick={() => navigate('/goals')} className="pressable h-13 flex-1 rounded-2xl border border-slate-200 font-black text-slate-600">취소</button>
+        <button onClick={submit} disabled={status === 'saving'} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue disabled:opacity-60">
+          <Save className="inline h-5 w-5" /> {status === 'saving' ? '저장 중' : status === 'saved' ? '저장 완료' : '저장하기'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function SpendingDetailPage() {
+  const { spendingCategories, spendingBlockers, financeSummary } = useMyWaveData()
+  return (
+    <div className="space-y-5">
+      <MobileTitle title="소비 상세" />
+      <SpendingHero />
+      <div className="grid gap-5 xl:grid-cols-[1fr_.9fr]">
+        <Card title="카테고리별 지출">
+          <div className="space-y-3">
+            {spendingCategories.map((item) => {
+              const Icon = item.icon
+              return (
+                <div key={item.name} className="grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-2xl bg-slate-50 p-3">
+                  <div className="grid h-9 w-9 place-items-center rounded-xl bg-white text-blue-700"><Icon className="h-5 w-5" /></div>
+                  <div>
+                    <div className="font-black">{item.name}</div>
+                    <Progress value={item.rate} className="mt-2 h-2" color={item.color} />
+                  </div>
+                  <div className="text-right">
+                    <div className="font-black">{won(item.amount)}</div>
+                    <div className="text-xs font-bold text-slate-500">{item.rate}%</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+        <Card title="목표 달성을 방해하는 소비 TOP 3" action="조정하기" actionTo="/spending/simulation">
+          <div className="space-y-3">
+            {spendingBlockers.map((item, index) => (
+              <div key={item.name} className="flex items-center gap-3 rounded-2xl border border-orange-100 bg-orange-50/50 p-4">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-orange-600 text-sm font-black text-white">{index + 1}</span>
+                <div className="flex-1">
+                  <div className="font-black">{item.name}</div>
+                  <div className="text-sm font-bold text-slate-500">목표 달성률 {item.impact}%p 영향</div>
+                </div>
+                <div className="font-black">{won(item.amount)}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+      <Card title="이번 달 소비 판단">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <MiniStat label="총 소비" value={won(financeSummary.totalSpending)} change="전월 대비 상승" />
+          <MiniStat label="일평균 소비" value={won(financeSummary.dailySpending)} />
+          <MiniStat label="예산 대비" value={`${financeSummary.budgetRate}%`} change="조정 필요" />
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+function SimulationDetailPage() {
+  return (
+    <div className="space-y-5">
+      <MobileTitle title="절약 시뮬레이션" />
+      <SavingSimulation />
+      <ActionPanel />
+      <Card title="적용 후 예상 루틴">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <MiniStat label="주간 배달 횟수" value="4회 -> 2회" change="+78,000원" />
+          <MiniStat label="카페 지출" value="-30%" change="+45,000원" />
+          <MiniStat label="구독 정리" value="2개 해지" change="+32,000원" />
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+function PortfolioDetailPage() {
+  return (
+    <div className="space-y-5">
+      <MobileTitle title="보유 자산" />
+      <PortfolioHero />
+      <HoldingsTable />
+      <CompanyPreview />
+    </div>
+  )
+}
+
+function PortfolioAllocationDetailPage() {
+  const { portfolioAllocation } = useMyWaveData()
+  return (
+    <div className="space-y-5">
+      <MobileTitle title="자산 배분" />
+      <Card title="포트폴리오 구성">
+        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+          <Donut data={portfolioAllocation} center={won(portfolioAllocation.reduce((sum, item) => sum + item.amount, 0))} />
+          <Legend items={portfolioAllocation} />
+        </div>
+      </Card>
+      <AssetBars />
+      <PortfolioInsight />
+    </div>
+  )
+}
+
+function RiskDetailPage() {
+  const [selectedAction, setSelectedAction] = useState('ETF 비중 10~15% 확대')
+  const [savedAction, setSavedAction] = useState('')
+
+  async function chooseAction(action: string) {
+    setSelectedAction(action)
+    try {
+      const saved = await saveMyWavePortfolioRiskAction(action)
+      setSavedAction(saved.action)
+    } catch {
+      setSavedAction(action)
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <MobileTitle title="포트폴리오 리스크" />
+      <RiskPanel />
+      <Card title="리스크 조정 액션">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {['ETF 비중 10~15% 확대', '현금 비중 5% 확보', '단일 종목 비중 35% 이하 유지'].map((item) => (
+            <button key={item} onClick={() => chooseAction(item)} className={`pressable rounded-2xl border p-4 text-left font-black ${selectedAction === item ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-blue-50'}`}>
+              {item}
+            </button>
+          ))}
+        </div>
+        <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-600">선택한 액션: <span className="text-blue-700">{selectedAction}</span></div>
+        {savedAction && <div className="mt-3 rounded-2xl bg-blue-50 p-4 text-sm font-black text-blue-700">백엔드에 저장됨: {savedAction}</div>}
+      </Card>
+    </div>
+  )
+}
+
+function AssetDetailPage() {
+  const { financeSummary, activities } = useMyWaveData()
+  return (
+    <div className="space-y-5">
+      <MobileTitle title="자산" />
+      <Card title="이번 달 재무 상태">
+        <div className="grid gap-4 sm:grid-cols-4">
+          <MiniStat label="총 자산" value={won(financeSummary.totalAsset)} change="+1.8%" />
+          <MiniStat label="총 지출" value={won(financeSummary.totalSpending)} change="-8.5%" />
+          <MiniStat label="저축률" value={`${financeSummary.savingRate}%`} change="+5%" />
+          <MiniStat label="투자 가능 금액" value={won(financeSummary.investableAmount)} />
+        </div>
+      </Card>
+      <Card title="최근 활동">
+        <div className="divide-y divide-slate-100">
+          {activities.map((item) => {
+            const Icon = item.icon
+            return (
+              <div key={item.title} className="flex items-center gap-4 py-4">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl text-white" style={{ background: item.color }}><Icon className="h-5 w-5" /></div>
+                <div className="flex-1">
+                  <div className="font-black">{item.title}</div>
+                  <div className="text-sm font-bold text-slate-500">{item.detail}</div>
+                </div>
+                <div className={`font-black ${item.amount >= 0 ? 'text-blue-700' : 'text-slate-900'}`}>{won(item.amount)}</div>
+              </div>
+            )
+          })}
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+function CompanyDetailPage() {
+  const { symbol = '005930' } = useParams()
+  const [watched, setWatched] = useState(false)
+  const [analysis, setAnalysis] = useState<MyWaveCompanyAnalysisResponse>(() => fallbackCompanyAnalysis(symbol))
+  const company = {
+    name: analysis.stock.name,
+    ticker: analysis.stock.symbol,
+    market: `${analysis.stock.market ?? 'MARKET'} · ${analysis.stock.industry ?? analysis.stock.sector ?? '기업'}`,
+    price: formatCompanyPrice(analysis.stock.currentPrice, analysis.stock.market),
+    change: `${Number(analysis.stock.changeRate ?? 0) >= 0 ? '+' : ''}${Number(analysis.stock.changeRate ?? 0).toFixed(2)}%`,
+    logo: analysis.stock.name.slice(0, 1).toUpperCase(),
+  }
+
+  useEffect(() => {
+    let ignore = false
+    getMyWaveCompanyAnalysis(symbol).then((result) => {
+      if (!ignore) setAnalysis(result)
+    }).catch(() => {
+      if (!ignore) setAnalysis(fallbackCompanyAnalysis(symbol))
+    })
+    return () => {
+      ignore = true
+    }
+  }, [symbol])
+
+  async function toggleWatch() {
+    const next = !watched
+    setWatched(next)
+    try {
+      if (next) {
+        await addMyWaveWatchlist(symbol)
+      } else {
+        await removeMyWaveWatchlist(symbol)
+      }
+    } catch {
+      // 백엔드가 꺼져 있어도 UI 토글은 유지합니다.
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <MobileTitle title="기업 분석" />
+      <Card>
+        <div className="flex items-center gap-5">
+          <div className="grid h-20 w-20 place-items-center rounded-[24px] bg-blue-700 text-3xl font-black text-white">{company.logo}</div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-end gap-2">
+              <h1 className="text-2xl font-black">{company.name}</h1>
+              <span className="font-bold text-slate-500">{company.ticker}</span>
+            </div>
+            <div className="mt-2 text-sm font-bold text-slate-500">{company.market}</div>
+            <div className="mt-4 text-2xl font-black">{company.price} <span className={company.change.startsWith('+') ? 'text-red-500' : 'text-blue-700'}>{company.change}</span></div>
+          </div>
+          <button onClick={toggleWatch} className={`pressable grid h-11 w-11 place-items-center rounded-full ${watched ? 'bg-blue-700 text-white' : 'bg-blue-50 text-blue-700'}`}>
+            <Save className="h-5 w-5" />
+          </button>
+        </div>
+        {watched && <div className="mt-5 rounded-2xl bg-blue-50 p-4 text-sm font-black text-blue-700">관심 기업에 저장되었습니다.</div>}
+      </Card>
+      <div className="grid gap-3 sm:grid-cols-5">
+        {analysis.metrics.map((metric) => (
+          <Card key={metric.label} className="p-4">
+            <div className={`grid h-10 w-10 place-items-center rounded-2xl ${toneBg(metric.tone)}`}><CheckCircle2 className="h-5 w-5" /></div>
+            <div className="mt-3 text-sm font-black">{metric.label}</div>
+            <div className="mt-2 text-xl font-black text-blue-700">{metric.value}{metric.unit}</div>
+          </Card>
+        ))}
+      </div>
+      <Card title="실적 추이">
+        <div className="h-72">
+          <ResponsiveContainer>
+            <AreaChart data={analysis.performance}>
+              <CartesianGrid stroke="#e8eef7" vertical={false} />
+              <XAxis dataKey="year" axisLine={false} tickLine={false} />
+              <YAxis axisLine={false} tickLine={false} />
+              <Tooltip />
+              <Area dataKey="sales" stroke="#2563eb" fill="#dbeafe" strokeWidth={3} />
+              <Line dataKey="operatingProfit" stroke="#60a5fa" strokeWidth={3} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+      <Card title="AI 요약" action="AI 코치에게 묻기" actionTo="/coach">
+        <p className="text-base font-bold leading-8 text-slate-600">
+          {analysis.aiSummary}
+        </p>
+      </Card>
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-black text-slate-600">{label}</span>
+      {children}
+    </label>
+  )
+}
+
+function toneBg(tone: string) {
+  if (tone === 'green') return 'bg-emerald-50 text-emerald-600'
+  if (tone === 'orange') return 'bg-orange-50 text-orange-600'
+  if (tone === 'violet') return 'bg-violet-50 text-violet-600'
+  if (tone === 'yellow') return 'bg-amber-50 text-amber-600'
+  return 'bg-blue-50 text-blue-700'
+}
+
+const defaultNotificationItems: MyWaveNotificationResponse[] = [
+  { id: 1, category: '목표', title: '목표 달성률 업데이트', body: '"다음 달까지 100만원 모으기" 목표가 63% 달성되었어요.', targetPath: '/goals', tone: 'green', read: false, createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString() },
+  { id: 2, category: '소비', title: '소비 경고', body: '이번 달 카페/간식 지출이 지난 달보다 32% 증가했어요.', targetPath: '/spending/detail', tone: 'orange', read: false, createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
+  { id: 3, category: '투자', title: '포트폴리오 변동', body: '국내 주식 비중이 2.3% 감소했어요.', targetPath: '/portfolio/allocation', tone: 'blue', read: false, createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() },
+  { id: 4, category: 'AI 코치', title: 'AI 코치 추천', body: '현금 비중을 10% 높이면 변동성 리스크를 줄일 수 있어요.', targetPath: '/coach', tone: 'violet', read: false, createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() },
+  { id: 5, category: '이벤트', title: '관심 종목 리포트 알림', body: '삼성전자 리포트가 업데이트 되었어요.', targetPath: '/company/005930', tone: 'yellow', read: false, createdAt: new Date(Date.now() - 33 * 60 * 60 * 1000).toISOString() },
+]
+
+function notificationIcon(category: string, title: string) {
+  if (category.includes('소비')) return ShieldAlert
+  if (category.includes('투자') || title.includes('포트폴리오')) return BarChart3
+  if (category.includes('AI')) return MessageCircle
+  if (category.includes('이벤트') || title.includes('리포트')) return FileText
+  return Target
+}
+
+function relativeTime(value: string) {
+  const diff = Date.now() - new Date(value).getTime()
+  const minutes = Math.max(1, Math.round(diff / 60000))
+  if (minutes < 60) return `${minutes}분 전`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours}시간 전`
+  return `${Math.round(hours / 24)}일 전`
+}
+
+function formatCompanyPrice(price: number, market?: string) {
+  if (market?.toUpperCase().includes('NASDAQ') || market?.toUpperCase().includes('NYSE')) {
+    return `$${Number(price).toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+  }
+  return `${Number(price).toLocaleString('ko-KR')}원`
+}
+
+function fallbackCompanyAnalysis(symbol: string): MyWaveCompanyAnalysisResponse {
+  const apple = symbol.toUpperCase() === 'AAPL'
+  return {
+    stock: apple
+      ? { symbol: 'AAPL', name: 'Apple', market: 'NASDAQ', currentPrice: 210, changePrice: 2.4, changeRate: 1.24, sector: '기술', industry: '소비자 전자' }
+      : { symbol: '005930', name: '삼성전자', market: 'KOSPI', currentPrice: 79600, changePrice: -1100, changeRate: -1.36, sector: '반도체', industry: '전자 장비 및 기기' },
+    metrics: [
+      { label: '매출 증가', value: apple ? 8.7 : 15.4, unit: '%', tone: 'green', description: '전년 대비 매출 성장' },
+      { label: '영업이익 변동', value: apple ? 12.3 : -5.2, unit: '%', tone: apple ? 'green' : 'orange', description: '수익성 변동' },
+      { label: '부채비율 안정', value: apple ? 62.1 : 39.8, unit: '%', tone: 'green', description: '재무 안정성' },
+      { label: '현금흐름 양호', value: apple ? 96.9 : 12.8, unit: apple ? 'B USD' : '조원', tone: 'blue', description: 'FCF 기준' },
+      { label: '배당 있음', value: apple ? 0.5 : 2.1, unit: '%', tone: 'violet', description: '배당 수익률' },
+    ],
+    performance: apple
+      ? [
+        { year: '2020', sales: 274.5, operatingProfit: 66.3 },
+        { year: '2021', sales: 365.8, operatingProfit: 108.9 },
+        { year: '2022', sales: 394.3, operatingProfit: 119.4 },
+        { year: '2023', sales: 383.3, operatingProfit: 114.3 },
+        { year: '2024', sales: 391.0, operatingProfit: 123.2 },
+      ]
+      : [
+        { year: '2020', sales: 236.8, operatingProfit: 35.9 },
+        { year: '2021', sales: 279.6, operatingProfit: 51.6 },
+        { year: '2022', sales: 302.2, operatingProfit: 43.4 },
+        { year: '2023', sales: 258.9, operatingProfit: 6.6 },
+        { year: '2024', sales: 298.1, operatingProfit: 32.7 },
+      ],
+    aiSummary: apple
+      ? '브랜드 충성도와 현금흐름은 강하지만 성장률 둔화와 규제 리스크를 함께 확인해야 합니다.'
+      : '재무 안정성은 높은 편이지만 최근 수익성은 확인이 필요합니다. 메모리 업황 회복과 AI 수요 증가로 실적 개선이 기대됩니다.',
+    portfolioImpact: '현재 포트폴리오에서 성장 노출도를 높이는 역할을 합니다.',
+    dividendAvailable: true,
+  }
+}
+
+function Card({ children, title, action, actionTo, className }: { children: ReactNode; title?: ReactNode; action?: ReactNode; actionTo?: string; className?: string }) {
+  const navigate = useNavigate()
+
   return (
     <section className={`rounded-[24px] border border-slate-200 bg-white p-5 shadow-card lg:p-6 ${className ?? ''}`}>
       {(title || action) && (
         <div className="mb-5 flex items-center justify-between gap-4">
           {title && <h2 className="text-lg font-black tracking-[-0.01em]">{title}</h2>}
-          {typeof action === 'string' ? <button className="text-sm font-bold text-slate-500">{action} <ChevronRight className="inline h-4 w-4" /></button> : action}
+          {typeof action === 'string' ? <button onClick={() => actionTo && navigate(actionTo)} className="text-sm font-bold text-slate-500">{action} <ChevronRight className="inline h-4 w-4" /></button> : action}
         </div>
       )}
       {children}
     </section>
+  )
+}
+
+function InlineAction({ to, label, primary = false }: { to: string; label: string; primary?: boolean }) {
+  const navigate = useNavigate()
+  return (
+    <button
+      onClick={() => navigate(to)}
+      className={primary ? 'rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white' : 'text-sm font-bold text-slate-500'}
+    >
+      {label} <ChevronRight className="inline h-4 w-4" />
+    </button>
   )
 }
 
@@ -1662,10 +2521,12 @@ function MobileCard({ children, className = '' }: { children: ReactNode; classNa
 }
 
 function SegmentedTabs({ items, active }: { items: string[]; active: string }) {
+  const [selected, setSelected] = useState(active)
+
   return (
     <div className="grid grid-cols-3 rounded-full bg-slate-100 p-1">
       {items.map((item) => (
-        <button key={item} className={`pressable h-11 rounded-full text-sm font-black ${item === active ? 'tab-pop bg-blue-700 text-white shadow-blue' : 'text-slate-600'}`}>
+        <button key={item} onClick={() => setSelected(item)} className={`pressable h-11 rounded-full text-sm font-black ${item === selected ? 'tab-pop bg-blue-700 text-white shadow-blue' : 'text-slate-600'}`}>
           {item}
         </button>
       ))}
@@ -1844,10 +2705,25 @@ function MobileTitle({ title }: { title: string }) {
 }
 
 function MonthPicker() {
+  const [open, setOpen] = useState(false)
+  const [month, setMonth] = useState('2024.05')
+  const months = ['2024.05', '2024.04', '2024.03']
+
   return (
-    <button className="flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-black text-slate-600 shadow-sm lg:h-12 lg:gap-3 lg:px-5 lg:text-sm">
-      <CalendarDays className="h-4 w-4 lg:h-5 lg:w-5" /> 2024.05 <ChevronDown className="h-4 w-4" />
-    </button>
+    <div className="relative">
+      <button onClick={() => setOpen((value) => !value)} className="flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-black text-slate-600 shadow-sm lg:h-12 lg:gap-3 lg:px-5 lg:text-sm">
+        <CalendarDays className="h-4 w-4 lg:h-5 lg:w-5" /> {month} <ChevronDown className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-12 z-20 w-32 rounded-2xl border border-slate-200 bg-white p-2 shadow-card">
+          {months.map((item) => (
+            <button key={item} onClick={() => { setMonth(item); setOpen(false) }} className="block w-full rounded-xl px-3 py-2 text-left text-sm font-black hover:bg-blue-50">
+              {item}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

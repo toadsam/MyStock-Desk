@@ -6,11 +6,15 @@ import com.stockflow.portfolio.dto.AllocationDto;
 import com.stockflow.portfolio.dto.HoldingDto;
 import com.stockflow.portfolio.dto.PerformancePointDto;
 import com.stockflow.portfolio.dto.PortfolioDto;
+import com.stockflow.portfolio.dto.PortfolioRiskActionDto;
+import com.stockflow.portfolio.dto.PortfolioRiskActionRequest;
 import com.stockflow.portfolio.dto.PortfolioStudyCandidateDto;
 import com.stockflow.portfolio.dto.TransactionDto;
 import com.stockflow.portfolio.entity.Portfolio;
+import com.stockflow.portfolio.entity.PortfolioRiskAction;
 import com.stockflow.portfolio.repository.HoldingRepository;
 import com.stockflow.portfolio.repository.PortfolioRepository;
+import com.stockflow.portfolio.repository.PortfolioRiskActionRepository;
 import com.stockflow.stock.dto.StockDto;
 import com.stockflow.stock.entity.Stock;
 import com.stockflow.stock.repository.StockRepository;
@@ -35,6 +39,7 @@ public class PortfolioService {
     private final HoldingRepository holdingRepository;
     private final StockRepository stockRepository;
     private final InvestmentTransactionRepository transactionRepository;
+    private final PortfolioRiskActionRepository riskActionRepository;
     private final CurrentMemberProvider currentMemberProvider;
     private final PortfolioSnapshotService portfolioSnapshotService;
 
@@ -149,6 +154,23 @@ public class PortfolioService {
                 .limit(10)
                 .map(this::toTransaction)
                 .toList();
+    }
+
+    public List<PortfolioRiskActionDto> getRiskActions() {
+        return riskActionRepository.findByMemberIdOrderByCreatedAtDesc(currentMemberProvider.currentMemberId()).stream()
+                .map(PortfolioRiskActionDto::from)
+                .toList();
+    }
+
+    @Transactional
+    public PortfolioRiskActionDto saveRiskAction(PortfolioRiskActionRequest request) {
+        PortfolioRiskAction saved = riskActionRepository.save(PortfolioRiskAction.builder()
+                .memberId(currentMemberProvider.currentMemberId())
+                .action(request.action())
+                .status("SELECTED")
+                .createdAt(java.time.LocalDateTime.now())
+                .build());
+        return PortfolioRiskActionDto.from(saved);
     }
 
     private TransactionDto toTransaction(InvestmentTransaction transaction) {

@@ -1,4 +1,4 @@
-package com.stockflow.member.entity;
+package com.stockflow.portfolio.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,26 +16,20 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Member {
+public class PortfolioRiskAction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false, unique = true)
-    private String email;
+    private Long memberId;
 
     @Column(nullable = false)
-    private String passwordHash;
+    private String action;
 
-    private String profileImageUrl;
-    private String membershipGrade;
+    @Column(nullable = false)
+    private String status;
+
     private LocalDateTime createdAt;
-
-    public void updateMembershipGrade(String membershipGrade) {
-        this.membershipGrade = membershipGrade;
-    }
 }

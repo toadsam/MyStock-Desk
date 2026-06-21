@@ -2,9 +2,13 @@ package com.stockflow.member.controller;
 
 import com.stockflow.global.response.ApiResponse;
 import com.stockflow.member.dto.MemberDto;
+import com.stockflow.member.dto.MemberMembershipRequest;
 import com.stockflow.member.service.MemberService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -18,5 +22,10 @@ public class MemberController {
     @GetMapping("/me")
     public ApiResponse<MemberDto> me() {
         return ApiResponse.success(memberService.getCurrentMember());
+    }
+
+    @PatchMapping("/me/membership")
+    public ApiResponse<MemberDto> updateMembership(@Valid @RequestBody MemberMembershipRequest request) {
+        return ApiResponse.success(memberService.updateMembership(request));
     }
 }
