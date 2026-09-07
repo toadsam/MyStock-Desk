@@ -76,6 +76,8 @@ AI 코치·AI 리포트·AI 요약·테마 설명 넷 중 실제로 OpenAI 를 �
 
 ## 알고 있는 빚
 
+한 달을 혼자 굴리면서 UI 를 한 번 갈아엎었고, 그때 정리하지 못한 것이 그대로 남아 있다. 아래는 다음에 손댈 순서대로 적은 것이다.
+
 - **옛 화면 열한 장이 코드에 남아 있는데 어디서도 안 열린다.** [`App.tsx`](frontend/src/App.tsx) 는 다섯 줄이고 `<MyWaveApp />` 하나만 렌더한다. MyWave 로 갈아엎을 때 `src/pages/` 의 StockFlow 화면 12장 중 `AuthPage` 만 재사용했고, 나머지 11장(4,414줄, 그중 `FinancialAnalysisPage.tsx` 하나가 1,661줄)은 라우트에서 끊겼다. 지웠어야 했다.
 - `MyWaveApp.tsx` 가 **3,751줄 한 파일**이다. 라우팅·레이아웃·페이지 컴포넌트 열여덟 개가 전부 여기 있다.
 - **위에서 모델에 금지한 셋을 정작 화면이 정적 문구로 띄운다.** 홈의 「관련 기업 분석 미리보기」 카드에 `투자 의견: 매수` · `목표가(12M) $210.00` · `상승 여력 +22.4%` 가 하드코딩돼 있다([`MyWaveApp.tsx CompanyPreview`](frontend/src/mywave/MyWaveApp.tsx#L1999-L2001)). 디자인 시안을 그대로 남긴 자리고, 이 저장소에서 제일 먼저 지워야 할 코드다.
@@ -85,7 +87,6 @@ AI 코치·AI 리포트·AI 요약·테마 설명 넷 중 실제로 OpenAI 를 �
 - 프론트에도 **조용한 폴백**이 있다. `CompanyDetailPage` 는 `fallbackCompanyAnalysis()` 로 먼저 그리고 API 응답이 오면 갈아끼우며, 실패하면 그대로 둔다([#L3293-L3316](frontend/src/mywave/MyWaveApp.tsx#L3293-L3316)). 백엔드가 죽어도 그럴듯한 숫자가 뜨고 화면에는 아무 표시가 없다. 백엔드가 출처 문자열까지 실어 보내는 것과 정반대다.
 - AI 코치 답변에 `BigDecimal.toPlainString()` 이 그대로 나간다 — 화면에 `120883000.00원` 이라고 뜬다([`FinancialCoachService#L87-L89`](backend/src/main/java/com/stockflow/coach/service/FinancialCoachService.java#L87-L89)).
 - 거래 CSV 가져오기(`POST /api/transactions/import/csv`)는 백엔드에만 있고 지금 UI 에서 열 수 없다. 위 「끊긴 화면」에 딸려 나갔다.
-- 1440px 에서 `/portfolio` 상단 요약 카드의 금액이 잘린다. 서브 라우트는 페이지 제목이 「홈」으로 남고(`/assets`, `/company/:symbol`), 소비 화면의 월 선택기 기본값은 시드 기준월인 `2024.05` 에 묶여 같은 화면의 `2026.09` 카드와 어긋난다.
 - **테스트가 9개뿐이고 전부 `@SpringBootTest` 흐름 테스트다.** 정작 숫자를 결정하는 `Holding.buy()`/`sell()` 같은 순수 계산에는 단위 테스트가 없다. 「전량 매도 후 재매수」처럼 평균단가가 어긋나기 쉬운 경우를 잠가 두지 않았다.
 - `application-mysql.yml` 의 DB 비밀번호와 JWT 시크릿에 **기본값이 박혀 있다.** 환경변수로 덮이긴 하지만 값 자체가 저장소에 있으면 안 된다. 전부 `${ENV}` 로만 받게 바꿔야 한다.
 - `CurrentMemberProvider` 는 인증이 없으면 회원 1번으로 떨어진다. 지금은 `SecurityConfig` 가 모든 요청에 인증을 걸어 막고 있지만, 한 사람만 쓰던 시절의 코드가 남은 것이다.
