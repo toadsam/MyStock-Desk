@@ -7,6 +7,7 @@ import com.stockflow.expense.dto.ExpenseDto;
 import com.stockflow.expense.dto.ExpenseMonthlySummaryDto;
 import com.stockflow.expense.dto.ExpenseRequest;
 import com.stockflow.expense.dto.ExpenseTrendDto;
+import com.stockflow.expense.dto.MerchantSuggestionDto;
 import com.stockflow.expense.dto.SavingSimulationRequest;
 import com.stockflow.expense.dto.SavingSimulationResultDto;
 import com.stockflow.expense.entity.Expense;
@@ -72,6 +73,65 @@ public class ExpenseService {
                 .updatedAt(LocalDateTime.now())
                 .build());
         return ExpenseDto.from(saved);
+    }
+
+    /** 확인 화면에서 고른 후보들을 한 번에 저장한다. 문자·캡처 경로가 공유한다. */
+    @Transactional
+    public List<ExpenseDto> createBulk(List<ExpenseRequest> requests) {
+        Long memberId = currentMemberProvider.currentMemberId();
+        LocalDateTime now = LocalDateTime.now();
+        List<Expense> saved = expenseRepository.saveAll(requests.stream()
+                .map(request -> Expense.builder()
+                        .memberId(memberId)
+                        .category(request.category())
+                        .merchant(request.merchant())
+                        .amount(request.amount())
+                        .spentDate(request.spentDate())
+                        .memo(request.memo())
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .build())
+                .toList());
+        return saved.stream().map(ExpenseDto::from).toList();
+    }
+
+    /**
+     * 가게 이름 자동완성.
+     *
+     * <p>새로 저장하는 데이터 없이 과거 기록만으로 계산한다. 사용자가 카테고리를 한 번
+     * 고치면 그 값이 최빈값이 되므로, 고칠수록 제안이 정확해진다.
+     */
+    public List<MerchantSuggestionDto> suggestMerchants(String query) {
+        List<Expense> history = expenseRepository
+                .findTop300ByMemberIdOrderBySpentDateDesc(currentMemberProvider.currentMemberId());
+        String normalized = query == null ? "" : query.replaceAll("\\s+", "").toUpperCase();
+        return history.stream()
+                .filter(expense -> expense.getMerchant() != null && !expense.getMerchant().isBlank())
+                .filter(expense -> normalized.isEmpty()
+                        || expense.getMerchant().replaceAll("\\s+", "").toUpperCase().contains(normalized))
+                .collect(Collectors.groupingBy(Expense::getMerchant, LinkedHashMap::new, Collectors.toList()))
+                .entrySet()
+                .stream()
+                .map(entry -> new MerchantSuggestionDto(
+                        entry.getKey(),
+                        mostCommon(entry.getValue(), Expense::getCategory),
+                        mostCommon(entry.getValue(), Expense::getAmount),
+                        entry.getValue().size()))
+                .sorted(Comparator.comparingLong(MerchantSuggestionDto::usageCount).reversed())
+                .limit(8)
+                .toList();
+    }
+
+    private <T> T mostCommon(List<Expense> rows, java.util.function.Function<Expense, T> extractor) {
+        return rows.stream()
+                .map(extractor)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.groupingBy(value -> value, Collectors.counting()))
+                .entrySet()
+                .stream()
+                .max(Comparator.comparingLong(Map.Entry::getValue))
+                .map(Map.Entry::getKey)
+                .orElse(null);
     }
 
     @Transactional
