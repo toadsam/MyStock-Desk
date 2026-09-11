@@ -5,7 +5,10 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:mysql,local}
   datasource:
-    url: jdbc:h2:mem:stockflow
+    # DB_CLOSE_DELAY=-1 이 없으면 커넥션 풀이 유휴 커넥션을 모두 닫는 순간
+    # 인메모리 DB 가 통째로 사라진다. 잠시 안 쓰다 돌아오면 모든 요청이
+    # "Table not found (this database is empty)" 로 실패한다.
+    url: jdbc:h2:mem:stockflow;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
