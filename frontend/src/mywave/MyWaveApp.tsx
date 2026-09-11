@@ -27,6 +27,16 @@ import {
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ComponentType, ReactNode } from 'react'
 import { NavLink, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { won } from './format'
+import { Card, Field, ListRow } from './uiKit'
+import { Beluga, BelugaSays } from './Beluga'
+import { Amount } from './Amount'
+import {
+  CashFlowCard,
+  ExpenseImportCard,
+  MerchantAutocomplete,
+  QuickExpenseButtons,
+} from './ExpenseCapture'
 import {
   activities as defaultActivities,
   coachMessages as defaultCoachMessages,
@@ -207,8 +217,8 @@ function Shell() {
 
   return (
     <MyWaveDataContext.Provider value={runtimeData}>
-      <div className="min-h-screen bg-[#edf5ff] p-0 text-slate-950 lg:p-8">
-        <div className="mx-auto min-h-screen w-full max-w-[1760px] overflow-hidden bg-white shadow-[0_24px_80px_rgba(37,99,235,.16)] lg:min-h-[calc(100vh-4rem)] lg:rounded-[28px] lg:border lg:border-slate-200">
+      <div className="min-h-screen bg-[var(--bg)] p-0 text-slate-900 lg:p-8">
+        <div className="mx-auto min-h-screen w-full max-w-[1760px] overflow-hidden bg-[var(--bg)] lg:min-h-[calc(100vh-4rem)] lg:rounded-[20px]">
           <WindowBar />
           <div className="flex min-h-screen lg:min-h-[calc(100vh-7rem)]">
             <Sidebar />
@@ -431,8 +441,7 @@ function Sidebar() {
               to={item.path}
               end={item.path === '/'}
               className={({ isActive }) =>
-                `flex h-14 items-center gap-4 rounded-2xl px-4 text-[15px] font-bold transition ${isActive ? activeClass : inactiveClass}`
-              }
+                `flex h-14 items-center gap-4 rounded-2xl px-4 text-[15px] font-bold transition ${isActive ? activeClass : inactiveClass}`}
             >
               <Icon className="h-6 w-6" />
               {item.label}
@@ -440,7 +449,7 @@ function Sidebar() {
           )
         })}
       </nav>
-      <div className="mt-auto rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-blue-50 p-5 shadow-card">
+      <div className="mt-auto rounded-[20px] bg-white p-5 shadow-card">
         <div className="font-black text-blue-700">MyWave 시작하기</div>
         <p className="mt-3 text-sm leading-6 text-slate-500">3분 만에 나에게 맞는 투자 흐름을 설계해보세요.</p>
         <button onClick={() => navigate('/onboarding')} className="mt-4 rounded-full border border-blue-600 px-4 py-2 text-sm font-bold text-blue-700">시작하기 <ChevronRight className="inline h-4 w-4" /></button>
@@ -488,7 +497,7 @@ function DesktopHeader() {
         <p className="mt-2 text-base font-medium text-slate-500">{meta.subtitle}</p>
       </div>
       <div className="flex items-center gap-5">
-        <label className="flex h-12 w-80 items-center gap-3 rounded-full border border-slate-200 bg-white px-5 text-slate-400 shadow-sm">
+        <label className="flex h-12 w-80 items-center gap-3 rounded-full bg-white px-5 text-slate-400">
           <Search className="h-5 w-5" />
           <input
             value={query}
@@ -507,7 +516,7 @@ function DesktopHeader() {
 
 function MobileBottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 mx-auto grid max-w-[1760px] grid-cols-5 border-t border-slate-200 bg-white/95 px-3 pb-[calc(.55rem+env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-12px_30px_rgba(15,23,42,.08)] backdrop-blur lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 mx-auto grid max-w-[1760px] grid-cols-5 border-t border-slate-200 bg-white px-3 pb-[calc(.55rem+env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
       {mobileNavItems.map((item) => {
         const Icon = item.icon
         return (
@@ -516,8 +525,7 @@ function MobileBottomNav() {
             to={item.path}
             end={item.path === '/'}
             className={({ isActive }) =>
-              `mobile-tab flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-black transition ${isActive ? 'text-blue-700' : 'text-slate-400'}`
-            }
+              `mobile-tab flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-black transition ${isActive ? 'text-blue-700' : 'text-slate-400'}`}
           >
             <Icon className="h-6 w-6" />
             {item.label}
@@ -532,7 +540,7 @@ function BellButton() {
   const navigate = useNavigate()
 
   return (
-    <button onClick={() => navigate('/notifications')} className="pressable relative grid h-9 w-9 place-items-center rounded-full bg-white text-slate-900 shadow-sm lg:h-10 lg:w-10">
+    <button onClick={() => navigate('/notifications')} className="pressable relative grid h-9 w-9 place-items-center rounded-full bg-white text-slate-900 lg:h-10 lg:w-10">
       <Bell className="h-5 w-5 lg:h-6 lg:w-6" />
       <span className="notification-dot absolute right-2 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
     </button>
@@ -611,6 +619,7 @@ function SpendingPage() {
         <div className="flex justify-end">
           <MonthPicker />
         </div>
+        <ExpenseQuickEntry />
         <div className="grid gap-5 xl:grid-cols-[.98fr_.92fr]">
           <SpendingHero />
           <TrendCard />
@@ -714,7 +723,7 @@ function ReportsPage() {
           <p className="text-base leading-8 text-slate-600">
             이 기업은 현금흐름과 부채비율 측면에서 안정적입니다. 다만 영업이익률 변동성이 있어 다음 분기 실적 발표에서 메모리 가격, AI 서버 수요, 설비투자 계획을 함께 확인하는 것이 좋습니다.
           </p>
-          <div className="mt-6 rounded-3xl bg-blue-50 p-5 text-sm font-bold leading-7 text-blue-800">
+          <div className="mt-6 rounded-[20px] bg-blue-50 p-5 text-sm font-bold leading-7 text-blue-800">
             투자 판단이 아니라, 사용자가 기업 상태를 이해하기 위한 참고 요약입니다.
           </div>
         </Card>
@@ -784,6 +793,7 @@ function MobileSpendingPage() {
         <MonthPicker />
       </div>
       <MobileBlueSummary title="이번 달 총 소비" value={won(financeSummary.totalSpending)} detail={`지난 달 대비 ${Math.abs(financeSummary.goalImpact).toFixed(1)}% ▲`} />
+      <ExpenseQuickEntry />
       <MobileSpendingCategories />
       <MobileTopSpending />
       <MobileSavingBox />
@@ -809,7 +819,7 @@ function MobileHeroCard() {
   const { financeSummary } = useMyWaveData()
 
   return (
-    <section className="motion-card pressable rounded-[22px] border border-blue-100 bg-blue-50 p-4 shadow-card">
+    <section className="motion-card pressable rounded-[20px] bg-blue-50 p-4 shadow-card">
       <div className="flex items-center gap-2 text-sm font-black text-blue-700">
         <TargetDot /> 이번 달 투자 목표
       </div>
@@ -843,22 +853,28 @@ function MobileGoalMainCard() {
     <MobileCard>
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-sm font-black text-blue-700">메인 목표</div>
-          <h2 className="mt-2 text-2xl font-black tracking-[-0.03em]">{mainGoal.title}</h2>
+          <div className="text-[13px] font-semibold text-slate-400">메인 목표</div>
+          <h2 className="mt-1.5 text-[22px] font-bold tracking-[-0.02em] text-slate-900">{mainGoal.title}</h2>
         </div>
-        <button onClick={() => navigate('/goals/new')} className="pressable text-2xl font-black text-slate-500">...</button>
+        <button onClick={() => navigate('/goals/new')} aria-label="목표 수정" className="pressable -mr-1 grid h-9 w-9 place-items-center rounded-full text-slate-300 hover:bg-slate-50">
+          <SlidersHorizontal className="h-4.5 w-4.5" />
+        </button>
       </div>
       <div className="mt-5 grid grid-cols-[132px_1fr] items-center gap-4">
         <MobileRing value={financeSummary.goalRate} />
-        <div className="min-w-0 divide-y divide-slate-100">
+        <div className="min-w-0">
           <MobileGoalLine label="현재 금액" value={won(financeSummary.savedAmount)} icon={<WalletCards className="h-4 w-4" />} />
           <MobileGoalLine label="남은 금액" value={won(financeSummary.remainingAmount)} icon={<FlagIcon />} />
           <MobileGoalLine label="남은 기간" value={`${financeSummary.daysLeft}일`} icon={<CalendarDays className="h-4 w-4" />} />
           <MobileGoalLine label="1일 목표 금액" value={won(financeSummary.dailyTarget)} icon={<TargetDot />} />
         </div>
       </div>
-      <div className="mt-4 rounded-2xl bg-blue-50 p-3 text-sm font-bold text-slate-700">
-        지금까지 잘하고 있어요. 이 흐름을 유지하면 목표 달성이 가능해요.
+      <div className="mt-4">
+        <BelugaSays mood={financeSummary.goalRate >= 50 ? 'cheer' : 'concern'} size="sm">
+          {financeSummary.goalRate >= 50
+            ? '이 흐름이면 이번 달 목표까지 갈 수 있어요.'
+            : '지금 페이스로는 조금 빠듯해요. 어디를 조정할 수 있을지 같이 볼까요?'}
+        </BelugaSays>
       </div>
     </MobileCard>
   )
@@ -871,21 +887,21 @@ function MobileActionCards() {
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-black">목표 달성을 위한 추천</h2>
-        <button onClick={() => navigate('/spending/simulation')} className="pressable text-sm font-bold text-slate-500">더보기 <ChevronRight className="inline h-4 w-4" /></button>
+        <h2 className="text-[17px] font-bold tracking-[-0.02em] text-slate-900">목표 달성을 위한 추천</h2>
+        <button onClick={() => navigate('/spending/simulation')} className="pressable text-[13px] font-semibold text-slate-400">더보기 <ChevronRight className="inline h-4 w-4" /></button>
       </div>
       <div className="grid grid-cols-3 gap-3">
         {recommendedActions.map((action) => {
           const Icon = action.icon
           return (
-            <button key={action.title} onClick={() => navigate('/spending/simulation')} className="motion-card pressable rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-card">
-              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-blue-700">
-                <Icon className="h-6 w-6" />
+            <button key={action.title} onClick={() => navigate('/spending/simulation')} className="motion-card pressable rounded-[20px] bg-white p-4 text-left">
+              <div className="grid h-10 w-10 place-items-center rounded-[12px] bg-slate-100 text-slate-400">
+                <Icon className="h-5 w-5" />
               </div>
-              <div className="mt-3 whitespace-nowrap text-[13px] font-black leading-5">
+              <div className="mt-3 whitespace-nowrap text-[14px] font-bold leading-5 text-slate-900">
                 {action.title === '카페 지출 줄이기' ? '카페 줄이기' : action.title === '대중교통 이용하기' ? '교통 이용' : '구독 정리'}
               </div>
-              <div className="mt-1 text-xs font-bold text-slate-500">월 {won(action.saving)} 절약</div>
+              <div className="mt-1 text-[12px] font-medium text-slate-400">월 {won(action.saving)} 절약</div>
             </button>
           )
         })}
@@ -899,25 +915,25 @@ function MobileOtherGoals() {
 
   return (
     <section>
-      <h2 className="mb-3 text-lg font-black">다른 목표</h2>
+      <h2 className="mb-3 text-[17px] font-bold tracking-[-0.02em] text-slate-900">다른 목표</h2>
       <div className="space-y-3">
         {goals.slice(1, 3).map((goal) => {
           const Icon = goal.icon
           return (
             <MobileCard key={goal.title} className="p-4">
               <div className="grid grid-cols-[56px_1fr_34px] items-center gap-4">
-                <div className="grid h-14 w-14 place-items-center rounded-2xl" style={{ background: `${goal.accent}18`, color: goal.accent }}>
-                  <Icon className="h-7 w-7" />
+                <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-slate-100 text-slate-400">
+                  <Icon className="h-6 w-6" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <div className="truncate font-black">{goal.title}</div>
-                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black text-blue-700">진행 중</span>
+                    <div className="truncate text-[15px] font-bold text-slate-900">{goal.title}</div>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">진행 중</span>
                   </div>
-                  <Progress value={goal.rate} className="mt-3 h-2" />
-                  <div className="mt-2 text-xs font-bold text-slate-500">목표 {Math.round(goal.target / 10000)}만원 ㅣ 현재 {Math.round(goal.saved / 10000)}만원</div>
+                  <Progress value={goal.rate} className="mt-2.5 h-1.5" />
+                  <div className="mt-2 text-[12px] font-medium text-slate-400">목표 {Math.round(goal.target / 10000)}만원 · 현재 {Math.round(goal.saved / 10000)}만원</div>
                 </div>
-                <div className="text-right text-base font-black text-blue-700">{goal.rate}%</div>
+                <div className="tnum text-right text-[15px] font-bold text-slate-900">{goal.rate}%</div>
               </div>
             </MobileCard>
           )
@@ -929,7 +945,7 @@ function MobileOtherGoals() {
 
 function MobileBlueSummary({ title, value, detail }: { title: string; value: string; detail: string }) {
   return (
-    <section className="motion-card pressable relative overflow-hidden rounded-[22px] bg-blue-700 p-5 text-white shadow-blue">
+    <section className="motion-card pressable relative overflow-hidden rounded-[20px] bg-blue-700 p-5 text-white shadow-blue">
       <div className="relative z-10">
         <div className="text-sm font-black text-white/90">{title} <Info className="inline h-4 w-4" /></div>
         <div className="mt-4 text-4xl font-black tracking-[-0.04em]">{value}</div>
@@ -948,7 +964,7 @@ function MobileSpendingCategories() {
     <MobileCard>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-black">카테고리별 소비 비중</h2>
-        <button onClick={() => navigate('/spending/detail')} className="pressable rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500">상세보기</button>
+        <button onClick={() => navigate('/spending/detail')} className="pressable rounded-full px-3 py-1.5 text-xs font-bold text-slate-500">상세보기</button>
       </div>
       <div className="grid grid-cols-[150px_1fr] items-center gap-3">
         <MobileCssDonut center={won(financeSummary.totalSpending)} label="총 소비" />
@@ -1010,9 +1026,9 @@ function MobileSavingBox() {
         <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">시뮬레이션 안내</span>
       </div>
       <div className="mt-4 flex items-center justify-between">
-        <button onClick={() => setAmount((value) => Math.max(0, value - 10000))} className="pressable grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-2xl">-</button>
+        <button onClick={() => setAmount((value) => Math.max(0, value - 10000))} className="pressable grid h-10 w-10 place-items-center rounded-full text-2xl">-</button>
         <div className="text-2xl font-black text-blue-700">{won(amount)}</div>
-        <button onClick={() => setAmount((value) => value + 10000)} className="pressable grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-2xl">+</button>
+        <button onClick={() => setAmount((value) => value + 10000)} className="pressable grid h-10 w-10 place-items-center rounded-full text-2xl">+</button>
       </div>
       <div className="mt-4 rounded-2xl bg-blue-50 p-3 text-sm font-black text-blue-700">
         이 금액을 저축하면 목표 달성률이 {financeSummary.goalRate}% → <span className="text-2xl">{expectedRate}%</span>로 올라요.
@@ -1029,14 +1045,22 @@ function MobilePortfolioCard({ compact = false }: { compact?: boolean }) {
   return (
     <MobileCard>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-black">포트폴리오 {compact ? '구성' : '현황'}</h2>
-        <button onClick={() => navigate('/portfolio/allocation')} className="pressable text-sm font-bold text-blue-700">자산 배분 보기 <ChevronRight className="inline h-4 w-4" /></button>
+        <h2 className="text-[17px] font-bold tracking-[-0.02em] text-slate-900">포트폴리오 {compact ? '구성' : '현황'}</h2>
+        <button onClick={() => navigate('/portfolio/allocation')} className="pressable text-[13px] font-semibold text-slate-400">자산 배분 <ChevronRight className="inline h-4 w-4" /></button>
       </div>
       <div className="grid grid-cols-[150px_1fr] items-center gap-3">
-        <MobileCssDonut center={compact ? `총 ${portfolioAllocation.length}개` : won(financeSummary.totalAsset)} label={compact ? '자산' : '총자산'} />
+        <MobileCssDonut
+          center={compact ? `총 ${portfolioAllocation.length}개` : won(financeSummary.totalAsset)}
+          label={compact ? '자산' : '총자산'}
+          items={portfolioAllocation}
+        />
         <Legend items={portfolioAllocation} />
       </div>
-      {!compact && <div className="mt-4 rounded-2xl bg-blue-50 p-3 text-sm font-bold text-blue-700">지난 달 대비 자산이 1,250,000원 증가했어요!</div>}
+      {!compact && (
+        <div className="mt-4">
+          <BelugaSays mood="cheer" size="sm">지난달보다 자산이 1,250,000원 늘었어요.</BelugaSays>
+        </div>
+      )}
     </MobileCard>
   )
 }
@@ -1048,24 +1072,20 @@ function MobileHoldingsList() {
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-black">보유 자산</h2>
-        <button onClick={() => navigate('/portfolio/detail')} className="pressable text-sm font-bold text-slate-500">평가금액 기준 <ChevronDown className="inline h-4 w-4" /></button>
+        <h2 className="text-[17px] font-bold tracking-[-0.02em] text-slate-900">보유 자산</h2>
+        <button onClick={() => navigate('/portfolio/detail')} className="pressable text-[13px] font-semibold text-slate-400">평가금액 기준 <ChevronDown className="inline h-4 w-4" /></button>
       </div>
-      <MobileCard>
-        <div className="divide-y divide-slate-100">
-          {holdings.slice(0, 4).map((item) => (
-            <div key={item.symbol} className="grid grid-cols-[1fr_auto] gap-3 py-3 first:pt-0 last:pb-0">
-              <div>
-                <div className="font-black">{item.name}</div>
-                <div className="text-xs font-bold text-slate-400">{item.symbol} · {item.quantity}주</div>
-              </div>
-              <div className="text-right">
-                <div className="font-black">{won(item.value)}</div>
-                <div className="text-sm font-black text-red-500">+{won(item.profit)}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+      <MobileCard className="px-4 py-2">
+        {holdings.slice(0, 4).map((item) => (
+          <ListRow
+            key={item.symbol}
+            title={item.name}
+            detail={`${item.symbol} · ${item.quantity}주`}
+            value={won(item.value)}
+            valueDetail={`+${won(item.profit)}`}
+            valueDetailTone="gain"
+          />
+        ))}
       </MobileCard>
     </section>
   )
@@ -1073,9 +1093,10 @@ function MobileHoldingsList() {
 
 function MobileInsightBox() {
   return (
-    <MobileCard className="bg-blue-50">
-      <div className="text-lg font-black text-blue-700">MyWave 인사이트</div>
-      <p className="mt-2 text-sm font-medium leading-6 text-slate-600">미국 시장 비중이 안정적으로 유지되고 있어요. IT 섹터의 비중이 높으니, 헬스케어 섹터를 함께 고려해보는 건 어떨까요?</p>
+    <MobileCard>
+      <BelugaSays mood="calm" size="sm">
+        IT 섹터 비중이 높은 편이에요. 한쪽에 몰려 있지 않은지 확인해볼 만해요.
+      </BelugaSays>
     </MobileCard>
   )
 }
@@ -1253,7 +1274,7 @@ function ActionPanel() {
         {recommendedActions.map((action) => {
           const Icon = action.icon
           return (
-            <div key={action.title} className={`flex items-center gap-4 rounded-2xl border p-4 ${action.tone === 'orange' ? 'border-orange-100 bg-orange-50/50' : action.tone === 'green' ? 'border-emerald-100 bg-emerald-50/50' : 'border-violet-100 bg-violet-50/50'}`}>
+            <div key={action.title} className={`flex items-center gap-4 rounded-2xl border p-4 ${action.tone === 'orange' ? 'border-orange-100 bg-orange-50' : action.tone === 'green' ? 'border-emerald-100 bg-emerald-50/50' : 'border-violet-100 bg-violet-50/50'}`}>
               <div className={`grid h-16 w-16 shrink-0 place-items-center rounded-full ${action.tone === 'orange' ? 'bg-orange-100 text-orange-600' : action.tone === 'green' ? 'bg-emerald-100 text-emerald-600' : 'bg-violet-100 text-violet-600'}`}>
                 <Icon className="h-8 w-8" />
               </div>
@@ -1359,7 +1380,7 @@ function GoalManagementPanel() {
       {message && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{message}</div>}
       <div className="space-y-3">
         {goals.map((goal) => (
-          <div key={goal.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+          <div key={goal.id} className="rounded-2xl bg-slate-50 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1372,11 +1393,11 @@ function GoalManagementPanel() {
             </div>
             <Progress value={Number(goal.progressRate)} className="mt-4" />
             <div className="mt-4 flex flex-wrap gap-2">
-              <button onClick={() => navigate(`/goals/new?id=${goal.id}`)} className="pressable rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-600">수정</button>
-              <button onClick={() => changeGoalStatus(goal, 'ACTIVE')} className="pressable rounded-full border border-blue-100 bg-white px-3 py-2 text-sm font-black text-blue-700">진행</button>
-              <button onClick={() => changeGoalStatus(goal, 'PAUSED')} className="pressable rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-600">일시정지</button>
-              <button onClick={() => changeGoalStatus(goal, 'COMPLETED')} className="pressable rounded-full border border-emerald-100 bg-white px-3 py-2 text-sm font-black text-emerald-700">완료</button>
-              <button onClick={() => removeGoal(goal.id)} className="pressable rounded-full border border-red-100 bg-white px-3 py-2 text-sm font-black text-red-500">삭제</button>
+              <button onClick={() => navigate(`/goals/new?id=${goal.id}`)} className="pressable rounded-full bg-white px-3 py-2 text-sm font-black text-slate-600">수정</button>
+              <button onClick={() => changeGoalStatus(goal, 'ACTIVE')} className="pressable rounded-full bg-white px-3 py-2 text-sm font-black text-blue-700">진행</button>
+              <button onClick={() => changeGoalStatus(goal, 'PAUSED')} className="pressable rounded-full bg-white px-3 py-2 text-sm font-black text-slate-600">일시정지</button>
+              <button onClick={() => changeGoalStatus(goal, 'COMPLETED')} className="pressable rounded-full bg-white px-3 py-2 text-sm font-black text-emerald-700">완료</button>
+              <button onClick={() => removeGoal(goal.id)} className="pressable rounded-full bg-white px-3 py-2 text-sm font-black text-red-500">삭제</button>
             </div>
           </div>
         ))}
@@ -1390,7 +1411,7 @@ function GoalPrediction() {
 
   return (
     <Card title={<span>목표 달성 예상 <CircleHelp className="inline h-4 w-4 text-slate-400" /></span>}>
-      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 text-sm font-black text-emerald-700">
+      <div className="rounded-2xl bg-emerald-50/40 p-4 text-sm font-black text-emerald-700">
         <CheckCircle2 className="mr-2 inline h-5 w-5" /> 예상대로 진행 중이에요!
       </div>
       <div className="mt-5 grid grid-cols-2 divide-x divide-slate-100 text-center">
@@ -1495,7 +1516,7 @@ function SpendingBlockers() {
         {spendingBlockers.map((item, index) => {
           const Icon = item.icon
           return (
-            <div key={item.name} className="grid grid-cols-[36px_42px_1fr_auto_auto] items-center gap-4 rounded-2xl bg-white p-4 shadow-sm">
+            <div key={item.name} className="grid grid-cols-[36px_42px_1fr_auto_auto] items-center gap-4 rounded-2xl bg-white p-4">
               <div className="grid h-8 w-8 place-items-center rounded-full bg-orange-600 text-sm font-black text-white">{index + 1}</div>
               <Icon className="h-7 w-7" style={{ color: item.color }} />
               <div className="font-black">{item.name}</div>
@@ -1589,13 +1610,13 @@ function SavingSimulation() {
           {simulations.map(({ name, rate, setRate, unit }) => (
             <div key={name} className="grid grid-cols-[80px_70px_1fr_80px] items-center gap-3 text-sm font-bold">
               <span>{name}</span>
-              <span className="rounded-lg border border-blue-200 py-1 text-center text-blue-700">-{rate}%</span>
+              <span className="rounded-lg py-1 text-center text-blue-700">-{rate}%</span>
               <input type="range" min="0" max="50" value={rate} onChange={(event) => setRate(Number(event.target.value))} className="accent-blue-600" />
               <span className="text-blue-700">-{won(Math.round(rate * unit))}</span>
             </div>
           ))}
         </div>
-        <div className="rounded-3xl border border-slate-100 p-5">
+        <div className="rounded-[20px] p-5">
           <div className="text-sm font-bold text-slate-500">예상 월 절약 금액</div>
           <div className="mt-2 text-3xl font-black text-blue-700">{won(displaySavingAmount)}</div>
           <div className="mt-5 text-sm font-bold text-slate-500">목표 달성률 개선</div>
@@ -1868,7 +1889,7 @@ function InvestmentTransactionManager() {
     <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
       <Card
         title="투자 거래 기록"
-        action={<button onClick={refreshPortfolioRecords} className="pressable rounded-full border border-blue-100 px-3 py-1.5 text-xs font-black text-blue-700">새로고침</button>}
+        action={<button onClick={refreshPortfolioRecords} className="pressable rounded-full px-3 py-1.5 text-xs font-black text-blue-700">새로고침</button>}
       >
         {portfolio && (
           <div className="mb-4 grid gap-3 sm:grid-cols-3">
@@ -1880,7 +1901,7 @@ function InvestmentTransactionManager() {
         {message && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{message}</div>}
         <div className="space-y-3">
           {transactions.map((transaction) => (
-            <div key={transaction.id} className="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div key={transaction.id} className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
               <button onClick={() => editTransaction(transaction)} className="pressable min-w-0 text-left">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-blue-700">{transactionLabel(transaction.transactionType)}</span>
@@ -1948,7 +1969,7 @@ function InvestmentTransactionManager() {
               <input value={form.tagsText} onChange={(event) => setForm((value) => ({ ...value, tagsText: event.target.value }))} className="form-input" placeholder="반도체, 장기보유" />
             </Field>
             <div className="flex gap-3">
-              {editingId && <button onClick={resetTransactionForm} className="pressable h-13 flex-1 rounded-2xl border border-slate-200 font-black text-slate-600">취소</button>}
+              {editingId && <button onClick={resetTransactionForm} className="pressable h-13 flex-1 rounded-2xl font-black text-slate-600">취소</button>}
               <button onClick={saveTransaction} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
                 <Save className="inline h-5 w-5" /> {editingId ? '수정 저장' : '거래 추가'}
               </button>
@@ -2004,23 +2025,44 @@ function CompanyPreview() {
   )
 }
 
+/**
+ * 코치 화면의 첫 인상.
+ *
+ * 벨루가가 상황을 한 줄로 말하고, 숫자는 그 아래에서 숫자대로 선다.
+ * 둘을 한 문장에 섞지 않는 것이 이 화면의 규칙이다.
+ */
 function CoachBanner() {
   const { financeSummary } = useMyWaveData()
+  const behind = financeSummary.goalRate < 50
 
   return (
-    <Card className="bg-blue-50">
-      <div className="grid items-center gap-5 lg:grid-cols-[1fr_220px]">
-        <div>
-          <h2 className="text-2xl font-black text-blue-950">김마이님, 좋은 흐름이에요!</h2>
-          <div className="mt-6 grid gap-5 sm:grid-cols-3">
-            <MiniStat label="현재 목표 달성률" value={`${financeSummary.goalRate}%`} />
-            <MiniStat label="남은 목표 금액" value={won(financeSummary.remainingAmount)} />
-            <MiniStat label="바로 투자 가능한 금액" value={won(financeSummary.investableAmount)} />
-          </div>
+    <Card>
+      <div className="space-y-6">
+        <BelugaSays mood={behind ? 'concern' : 'calm'} size="lg">
+          {behind
+            ? '이번 달은 목표 페이스가 조금 느려요. 어디를 조정할 수 있을지 같이 볼까요?'
+            : '이번 달 흐름을 정리해뒀어요. 아래 숫자부터 같이 볼까요?'}
+        </BelugaSays>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <CoachStat label="목표 달성률" value={financeSummary.goalRate} suffix="%" highlight />
+          <CoachStat label="남은 목표 금액" value={financeSummary.remainingAmount} currency />
+          <CoachStat label="바로 투자 가능" value={financeSummary.investableAmount} currency />
         </div>
-        <img src={waveHero} alt="" className="h-36 w-full object-contain" />
       </div>
     </Card>
+  )
+}
+
+/** 라벨은 작게, 숫자는 크게. 값이 바뀌면 새로 세어 올린다. */
+function CoachStat({ label, value, suffix, currency, highlight }: { label: string; value: number; suffix?: string; currency?: boolean; highlight?: boolean }) {
+  return (
+    <div className={`rounded-[14px] px-4 py-4 ${highlight ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-900'}`}>
+      <div className={`text-[12px] font-semibold ${highlight ? 'text-blue-100' : 'text-slate-500'}`}>{label}</div>
+      <div className="mt-1.5 text-[24px] font-bold leading-none tracking-[-0.02em]">
+        <Amount value={value} currency={currency} suffix={suffix} />
+      </div>
+    </div>
   )
 }
 
@@ -2054,8 +2096,8 @@ function ChatPanel() {
     <section className="space-y-5">
       {messages.map((message, index) => (
         <div key={`${message.from}-${index}`} className={`chat-row flex ${message.from === 'user' ? 'justify-end' : 'justify-start'} gap-4`} style={{ animationDelay: `${index * 120}ms` }}>
-          {message.from === 'bot' && <div className="mt-2 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-100 text-blue-700"><MessageCircle className="h-6 w-6" /></div>}
-          <div className={`max-w-[720px] rounded-3xl px-6 py-4 text-base font-medium leading-8 shadow-sm ${message.from === 'user' ? 'bg-blue-700 text-white' : 'border border-slate-200 bg-white text-slate-900'}`}>
+          {message.from === 'bot' && <Beluga mood="calm" size="sm" float={false} className="mt-1" />}
+          <div className={`max-w-[720px] px-5 py-3.5 text-[15px] font-medium leading-7 ${message.from === 'user' ? 'rounded-[18px] rounded-br-[6px] bg-blue-700 text-white' : 'rounded-[18px] rounded-bl-[6px] bg-wave-foam text-blue-950'}`}>
             {message.text}
             {message.stats && (
               <div className="mt-4 grid gap-3 rounded-2xl bg-blue-50 p-4 sm:grid-cols-3">
@@ -2063,7 +2105,7 @@ function ChatPanel() {
               </div>
             )}
             {message.suggestions && (
-              <div className="mt-4 rounded-2xl border border-slate-100 p-4 text-sm leading-7">
+              <div className="mt-4 rounded-2xl p-4 text-sm leading-7">
                 <div className="font-black">이렇게 해보는 건 어때요?</div>
                 {message.suggestions.map((item) => <div key={item} className="mt-1 text-slate-600">· {item}</div>)}
               </div>
@@ -2071,22 +2113,32 @@ function ChatPanel() {
           </div>
         </div>
       ))}
+      {sending && (
+        <div className="flex items-center gap-3">
+          <Beluga mood="calm" size="sm" />
+          <div className="flex items-center gap-1.5 rounded-[20px] rounded-bl-lg bg-wave-foam px-5 py-4">
+            <span className="typing-dot h-2 w-2 rounded-full bg-blue-700" />
+            <span className="typing-dot h-2 w-2 rounded-full bg-blue-700" />
+            <span className="typing-dot h-2 w-2 rounded-full bg-blue-700" />
+          </div>
+        </div>
+      )}
       <div className="pt-2">
         <div className="mb-3 flex flex-wrap gap-2">
-          {['포트폴리오 리스크는 어때?', '어떤 자산에 더 투자하는 게 좋을까?', '은퇴까지 얼마나 필요할까?', '이번 달 소비 패턴 분석해줘'].map((item) => (
-            <button key={item} onClick={() => sendMessage(item)} className="rounded-full border border-blue-200 px-4 py-2 text-sm font-bold text-blue-700">{item}</button>
+          {['이번 달 소비 어땠어?', '지금 투자해도 괜찮을까?', '목표까지 얼마나 남았어?', '어디를 줄이면 좋을까?'].map((item) => (
+            <button key={item} onClick={() => sendMessage(item)} className="pressable rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-600 hover:bg-slate-50">{item}</button>
           ))}
         </div>
-        <label className="flex h-16 items-center gap-4 rounded-3xl border border-slate-200 bg-white px-5 shadow-sm">
-          <Plus className="h-6 w-6 text-slate-400" />
+        <label className="flex h-16 items-center gap-4 rounded-[18px] bg-white px-5">
+          <Plus className="h-6 w-6 text-slate-300" />
           <input
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && sendMessage()}
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-slate-400"
-            placeholder="무엇이든 물어보세요..."
+            placeholder="벨루가에게 물어보세요"
           />
-          <button type="button" onClick={() => sendMessage()} className="grid h-11 w-11 place-items-center rounded-full bg-blue-700 text-white disabled:opacity-50" disabled={sending}>
+          <button type="button" onClick={() => sendMessage()} className="pressable grid h-11 w-11 place-items-center rounded-full bg-blue-700 text-white disabled:bg-slate-200" disabled={sending}>
             <SendHorizontal className="h-5 w-5" />
           </button>
         </label>
@@ -2210,8 +2262,8 @@ function NotificationsPage() {
       <div className="flex items-center justify-between">
         <MobileTitle title="알림" />
         <div className="hidden items-center gap-2 lg:flex">
-          <button onClick={markAllRead} className="pressable rounded-full border border-blue-100 px-4 py-2 text-sm font-black text-blue-700">전체 읽음 {unreadCount > 0 ? unreadCount : ''}</button>
-          <button onClick={clearReadNotifications} className="pressable flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-600">
+          <button onClick={markAllRead} className="pressable rounded-full px-4 py-2 text-sm font-black text-blue-700">전체 읽음 {unreadCount > 0 ? unreadCount : ''}</button>
+          <button onClick={clearReadNotifications} className="pressable flex items-center gap-2 rounded-full px-4 py-2 text-sm font-black text-slate-600">
           <Trash2 className="h-4 w-4" /> 읽은 알림 정리
           </button>
         </div>
@@ -2441,7 +2493,7 @@ function ProfilePage() {
               <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="form-input" autoComplete="new-password" />
             </Field>
             {passwordMessage && <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">{passwordMessage}</p>}
-            <button onClick={savePassword} disabled={passwordSaving || !currentPassword || !newPassword} className="pressable h-13 w-full rounded-2xl border border-blue-100 bg-blue-50 font-black text-blue-700 disabled:opacity-50">
+            <button onClick={savePassword} disabled={passwordSaving || !currentPassword || !newPassword} className="pressable h-13 w-full rounded-2xl bg-blue-50 font-black text-blue-700 disabled:opacity-50">
               <ShieldAlert className="inline h-5 w-5" /> {passwordSaving ? '변경 중' : '비밀번호 변경'}
             </button>
           </div>
@@ -2464,7 +2516,7 @@ function ProfilePage() {
           })}
         </div>
       </Card>
-      <button onClick={handleLogout} disabled={logoutSaving} className="pressable flex w-full items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white py-4 font-black text-red-500 shadow-card disabled:opacity-60">
+      <button onClick={handleLogout} disabled={logoutSaving} className="pressable flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-4 font-black text-red-500 shadow-card disabled:opacity-60">
         <LogOut className="h-5 w-5" /> {logoutSaving ? '로그아웃 중' : '로그아웃'}
       </button>
     </div>
@@ -2495,7 +2547,7 @@ function OnboardingPage() {
           {steps.map((item, index) => <span key={item.title} className={`h-2 rounded-full ${index === step ? 'w-8 bg-blue-700' : 'w-2 bg-slate-200'}`} />)}
         </div>
         <div className="mt-10 flex gap-3">
-          <button onClick={() => step === 0 ? navigate('/') : setStep((value) => value - 1)} className="pressable h-14 flex-1 rounded-2xl border border-slate-200 font-black text-slate-600">
+          <button onClick={() => step === 0 ? navigate('/') : setStep((value) => value - 1)} className="pressable h-14 flex-1 rounded-2xl font-black text-slate-600">
             이전
           </button>
           <button onClick={() => step === steps.length - 1 ? navigate('/') : setStep((value) => value + 1)} className="pressable h-14 flex-[1.4] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
@@ -2560,7 +2612,7 @@ function SearchResultsPage() {
 function SearchResultRow({ title, detail, to }: { title: string; detail: string; to: string }) {
   const navigate = useNavigate()
   return (
-    <button onClick={() => navigate(to)} className="pressable rounded-[20px] border border-slate-200 bg-white p-5 text-left shadow-card">
+    <button onClick={() => navigate(to)} className="pressable rounded-[20px] bg-white p-5 text-left shadow-card">
       <div className="flex items-center gap-4">
         <div className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-blue-700">
           <Search className="h-5 w-5" />
@@ -2634,7 +2686,7 @@ function GoalEditorPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <MobileTitle title={editingId ? '목표 수정' : '새 목표 만들기'} />
-      {message && <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-black text-red-500">{message}</div>}
+      {message && <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-500">{message}</div>}
       <Card title="목표 정보">
         <div className="space-y-4">
           <Field label="목표 이름">
@@ -2673,7 +2725,7 @@ function GoalEditorPage() {
         </div>
       </Card>
       <div className="flex gap-3">
-        <button onClick={() => navigate('/goals')} className="pressable h-13 flex-1 rounded-2xl border border-slate-200 font-black text-slate-600">취소</button>
+        <button onClick={() => navigate('/goals')} className="pressable h-13 flex-1 rounded-2xl font-black text-slate-600">취소</button>
         <button onClick={submit} disabled={status === 'saving'} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue disabled:opacity-60">
           <Save className="inline h-5 w-5" /> {status === 'saving' ? '저장 중' : status === 'saved' ? '저장 완료' : editingId ? '수정 저장' : '저장하기'}
         </button>
@@ -2712,7 +2764,7 @@ function SpendingDetailPage() {
         <Card title="목표 달성을 방해하는 소비 TOP 3" action="조정하기" actionTo="/spending/simulation">
           <div className="space-y-3">
             {spendingBlockers.map((item, index) => (
-              <div key={item.name} className="flex items-center gap-3 rounded-2xl border border-orange-100 bg-orange-50/50 p-4">
+              <div key={item.name} className="flex items-center gap-3 rounded-2xl bg-orange-50 p-4">
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-orange-600 text-sm font-black text-white">{index + 1}</span>
                 <div className="flex-1">
                   <div className="font-black">{item.name}</div>
@@ -2751,6 +2803,26 @@ function todayDateString() {
 
 function monthStringFromDate(value: string) {
   return value.slice(0, 7)
+}
+
+/**
+ * 소비 기록 간편 입력 묶음.
+ *
+ * 퀵버튼, 붙여넣기·캡처, 돈 흐름이 같은 refreshKey 를 공유한다.
+ * 어느 경로로 기록하든 나머지 카드가 함께 새로고침되어야 하기 때문이다.
+ */
+function ExpenseQuickEntry() {
+  const [refreshKey, setRefreshKey] = useState(0)
+  const refresh = useCallback(() => setRefreshKey((value) => value + 1), [])
+
+  // 카드가 한꺼번에 튀어나오지 않고 위에서 아래로 차례차례 들어온다.
+  return (
+    <div className="space-y-4 lg:space-y-5">
+      <div className="rise-in"><QuickExpenseButtons onLogged={refresh} /></div>
+      <div className="rise-in" style={{ animationDelay: '70ms' }}><ExpenseImportCard onSaved={refresh} /></div>
+      <div className="rise-in" style={{ animationDelay: '140ms' }}><CashFlowCard refreshKey={refreshKey} /></div>
+    </div>
+  )
 }
 
 function ExpenseRecordsManager() {
@@ -2836,7 +2908,7 @@ function ExpenseRecordsManager() {
     <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
       <Card
         title="소비 내역"
-        action={<button onClick={() => loadExpenses()} className="pressable rounded-full border border-blue-100 px-3 py-1.5 text-xs font-black text-blue-700">새로고침</button>}
+        action={<button onClick={() => loadExpenses()} className="pressable rounded-full px-3 py-1.5 text-xs font-black text-blue-700">새로고침</button>}
       >
         {summary && (
           <div className="mb-4 grid gap-3 sm:grid-cols-3">
@@ -2848,7 +2920,7 @@ function ExpenseRecordsManager() {
         {message && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{message}</div>}
         <div className="space-y-3">
           {expenses.map((expense) => (
-            <div key={expense.id} className="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div key={expense.id} className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
               <button onClick={() => editExpense(expense)} className="pressable min-w-0 text-left">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-blue-700">{expense.category}</span>
@@ -2875,7 +2947,16 @@ function ExpenseRecordsManager() {
               </select>
             </Field>
             <Field label="사용처">
-              <input value={form.merchant} onChange={(event) => setForm((value) => ({ ...value, merchant: event.target.value }))} className="form-input" />
+              <MerchantAutocomplete
+                value={form.merchant}
+                onChange={(merchant) => setForm((value) => ({ ...value, merchant }))}
+                onPick={(suggestion) => setForm((value) => ({
+                  ...value,
+                  merchant: suggestion.merchant,
+                  category: suggestion.category,
+                  amount: Number(suggestion.suggestedAmount),
+                }))}
+              />
             </Field>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -2890,7 +2971,7 @@ function ExpenseRecordsManager() {
             <input value={form.memo} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} className="form-input" />
           </Field>
           <div className="flex gap-3">
-            {editingId && <button onClick={resetExpenseForm} className="pressable h-13 flex-1 rounded-2xl border border-slate-200 font-black text-slate-600">취소</button>}
+            {editingId && <button onClick={resetExpenseForm} className="pressable h-13 flex-1 rounded-2xl font-black text-slate-600">취소</button>}
             <button onClick={saveExpense} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
               <Save className="inline h-5 w-5" /> {editingId ? '수정 저장' : '내역 추가'}
             </button>
@@ -3176,17 +3257,17 @@ function AssetDetailPage() {
           <MiniStat label="투자 가능 금액" value={won(assetMetrics.investmentAvailableAmount)} />
         </div>
       </Card>
-      {statusMessage && <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{statusMessage}</div>}
+      {statusMessage && <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{statusMessage}</div>}
       <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
         <Card
           title="연결 계좌"
-          action={<button onClick={loadAccountsOnly} className="pressable rounded-full border border-blue-100 px-3 py-1.5 text-xs font-black text-blue-700">새로고침</button>}
+          action={<button onClick={loadAccountsOnly} className="pressable rounded-full px-3 py-1.5 text-xs font-black text-blue-700">새로고침</button>}
         >
           <div className="space-y-3">
             {accounts.map((account) => (
-              <div key={account.id} className="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+              <div key={account.id} className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
                 <button onClick={() => editAccount(account)} className="pressable flex min-w-0 items-center gap-3 text-left">
-                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-blue-700 shadow-sm">
+                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-blue-700">
                     <WalletCards className="h-5 w-5" />
                   </div>
                   <span className="min-w-0">
@@ -3228,12 +3309,12 @@ function AssetDetailPage() {
                 <input type="number" value={accountForm.balance} onChange={(event) => setAccountForm((value) => ({ ...value, balance: Number(event.target.value) }))} className="form-input" />
               </Field>
             </div>
-            <label className="flex items-center justify-between rounded-2xl border border-slate-200 p-4 text-sm font-black">
+            <label className="flex items-center justify-between rounded-2xl p-4 text-sm font-black">
               총자산 계산에 포함
               <input type="checkbox" checked={accountForm.includedInAssets} onChange={(event) => setAccountForm((value) => ({ ...value, includedInAssets: event.target.checked }))} className="h-5 w-5 accent-blue-700" />
             </label>
             <div className="flex gap-3">
-              {editingAccountId && <button onClick={resetAccountForm} className="pressable h-13 flex-1 rounded-2xl border border-slate-200 font-black text-slate-600">취소</button>}
+              {editingAccountId && <button onClick={resetAccountForm} className="pressable h-13 flex-1 rounded-2xl font-black text-slate-600">취소</button>}
               <button onClick={saveAccount} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
                 <Save className="inline h-5 w-5" /> {editingAccountId ? '수정 저장' : '계좌 연결'}
               </button>
@@ -3334,7 +3415,7 @@ function CompanyDetailPage() {
       <MobileTitle title="기업 분석" />
       <Card>
         <div className="flex items-center gap-5">
-          <div className="grid h-20 w-20 place-items-center rounded-[24px] bg-blue-700 text-3xl font-black text-white">{company.logo}</div>
+          <div className="grid h-20 w-20 place-items-center rounded-[20px] bg-blue-700 text-3xl font-black text-white">{company.logo}</div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-end gap-2">
               <h1 className="text-2xl font-black">{company.name}</h1>
@@ -3381,14 +3462,6 @@ function CompanyDetailPage() {
   )
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-black text-slate-600">{label}</span>
-      {children}
-    </label>
-  )
-}
 
 function toneBg(tone: string) {
   if (tone === 'green') return 'bg-emerald-50 text-emerald-600'
@@ -3466,21 +3539,6 @@ function fallbackCompanyAnalysis(symbol: string): MyWaveCompanyAnalysisResponse 
   }
 }
 
-function Card({ children, title, action, actionTo, className }: { children: ReactNode; title?: ReactNode; action?: ReactNode; actionTo?: string; className?: string }) {
-  const navigate = useNavigate()
-
-  return (
-    <section className={`rounded-[24px] border border-slate-200 bg-white p-5 shadow-card lg:p-6 ${className ?? ''}`}>
-      {(title || action) && (
-        <div className="mb-5 flex items-center justify-between gap-4">
-          {title && <h2 className="text-lg font-black tracking-[-0.01em]">{title}</h2>}
-          {typeof action === 'string' ? <button onClick={() => actionTo && navigate(actionTo)} className="text-sm font-bold text-slate-500">{action} <ChevronRight className="inline h-4 w-4" /></button> : action}
-        </div>
-      )}
-      {children}
-    </section>
-  )
-}
 
 function InlineAction({ to, label, primary = false }: { to: string; label: string; primary?: boolean }) {
   const navigate = useNavigate()
@@ -3496,7 +3554,7 @@ function InlineAction({ to, label, primary = false }: { to: string; label: strin
 
 function MobileCard({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <section className={`motion-card pressable rounded-[18px] border border-slate-200 bg-white p-4 shadow-card ${className}`}>
+    <section className={`motion-card rounded-[20px] bg-white p-4 ${className}`}>
       {children}
     </section>
   )
@@ -3506,9 +3564,13 @@ function SegmentedTabs({ items, active }: { items: string[]; active: string }) {
   const [selected, setSelected] = useState(active)
 
   return (
-    <div className="grid grid-cols-3 rounded-full bg-slate-100 p-1">
+    <div className="grid grid-cols-3 rounded-[14px] bg-slate-100 p-1">
       {items.map((item) => (
-        <button key={item} onClick={() => setSelected(item)} className={`pressable h-11 rounded-full text-sm font-black ${item === selected ? 'tab-pop bg-blue-700 text-white shadow-blue' : 'text-slate-600'}`}>
+        <button
+          key={item}
+          onClick={() => setSelected(item)}
+          className={`pressable h-10 rounded-[11px] text-[14px] font-bold ${item === selected ? 'bg-white text-slate-900' : 'text-slate-400'}`}
+        >
           {item}
         </button>
       ))}
@@ -3517,32 +3579,29 @@ function SegmentedTabs({ items, active }: { items: string[]; active: string }) {
 }
 
 function MobileMiniMetric({ icon, label, value, detail, tone = 'blue' }: { icon: ReactNode; label: string; value: string; detail: string; tone?: 'blue' | 'green' | 'violet' }) {
-  const colors = {
-    blue: 'bg-blue-50 text-blue-700',
-    green: 'bg-emerald-50 text-emerald-600',
-    violet: 'bg-violet-50 text-violet-600',
-  }
+  void tone
   return (
-    <MobileCard className="min-h-32 p-3">
-      <div className={`grid h-10 w-10 place-items-center rounded-2xl ${colors[tone]}`}>{icon}</div>
-      <div className="mt-3 text-xs font-black text-slate-700">{label}</div>
-      <div className="mt-2 whitespace-nowrap text-[16px] font-black leading-tight tracking-[-0.04em]">{value}</div>
-      <div className="mt-1 text-[11px] font-bold text-slate-500">{detail}</div>
+    <MobileCard className="min-h-30 p-4">
+      <div className="grid h-9 w-9 place-items-center rounded-[10px] bg-slate-100 text-slate-400">{icon}</div>
+      <div className="mt-3 text-[12px] font-medium text-slate-400">{label}</div>
+      <div className="mt-1.5 whitespace-nowrap text-[17px] font-bold leading-tight tracking-[-0.02em] text-slate-900">{value}</div>
+      <div className="mt-0.5 text-[11px] font-medium text-slate-400">{detail}</div>
     </MobileCard>
   )
 }
 
 function MobileNotice() {
   return (
-    <section className="rounded-[18px] border border-orange-100 bg-orange-50 p-4">
-      <div className="flex items-center gap-4">
-        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-orange-100 text-orange-600">
-          <ShieldAlert className="h-8 w-8" />
+    <section className="rounded-[20px] bg-white p-4">
+      <div className="flex items-center gap-3.5">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-red-50 text-red-500">
+          <ShieldAlert className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-lg font-black text-orange-600">지출이 평소보다 많아요!</div>
-          <p className="mt-1 text-sm font-medium leading-5 text-slate-600">카페/간식 지출이 지난 달보다 32% 증가했어요.</p>
+          <div className="text-[15px] font-bold text-slate-900">지출이 평소보다 많아요</div>
+          <p className="mt-0.5 text-[13px] font-medium leading-5 text-slate-400">카페·간식 지출이 지난달보다 32% 늘었어요.</p>
         </div>
+        <ChevronRight className="h-5 w-5 shrink-0 text-slate-300" />
       </div>
     </section>
   )
@@ -3566,29 +3625,43 @@ function MobileRing({ value }: { value: number }) {
 }
 
 function MobileGoalLine({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
+  void icon
   return (
-    <div className="grid grid-cols-[22px_1fr_auto] items-center gap-2 py-2">
-      <span className="grid h-6 w-6 place-items-center rounded-lg bg-blue-50 text-blue-700">{icon}</span>
-      <span className="whitespace-nowrap text-xs font-bold text-slate-500">{label}</span>
-      <span className="text-sm font-black">{value}</span>
+    <div className="flex items-center justify-between gap-3 py-2.5">
+      <span className="whitespace-nowrap text-[13px] font-medium text-slate-400">{label}</span>
+      <span className="tnum text-[15px] font-bold text-slate-900">{value}</span>
     </div>
   )
 }
 
-function MobileCssDonut({ center, label }: { center: string; label: string }) {
+/**
+ * 자산 배분 도넛.
+ *
+ * 전에는 조각 비율이 코드에 박혀 있어서 범례가 "현금 100%" 인데 그림은 다섯 조각으로
+ * 갈라져 있었다. 화면이 사실과 다른 말을 하면 안 되므로 실제 배분으로 그린다.
+ */
+function MobileCssDonut({ center, label, items }: { center: string; label: string; items?: Array<{ name: string; rate: number; color: string }> }) {
+  const slices = items && items.length > 0 ? items : [{ name: '없음', rate: 100, color: '#e9ecef' }]
+  const { stops, filled } = slices.reduce<{ stops: string[]; filled: number }>(
+    (acc, item) => {
+      const end = Math.min(100, acc.filled + item.rate)
+      return { stops: [...acc.stops, `${item.color} ${acc.filled}% ${end}%`], filled: end }
+    },
+    { stops: [], filled: 0 },
+  )
+  // 합이 100 에 못 미치면 나머지를 회색으로 채워 도넛이 끊겨 보이지 않게 한다.
+  const ring = filled < 100 ? [...stops, `#e9ecef ${filled}% 100%`] : stops
+
   return (
     <div className="relative h-36 w-36">
       <div
         className="donut-animate h-full w-full rounded-full"
-        style={{
-          background:
-            'conic-gradient(#1568f4 0 40%, #42c7bd 40% 65%, #7657f4 65% 82%, #ffbd2e 82% 94%, #cbd5e1 94% 100%)',
-        }}
+        style={{ background: `conic-gradient(${ring.join(', ')})` }}
       />
-      <div className="absolute inset-[25px] grid place-items-center rounded-full bg-white text-center shadow-[inset_0_0_0_1px_rgba(226,232,240,.8)]">
+      <div className="absolute inset-[26px] grid place-items-center rounded-full bg-white text-center">
         <div>
-          <div className="text-xs font-bold text-slate-400">{label}</div>
-          <div className="mt-1 text-sm font-black leading-tight">{center}</div>
+          <div className="text-[11px] font-medium text-slate-400">{label}</div>
+          <div className="mt-0.5 text-[13px] font-bold leading-tight text-slate-900">{center}</div>
         </div>
       </div>
     </div>
@@ -3636,10 +3709,10 @@ function Legend({ items }: { items: Array<{ name: string; rate: number; color: s
   return (
     <div className="space-y-3 self-center">
       {items.map((item) => (
-        <div key={item.name} className="grid grid-cols-[1fr_42px] items-center gap-2 text-sm font-bold sm:grid-cols-[1fr_auto_54px] sm:gap-4">
-          <span className="flex items-center gap-2 text-slate-700"><span className="h-3 w-3 rounded" style={{ background: item.color }} />{item.name}</span>
-          {item.amount !== undefined && <span className="hidden text-slate-500 sm:block">{won(item.amount)}</span>}
-          <span className="text-right text-slate-500">{item.rate}%</span>
+        <div key={item.name} className="grid grid-cols-[1fr_46px] items-center gap-2 text-[14px] sm:grid-cols-[1fr_auto_58px] sm:gap-4">
+          <span className="flex items-center gap-2 font-semibold text-slate-900"><span className="h-2.5 w-2.5 rounded-full" style={{ background: item.color }} />{item.name}</span>
+          {item.amount !== undefined && <span className="hidden font-medium text-slate-400 sm:block">{won(item.amount)}</span>}
+          <span className="tnum text-right font-bold text-slate-900">{item.rate}%</span>
         </div>
       ))}
     </div>
@@ -3693,11 +3766,11 @@ function MonthPicker() {
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen((value) => !value)} className="flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-black text-slate-600 shadow-sm lg:h-12 lg:gap-3 lg:px-5 lg:text-sm">
+      <button onClick={() => setOpen((value) => !value)} className="flex h-10 items-center gap-2 rounded-full bg-white px-3 text-xs font-black text-slate-600 lg:h-12 lg:gap-3 lg:px-5 lg:text-sm">
         <CalendarDays className="h-4 w-4 lg:h-5 lg:w-5" /> {month} <ChevronDown className="h-4 w-4" />
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-20 w-32 rounded-2xl border border-slate-200 bg-white p-2 shadow-card">
+        <div className="absolute right-0 top-12 z-20 w-32 rounded-2xl bg-white p-2 shadow-card">
           {months.map((item) => (
             <button key={item} onClick={() => { setMonth(item); setOpen(false) }} className="block w-full rounded-xl px-3 py-2 text-left text-sm font-black hover:bg-blue-50">
               {item}
@@ -3746,6 +3819,3 @@ function pageMeta(pathname: string) {
   return { title: '홈', subtitle: '목표, 소비, 투자 흐름을 한눈에 확인하세요.', search: '검색 (예: 투자 리포트)' }
 }
 
-function won(value: number) {
-  return `₩${new Intl.NumberFormat('ko-KR').format(Math.round(value))}`
-}

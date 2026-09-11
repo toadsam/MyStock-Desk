@@ -22,7 +22,7 @@ export function Logo() {
         <div className="absolute left-1 top-0 h-4 w-7 -skew-y-12 rounded bg-blue-500" />
         <div className="absolute bottom-0 left-0 h-4 w-7 -skew-y-12 rounded bg-sky-400" />
       </div>
-      <span className="text-xl font-black tracking-normal text-white">StockFlow</span>
+      <span className="text-xl font-bold tracking-[-0.02em] text-slate-900">StockFlow</span>
     </div>
   )
 }

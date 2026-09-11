@@ -2,8 +2,6 @@ import { LockKeyhole, LogIn, UserPlus } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
 import { Logo } from '../layouts/Header'
 
 export default function AuthPage() {
@@ -58,18 +56,18 @@ export default function AuthPage() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center px-4 py-10 text-slate-100">
+    <main className="grid min-h-screen place-items-center bg-[var(--bg)] px-5 py-10 text-slate-900">
       <div className="w-full max-w-md space-y-5">
         <Link to="/" className="flex justify-center">
           <Logo />
         </Link>
-        <Card className="p-6 md:p-7">
+        <div className="rounded-[20px] bg-white p-6 md:p-7">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold text-blue-300">StockFlow 계정</div>
-              <h1 className="mt-2 text-2xl font-black text-white">{title}</h1>
+              <div className="text-[13px] font-semibold text-slate-400">StockFlow 계정</div>
+              <h1 className="mt-1.5 text-[26px] font-bold tracking-[-0.02em] text-slate-900">{title}</h1>
             </div>
-            <div className="grid h-12 w-12 place-items-center rounded-2xl border border-blue-500/30 bg-blue-500/15 text-blue-300">
+            <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-blue-50 text-blue-700">
               {isRegister ? <UserPlus className="h-6 w-6" /> : <LockKeyhole className="h-6 w-6" />}
             </div>
           </div>
@@ -77,9 +75,9 @@ export default function AuthPage() {
           <form className="space-y-4" onSubmit={submit}>
             {isRegister && (
               <label className="block">
-                <span className="text-sm text-slate-400">이름</span>
+                <span className="text-[13px] font-semibold text-slate-500">이름</span>
                 <input
-                  className="mt-2 h-12 w-full rounded-xl border border-slate-700 bg-slate-950/55 px-4 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-blue-500"
+                  className="form-input mt-2"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   autoComplete="name"
@@ -87,9 +85,9 @@ export default function AuthPage() {
               </label>
             )}
             <label className="block">
-              <span className="text-sm text-slate-400">이메일</span>
+              <span className="text-[13px] font-semibold text-slate-500">이메일</span>
               <input
-                className="mt-2 h-12 w-full rounded-xl border border-slate-700 bg-slate-950/55 px-4 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-blue-500"
+                className="form-input mt-2"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 autoComplete="email"
@@ -97,9 +95,9 @@ export default function AuthPage() {
               />
             </label>
             <label className="block">
-              <span className="text-sm text-slate-400">비밀번호</span>
+              <span className="text-[13px] font-semibold text-slate-500">비밀번호</span>
               <input
-                className="mt-2 h-12 w-full rounded-xl border border-slate-700 bg-slate-950/55 px-4 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-blue-500"
+                className="form-input mt-2"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 type="password"
@@ -108,30 +106,39 @@ export default function AuthPage() {
             </label>
 
             {error && (
-              <div className="rounded-xl border border-red-500/35 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-300">
+              <div className="rounded-[12px] bg-red-50 px-4 py-3 text-[13px] font-semibold text-red-700">
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={submitting}>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="pressable flex h-14 w-full items-center justify-center gap-2 rounded-[14px] bg-blue-700 text-[16px] font-bold text-white disabled:bg-slate-200 disabled:text-slate-400"
+            >
               <LogIn className="h-4 w-4" />
               {submitting ? '처리 중' : title}
-            </Button>
+            </button>
             {!isRegister && (
-              <Button type="button" variant="outline" className="w-full" onClick={loginDemo} disabled={submitting}>
+              <button
+                type="button"
+                onClick={loginDemo}
+                disabled={submitting}
+                className="pressable h-14 w-full rounded-[14px] bg-slate-100 text-[16px] font-bold text-slate-600 disabled:text-slate-400"
+              >
                 데모 계정으로 로그인
-              </Button>
+              </button>
             )}
           </form>
 
-          <div className="mt-6 border-t border-slate-800 pt-4 text-center text-sm text-slate-400">
+          <div className="mt-6 pt-5 text-center text-[14px]">
             {isRegister ? (
-              <Link to="/login" className="font-semibold text-blue-300">이미 계정이 있습니다</Link>
+              <Link to="/login" className="font-semibold text-slate-500">이미 계정이 있어요</Link>
             ) : (
-              <Link to="/register" className="font-semibold text-blue-300">새 계정 만들기</Link>
+              <Link to="/register" className="font-semibold text-blue-700">새 계정 만들기</Link>
             )}
           </div>
-        </Card>
+        </div>
       </div>
     </main>
   )
