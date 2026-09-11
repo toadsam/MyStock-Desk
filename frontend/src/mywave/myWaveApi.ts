@@ -505,3 +505,142 @@ export async function deleteMyWaveTransaction(id: number) {
 export async function getMyWaveCompanyAnalysis(symbol: string) {
   return unwrap(api.get<ApiResponse<MyWaveCompanyAnalysisResponse>>(`/api/companies/${symbol}/analysis`))
 }
+
+// ---------------------------------------------------------------------------
+// 소비 기록 간편 입력
+//
+// 문자든 캡처든 결과는 같은 모양의 후보 목록(MyWaveParseResultResponse)으로 돌아온다.
+// 확인 화면을 하나만 만들기 위해서다. 입력 경로가 늘어나도 이 타입은 바뀌지 않는다.
+// ---------------------------------------------------------------------------
+
+export type MyWaveParsedExpenseResponse = {
+  category: string
+  merchant: string
+  amount: number
+  spentDate: string
+  source: 'SMS' | 'IMAGE'
+  rawText?: string | null
+  duplicate: boolean
+  warning?: string | null
+}
+
+export type MyWaveParseResultResponse = {
+  items: MyWaveParsedExpenseResponse[]
+  parsedCount: number
+  duplicateCount: number
+  totalAmount: number
+  reportedTotal?: number | null
+  totalMatched: boolean
+  warnings: string[]
+}
+
+export type MyWaveImportStatusResponse = {
+  imageParsingAvailable: boolean
+  remainingImageQuota: number
+  dailyImageLimit: number
+}
+
+export type MyWaveMerchantSuggestionResponse = {
+  merchant: string
+  category: string
+  suggestedAmount: number
+  usageCount: number
+}
+
+export type MyWaveExpenseTemplateResponse = {
+  id: number
+  name: string
+  category: string
+  merchant: string
+  amount: number
+  usageCount: number
+}
+
+export type MyWaveTemplateSuggestionResponse = {
+  merchant: string
+  category: string
+  amount: number
+  usageCount: number
+  message: string
+}
+
+export type MyWaveCashFlowItemResponse = {
+  kind: 'SPEND' | 'INVEST'
+  refId: number
+  category: string
+  title: string
+  amount: number
+  date: string
+  /** false = 사라진 돈(소비), true = 형태만 바뀐 내 돈(투자) */
+  moneyKept: boolean
+}
+
+export type MyWaveCashFlowResponse = {
+  month: string
+  incomeAmount: number
+  spentTotal: number
+  investedTotal: number
+  savedTotal: number
+  keptTotal: number
+  remainingAmount: number
+  items: MyWaveCashFlowItemResponse[]
+}
+
+export async function parseMyWaveExpenseSms(text: string) {
+  return unwrap(api.post<ApiResponse<MyWaveParseResultResponse>>('/api/expenses/parse-sms', { text }))
+}
+
+export async function parseMyWaveExpenseImage(file: File) {
+  const body = new FormData()
+  body.append('file', file)
+  return unwrap(api.post<ApiResponse<MyWaveParseResultResponse>>('/api/expenses/parse-image', body, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }))
+}
+
+export async function getMyWaveImportStatus() {
+  return unwrap(api.get<ApiResponse<MyWaveImportStatusResponse>>('/api/expenses/import-status'))
+}
+
+export async function createMyWaveExpensesBulk(items: Array<{
+  category: string
+  merchant: string
+  amount: number
+  spentDate: string
+  memo?: string
+}>) {
+  return unwrap(api.post<ApiResponse<MyWaveExpenseResponse[]>>('/api/expenses/bulk', { items }))
+}
+
+export async function suggestMyWaveMerchants(q: string) {
+  return unwrap(api.get<ApiResponse<MyWaveMerchantSuggestionResponse[]>>('/api/expenses/merchants/suggest', { params: { q } }))
+}
+
+export async function getMyWaveCashFlow(month?: string) {
+  return unwrap(api.get<ApiResponse<MyWaveCashFlowResponse>>('/api/expenses/cash-flow', { params: { month } }))
+}
+
+export async function getMyWaveExpenseTemplates() {
+  return unwrap(api.get<ApiResponse<MyWaveExpenseTemplateResponse[]>>('/api/expense-templates'))
+}
+
+export async function getMyWaveTemplateSuggestions() {
+  return unwrap(api.get<ApiResponse<MyWaveTemplateSuggestionResponse[]>>('/api/expense-templates/suggestions'))
+}
+
+export async function createMyWaveExpenseTemplate(request: {
+  name: string
+  category: string
+  merchant: string
+  amount: number
+}) {
+  return unwrap(api.post<ApiResponse<MyWaveExpenseTemplateResponse>>('/api/expense-templates', request))
+}
+
+export async function deleteMyWaveExpenseTemplate(id: number) {
+  return unwrap(api.delete<ApiResponse<void>>(`/api/expense-templates/${id}`))
+}
+
+export async function logMyWaveExpenseTemplate(id: number, request?: { amount?: number; spentDate?: string }) {
+  return unwrap(api.post<ApiResponse<MyWaveExpenseResponse>>(`/api/expense-templates/${id}/log`, request ?? {}))
+}
