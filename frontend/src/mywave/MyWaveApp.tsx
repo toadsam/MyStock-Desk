@@ -648,9 +648,9 @@ function PortfolioPage() {
       <div className="hidden space-y-5 lg:block">
         <PortfolioHero />
         <div className="grid gap-4 lg:grid-cols-4">
-          <MetricCard icon={<BriefcaseIcon />} label="투자 원금" value={won(20_650_000)} tone="blue" />
+          <MetricCard icon={<BriefcaseIcon />} label="투자 원금" value={won(401_940)} tone="blue" />
           <MetricCard icon={<WalletCards />} label="총 평가금액" value={won(financeSummary.totalAsset)} tone="blue" />
-          <MetricCard icon={<BarIcon />} label="총 수익" value={won(financeSummary.investmentProfit)} detail="▲ 20.3%" tone="green" />
+          <MetricCard icon={<BarIcon />} label="총 수익" value={won(financeSummary.investmentProfit)} detail={`▲ ${financeSummary.investmentReturn}%`} tone="green" />
           <MetricCard icon={<BarIcon />} label="총 수익률" value={`▲ ${financeSummary.investmentReturn}%`} tone="violet" />
         </div>
         <div className="grid gap-5 xl:grid-cols-[1.1fr_.95fr_.95fr]">
@@ -1016,8 +1016,8 @@ function MobileTopSpending() {
 function MobileSavingBox() {
   const { financeSummary } = useMyWaveData()
   const navigate = useNavigate()
-  const [amount, setAmount] = useState(100000)
-  const expectedRate = Math.min(100, financeSummary.goalRate + Math.round(amount / 5500))
+  const [amount, setAmount] = useState(30000)
+  const expectedRate = Math.min(100, financeSummary.goalRate + Math.round(amount / 3000))
 
   return (
     <MobileCard>
@@ -1058,7 +1058,7 @@ function MobilePortfolioCard({ compact = false }: { compact?: boolean }) {
       </div>
       {!compact && (
         <div className="mt-4">
-          <BelugaSays mood="cheer" size="sm">지난달보다 자산이 1,250,000원 늘었어요.</BelugaSays>
+          <BelugaSays mood="cheer" size="sm">지난달보다 자산이 38,000원 늘었어요.</BelugaSays>
         </div>
       )}
     </MobileCard>
@@ -1443,9 +1443,9 @@ function GoalSummary() {
       <div className="space-y-4">
         <SummaryLine label="진행 중인 목표" value={`${goals.length}개`} />
         <SummaryLine label="연간 목표 달성률" value={`${financeSummary.goalRate}%`} />
-        <SummaryLine label="이번 달 목표 저축액" value={won(880_000)} muted />
-        <SummaryLine label="이번 달 저축 달성률" value="71%" />
-        <Progress value={71} className="mt-3" />
+        <SummaryLine label="이번 달 목표 저축액" value={won(100_000)} muted />
+        <SummaryLine label="이번 달 저축 달성률" value="64%" />
+        <Progress value={64} className="mt-3" />
       </div>
     </Card>
   )
@@ -1459,7 +1459,7 @@ function SpendingHero() {
       <div className="relative z-10">
         <div className="flex items-center gap-2 text-lg font-black">총 소비 금액 <Pill>{financeSummary.month}</Pill></div>
         <div className="mt-6 text-5xl font-black lg:text-6xl">{won(financeSummary.totalSpending)}</div>
-        <div className="mt-5 text-lg font-black">전월 대비 ▲ 8.6% (+₩196,400)</div>
+        <div className="mt-5 text-lg font-black">전월 대비 ▲ 3.4% (+₩20,400)</div>
         <div className="mt-12 grid grid-cols-3 gap-6">
           <BlueMetric label="일평균 소비" value={won(financeSummary.dailySpending)} />
           <BlueMetric label="예산 대비" value={`${financeSummary.budgetRate}%`} />
@@ -1574,14 +1574,14 @@ function SavingSimulation() {
   const [shopping, setShopping] = useState(20)
   const [applied, setApplied] = useState(false)
   const [savingResult, setSavingResult] = useState<{ amount: number; rate: number } | null>(null)
-  const savingAmount = delivery * 1800 + cafe * 2100 + shopping * 2900
-  const improvedRate = Math.min(100, financeSummary.goalRate + Math.round(savingAmount / 36500))
+  const savingAmount = delivery * 985 + cafe * 742 + shopping * 680
+  const improvedRate = Math.min(100, financeSummary.goalRate + Math.round(savingAmount / 3000))
   const displaySavingAmount = savingResult?.amount ?? savingAmount
   const displayImprovedRate = savingResult?.rate ?? improvedRate
   const simulations: Array<{ name: string; rate: number; setRate: (value: number) => void; unit: number }> = [
-    { name: '배달', rate: delivery, setRate: setDelivery, unit: 1800 },
-    { name: '카페/간식', rate: cafe, setRate: setCafe, unit: 2100 },
-    { name: '쇼핑', rate: shopping, setRate: setShopping, unit: 2900 },
+    { name: '배달', rate: delivery, setRate: setDelivery, unit: 985 },
+    { name: '카페/간식', rate: cafe, setRate: setCafe, unit: 742 },
+    { name: '쇼핑', rate: shopping, setRate: setShopping, unit: 680 },
   ]
 
   async function applySimulation() {
@@ -1637,7 +1637,7 @@ function PortfolioHero() {
         <div>
           <div className="text-lg font-black">전체 투자 자산</div>
           <div className="mt-4 text-5xl font-black lg:text-6xl">{won(financeSummary.totalAsset)}</div>
-          <div className="mt-6 text-lg font-black text-emerald-200">전일 대비 ▲ ₩425,000 (1.74%)</div>
+          <div className="mt-6 text-lg font-black text-emerald-200">전일 대비 ▲ ₩3,900 (0.87%)</div>
         </div>
         <div className="grid grid-cols-3 gap-5 self-center">
           <BlueMetric label="총 투자 수익" value={won(financeSummary.investmentProfit)} />
@@ -2154,7 +2154,7 @@ function FinanceState() {
     <Card title="이번 달 재무 상태" action="자세히 보기" actionTo="/assets">
       <div className="space-y-5">
         <SummaryLine label="총 자산" value={won(financeSummary.totalAsset)} />
-        <SummaryLine label="총 지출" value={won(2_420_000)} />
+        <SummaryLine label="총 지출" value={won(financeSummary.totalSpending)} />
         <SummaryLine label="저축률" value={`${financeSummary.savingRate}%`} />
       </div>
     </Card>
@@ -2170,9 +2170,9 @@ function GoalOutlook() {
         <RingProgress value={financeSummary.goalRate} />
         <div>
           <div className="text-sm font-bold text-slate-500">이번 달 목표 달성 가능성</div>
-          <div className="mt-2 text-4xl font-black text-emerald-500">88%</div>
-          <div className="mt-2 text-sm font-bold text-slate-500">추가 투자 시 95%+ 달성 가능</div>
-          <div className="mt-4 rounded-2xl bg-blue-50 p-3 font-black text-blue-700">필요 투자 금액<br />₩320,000</div>
+          <div className="mt-2 text-4xl font-black text-emerald-500">68%</div>
+          <div className="mt-2 text-sm font-bold text-slate-500">추가 저축 시 90%+ 달성 가능</div>
+          <div className="mt-4 rounded-2xl bg-blue-50 p-3 font-black text-blue-700">필요 저축 금액<br />₩58,000</div>
         </div>
       </div>
     </Card>
@@ -2632,7 +2632,7 @@ function GoalEditorPage() {
   const [searchParams] = useSearchParams()
   const editingId = Number(searchParams.get('id') ?? 0)
   const [title, setTitle] = useState('새 저축 목표')
-  const [targetAmount, setTargetAmount] = useState(1_000_000)
+  const [targetAmount, setTargetAmount] = useState(300_000)
   const [currentAmount, setCurrentAmount] = useState(0)
   const [targetDate, setTargetDate] = useState('2026-07-21')
   const [goalStatus, setGoalStatus] = useState('ACTIVE')
@@ -2990,9 +2990,9 @@ function SimulationDetailPage() {
       <ActionPanel />
       <Card title="적용 후 예상 루틴">
         <div className="grid gap-4 sm:grid-cols-3">
-          <MiniStat label="주간 배달 횟수" value="4회 -> 2회" change="+78,000원" />
-          <MiniStat label="카페 지출" value="-30%" change="+45,000원" />
-          <MiniStat label="구독 정리" value="2개 해지" change="+32,000원" />
+          <MiniStat label="주간 배달 횟수" value="3회 -> 1회" change="+49,000원" />
+          <MiniStat label="카페 지출" value="-30%" change="+22,000원" />
+          <MiniStat label="구독 정리" value="1개 해지" change="+9,900원" />
         </div>
       </Card>
     </div>
@@ -3111,11 +3111,11 @@ function defaultBudgetForm(): BudgetFormState {
   const now = new Date()
   return {
     budgetMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
-    incomeAmount: 4_200_000,
-    livingBudgetAmount: 2_100_000,
-    fixedExpenseAmount: 620_000,
-    plannedSavingAmount: 630_000,
-    plannedInvestmentAmount: 530_000,
+    incomeAmount: 850_000,
+    livingBudgetAmount: 550_000,
+    fixedExpenseAmount: 120_000,
+    plannedSavingAmount: 100_000,
+    plannedInvestmentAmount: 30_000,
   }
 }
 
@@ -3472,7 +3472,7 @@ function toneBg(tone: string) {
 }
 
 const defaultNotificationItems: MyWaveNotificationResponse[] = [
-  { id: 1, category: '목표', title: '목표 달성률 업데이트', body: '"다음 달까지 100만원 모으기" 목표가 63% 달성되었어요.', targetPath: '/goals', tone: 'green', read: false, createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString() },
+  { id: 1, category: '목표', title: '목표 달성률 업데이트', body: '"다음 달까지 30만원 모으기" 목표가 37% 달성되었어요.', targetPath: '/goals', tone: 'green', read: false, createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString() },
   { id: 2, category: '소비', title: '소비 경고', body: '이번 달 카페/간식 지출이 지난 달보다 32% 증가했어요.', targetPath: '/spending/detail', tone: 'orange', read: false, createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
   { id: 3, category: '투자', title: '포트폴리오 변동', body: '국내 주식 비중이 2.3% 감소했어요.', targetPath: '/portfolio/allocation', tone: 'blue', read: false, createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() },
   { id: 4, category: 'AI 코치', title: 'AI 코치 추천', body: '현금 비중을 10% 높이면 변동성 리스크를 줄일 수 있어요.', targetPath: '/coach', tone: 'violet', read: false, createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() },

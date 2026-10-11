@@ -251,26 +251,22 @@ public class DataSeeder implements CommandLineRunner {
     private Portfolio seedPortfolio(Long memberId) {
         return portfolioRepository.save(Portfolio.builder()
                 .memberId(memberId)
-                .totalAsset(bd(153_780_350))
-                .cash(bd(8_450_000))
-                .totalPurchaseAmount(bd(98_765_000))
-                .totalEvaluationAmount(bd(145_330_350))
-                .totalProfitLoss(bd(29_465_500))
-                .totalReturnRate(BigDecimal.valueOf(29.83))
-                .dailyProfitLoss(bd(1_845_200))
-                .dailyReturnRate(BigDecimal.valueOf(1.21))
+                .totalAsset(bd(450_900))
+                .cash(bd(23_600))
+                .totalPurchaseAmount(bd(401_940))
+                .totalEvaluationAmount(bd(427_300))
+                .totalProfitLoss(bd(25_360))
+                .totalReturnRate(BigDecimal.valueOf(6.31))
+                .dailyProfitLoss(bd(3_900))
+                .dailyReturnRate(BigDecimal.valueOf(0.87))
                 .build());
     }
 
     private void seedHoldings(Long portfolioId, Map<String, Stock> stocks) {
         holdingRepository.saveAll(List.of(
-                holding(portfolioId, stocks.get("005930"), 200, 71250, 15_720_000, 1_470_000, 10.32, 10.22),
-                holding(portfolioId, stocks.get("000660"), 100, 176000, 19_650_000, 2_050_000, 11.65, 12.77),
-                holding(portfolioId, stocks.get("373220"), 80, 395000, 27_760_000, -3_840_000, -12.14, 18.03),
-                holding(portfolioId, stocks.get("035420"), 50, 178000, 9_915_000, 1_015_000, 11.39, 6.44),
-                holding(portfolioId, stocks.get("035720"), 120, 51000, 5_418_000, -702_000, -11.46, 3.52),
-                holding(portfolioId, stocks.get("005380"), 60, 242000, 14_190_000, -330_000, -2.27, 9.21),
-                holding(portfolioId, stocks.get("005490"), 35, 331000, 12_880_000, 1_295_000, 11.18, 8.37)
+                holding(portfolioId, stocks.get("005930"), 3, 73700, 235_800, 14_800, 6.70, 52.3),
+                holding(portfolioId, stocks.get("360750"), 8, 12243, 101_200, 3_260, 3.33, 22.4),
+                holding(portfolioId, stocks.get("035720"), 2, 41500, 90_300, 7_300, 8.80, 20.0)
         ));
     }
 
@@ -299,14 +295,14 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedInvestmentTransactions(Long memberId, Map<String, Stock> stocks) {
         transactionRepository.saveAll(List.of(
-                transaction(memberId, stocks.get("005930"), TransactionType.BUY, 50, 78200, 587, 0, 0, 2, "HBM 수요 증가 기대", "6개월 이상 보유 예정", "반도체,장기보유"),
-                transaction(memberId, stocks.get("360750"), TransactionType.BUY, 30, 12480, 56, 0, 0, 3, "해외지수 분산 목적", "월 적립 후보", "ETF,분산"),
-                transaction(memberId, stocks.get("035720"), TransactionType.BUY, 80, 41500, 498, 0, 0, 20, "플랫폼 사업 회복 여부 확인", "매도 기록 계산을 위한 과거 매수 기록", "플랫폼,복기"),
-                transaction(memberId, stocks.get("035720"), TransactionType.SELL, 40, 44800, 269, 2790, 88000, 4, "기존 정리 기준에 도달", "플랫폼 규제 뉴스 확인 후 일부 정리", "플랫폼,리스크관리"),
-                transaction(memberId, stocks.get("000660"), TransactionType.BUY, 1, 196500, 29, 0, 0, 8, "HBM 매출 비중 확대", "실적 발표 전까지 뉴스 흐름 확인", "반도체,실적개선"),
-                transaction(memberId, stocks.get("005380"), TransactionType.BUY, 20, 236500, 710, 0, 0, 13, "북미 판매 회복 기대", "환율과 전기차 판매량 체크", "자동차,환율"),
-                cashTransaction(memberId, TransactionType.DEPOSIT, 1_000_000, 15, "월 투자금 입금", "정기 현금 유입"),
-                cashTransaction(memberId, TransactionType.DIVIDEND, 124_000, 22, "배당금 입금", "현금흐름 기록")
+                transaction(memberId, stocks.get("005930"), TransactionType.BUY, 1, 78200, 12, 0, 0, 2, "HBM 수요 증가 기대", "알바비 들어온 김에 1주 추가", "반도체,장기보유"),
+                transaction(memberId, stocks.get("360750"), TransactionType.BUY, 3, 12480, 6, 0, 0, 3, "해외지수 분산 목적", "월 3만원 적립 후보", "ETF,분산"),
+                transaction(memberId, stocks.get("035720"), TransactionType.BUY, 4, 41500, 25, 0, 0, 20, "플랫폼 사업 회복 여부 확인", "매도 기록 계산을 위한 과거 매수 기록", "플랫폼,복기"),
+                transaction(memberId, stocks.get("035720"), TransactionType.SELL, 2, 44800, 13, 161, 6600, 4, "기존 정리 기준에 도달", "교재비 필요해서 2주만 정리", "플랫폼,리스크관리"),
+                transaction(memberId, stocks.get("005930"), TransactionType.BUY, 2, 71400, 21, 0, 0, 8, "학기 초 소액 매수", "용돈 남은 걸로 시작", "반도체,첫투자"),
+                transaction(memberId, stocks.get("360750"), TransactionType.BUY, 5, 12100, 9, 0, 0, 13, "적립식으로 모으기", "한 달에 5주씩 목표", "ETF,적립"),
+                cashTransaction(memberId, TransactionType.DEPOSIT, 30_000, 15, "월 투자금 입금", "알바비에서 3만원 떼어 넣기"),
+                cashTransaction(memberId, TransactionType.DIVIDEND, 1_450, 22, "배당금 입금", "현금흐름 기록")
         ));
     }
 

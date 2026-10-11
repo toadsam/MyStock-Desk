@@ -164,8 +164,8 @@ public class ExpenseService {
         }
         BigDecimal fixed = request == null || request.fixedSavingAmount() == null ? BigDecimal.ZERO : request.fixedSavingAmount();
         BigDecimal totalSaving = variableSaving.add(fixed);
-        BigDecimal currentRate = BigDecimal.valueOf(63);
-        BigDecimal expectedRate = currentRate.add(totalSaving.divide(BigDecimal.valueOf(10000), 1, RoundingMode.HALF_UP)).min(BigDecimal.valueOf(100));
+        BigDecimal currentRate = BigDecimal.valueOf(37);
+        BigDecimal expectedRate = currentRate.add(totalSaving.divide(BigDecimal.valueOf(3000), 1, RoundingMode.HALF_UP)).min(BigDecimal.valueOf(100));
         return new SavingSimulationResultDto(currentRate, expectedRate, totalSaving, savings);
     }
 
@@ -196,11 +196,11 @@ public class ExpenseService {
 
     private void seedDemoExpenses(Long memberId, YearMonth month) {
         expenseRepository.saveAll(List.of(
-                demo(memberId, "배달비", "배달의민족", 399800, month.atDay(3)),
-                demo(memberId, "쇼핑", "온라인 쇼핑", 299600, month.atDay(8)),
-                demo(memberId, "식비", "마트", 249200, month.atDay(12)),
-                demo(memberId, "카페", "카페", 174300, month.atDay(18)),
-                demo(memberId, "교통", "대중교통", 125600, month.atDay(21))
+                demo(memberId, "배달비", "배달의민족", 98500, month.atDay(3)),
+                demo(memberId, "쇼핑", "온라인 쇼핑", 68000, month.atDay(8)),
+                demo(memberId, "식비", "학식·편의점", 186000, month.atDay(12)),
+                demo(memberId, "카페", "학교 앞 카페", 74200, month.atDay(18)),
+                demo(memberId, "교통", "대중교통", 62000, month.atDay(21))
         ));
     }
 
@@ -262,9 +262,9 @@ public class ExpenseService {
                             month.atEndOfMonth()
                     ));
                     if (amount.compareTo(BigDecimal.ZERO) == 0 && month.equals(targetMonth)) {
-                        amount = BigDecimal.valueOf(1_248_500);
+                        amount = BigDecimal.valueOf(612_400);
                     }
-                    return new ExpenseTrendDto(month.toString(), amount, BigDecimal.valueOf(1_100_000), amount.multiply(BigDecimal.valueOf(0.2)).setScale(0, RoundingMode.HALF_UP));
+                    return new ExpenseTrendDto(month.toString(), amount, BigDecimal.valueOf(670_000), amount.multiply(BigDecimal.valueOf(0.2)).setScale(0, RoundingMode.HALF_UP));
                 })
                 .toList();
     }

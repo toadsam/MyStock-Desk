@@ -43,7 +43,7 @@ public class AssetService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal investmentAsset = portfolioRepository.findByMemberId(memberId)
                 .map(Portfolio::getTotalAsset)
-                .orElse(BigDecimal.valueOf(24_850_000));
+                .orElse(BigDecimal.valueOf(450_900));
         BigDecimal monthlyExpense = expenseService.getMonthlySummary(targetMonth).totalAmount();
         BigDecimal remainingLivingBudget = budget.getLivingBudgetAmount().subtract(monthlyExpense).max(BigDecimal.ZERO);
         BigDecimal investmentAvailable = remainingLivingBudget
@@ -137,9 +137,9 @@ public class AssetService {
             return accounts;
         }
         accountRepository.saveAll(List.of(
-                demoAccount(memberId, "입출금 통장", "BANK", "MyWave Bank", 3_200_000),
-                demoAccount(memberId, "비상금 통장", "SAVINGS", "MyWave Bank", 2_250_000),
-                demoAccount(memberId, "월급 계좌", "BANK", "MyWave Bank", 1_450_000)
+                demoAccount(memberId, "생활비 통장", "BANK", "MyWave Bank", 57_600),
+                demoAccount(memberId, "목표 저축 통장", "SAVINGS", "MyWave Bank", 112_000),
+                demoAccount(memberId, "비상금 통장", "SAVINGS", "MyWave Bank", 350_000)
         ));
         return accountRepository.findByMemberIdOrderByIdAsc(memberId);
     }
@@ -162,11 +162,11 @@ public class AssetService {
                 .orElseGet(() -> budgetRepository.save(MonthlyBudget.builder()
                         .memberId(memberId)
                         .budgetMonth(month)
-                        .incomeAmount(BigDecimal.valueOf(4_200_000))
-                        .livingBudgetAmount(BigDecimal.valueOf(2_100_000))
-                        .fixedExpenseAmount(BigDecimal.valueOf(620_000))
-                        .plannedSavingAmount(BigDecimal.valueOf(630_000))
-                        .plannedInvestmentAmount(BigDecimal.valueOf(530_000))
+                        .incomeAmount(BigDecimal.valueOf(850_000))
+                        .livingBudgetAmount(BigDecimal.valueOf(550_000))
+                        .fixedExpenseAmount(BigDecimal.valueOf(120_000))
+                        .plannedSavingAmount(BigDecimal.valueOf(100_000))
+                        .plannedInvestmentAmount(BigDecimal.valueOf(30_000))
                         .build()));
     }
 

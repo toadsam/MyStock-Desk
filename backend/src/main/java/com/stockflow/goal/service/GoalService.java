@@ -102,9 +102,9 @@ public class GoalService {
 
     public List<GoalActionDto> recommendedActions() {
         return List.of(
-                new GoalActionDto("배달비 줄이기", "주 2회 줄이면 목표에 더 가까워져요.", BigDecimal.valueOf(78000), "배달비", 92),
-                new GoalActionDto("카페 지출 줄이기", "테이크아웃 횟수를 조정해보세요.", BigDecimal.valueOf(45000), "카페", 78),
-                new GoalActionDto("구독 정리", "잘 쓰지 않는 정기결제를 점검하세요.", BigDecimal.valueOf(32000), "구독", 68)
+                new GoalActionDto("배달비 줄이기", "주 2회 줄이면 목표에 더 가까워져요.", BigDecimal.valueOf(24000), "배달비", 92),
+                new GoalActionDto("카페 지출 줄이기", "테이크아웃 횟수를 조정해보세요.", BigDecimal.valueOf(15000), "카페", 78),
+                new GoalActionDto("구독 정리", "잘 쓰지 않는 정기결제를 점검하세요.", BigDecimal.valueOf(9900), "구독", 68)
         );
     }
 
@@ -124,9 +124,9 @@ public class GoalService {
         }
         LocalDate today = LocalDate.now();
         goalRepository.saveAll(List.of(
-                demo(memberId, "다음 달까지 100만원 모으기", 1_000_000, 630_000, today.plusDays(16), ACTIVE, 1),
-                demo(memberId, "비상금 만들기", 3_000_000, 2_250_000, today.plusDays(90), ACTIVE, 2),
-                demo(memberId, "여행 자금", 2_000_000, 840_000, today.plusDays(120), ACTIVE, 3)
+                demo(memberId, "다음 달까지 30만원 모으기", 300_000, 112_000, today.plusDays(16), ACTIVE, 1),
+                demo(memberId, "비상금 50만원 만들기", 500_000, 350_000, today.plusDays(90), ACTIVE, 2),
+                demo(memberId, "여름방학 여행비", 400_000, 85_000, today.plusDays(120), ACTIVE, 3)
         ));
         return goalRepository.findByMemberIdOrderByPriorityAscTargetDateAsc(memberId);
     }
