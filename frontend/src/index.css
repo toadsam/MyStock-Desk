@@ -527,3 +527,87 @@ textarea.form-input {
     transform: none;
   }
 }
+
+/* ===========================================================================
+   홈 "소다 한 잔"
+   ---------------------------------------------------------------------------
+   숫자는 Fredoka, 제목은 Jua. 둘 다 홈의 큰 숫자와 짧은 제목에만 쓴다.
+   움직임은 잔 안에서만 일어난다. 동작 줄이기를 켜면 전부 멈춘다.
+   =========================================================================== */
+.wave-num {
+  font-family: Fredoka, Pretendard, "Noto Sans KR", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.wave-jua {
+  font-family: Jua, Pretendard, "Noto Sans KR", system-ui, sans-serif;
+  font-weight: 400;
+}
+
+.wave-liquid {
+  transition: height 900ms cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.wave-slosh {
+  animation: wave-drift 3.5s linear infinite;
+}
+
+.wave-slosh-slow {
+  animation: wave-drift 6s linear infinite;
+}
+
+.wave-fizz {
+  animation: wave-rise 3.2s ease-in infinite;
+}
+
+.wave-bob {
+  animation: wave-bob 3.2s ease-in-out infinite;
+}
+
+.wave-pop {
+  animation: wave-pop 500ms cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+.wave-chip {
+  transition: transform 120ms ease;
+}
+
+.wave-chip:active {
+  transform: scale(0.94);
+}
+
+@keyframes wave-drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes wave-rise {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 0.9; }
+  100% { transform: translateY(-120px); opacity: 0; }
+}
+
+@keyframes wave-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-7px) rotate(2deg); }
+}
+
+@keyframes wave-pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave-slosh,
+  .wave-slosh-slow,
+  .wave-fizz,
+  .wave-bob,
+  .wave-pop {
+    animation: none;
+  }
+
+  .wave-liquid {
+    transition: none;
+  }
+}

@@ -31,6 +31,7 @@ import { won } from './format'
 import { Card, Field, ListRow } from './uiKit'
 import { Beluga, BelugaSays } from './Beluga'
 import { Amount } from './Amount'
+import { TodayHome } from './TodayHome'
 import {
   CashFlowCard,
   ExpenseImportCard,
@@ -557,34 +558,9 @@ function Avatar() {
   )
 }
 
+/** 홈은 모바일과 데스크톱이 같은 화면 하나다. 넓어지면 두 열로 펼쳐질 뿐이다. */
 function HomePage() {
-  const { financeSummary } = useMyWaveData()
-
-  return (
-    <>
-      <div className="lg:hidden">
-        <MobileHomePage />
-      </div>
-      <div className="hidden space-y-5 lg:block lg:space-y-7">
-        <HeroGoalCard />
-        <div className="grid gap-4 lg:grid-cols-3">
-          <MetricCard icon={<WalletCards />} label="총자산" value={won(financeSummary.totalAsset)} detail="▲ 1.8% (전일 대비)" tone="blue" />
-          <MetricCard icon={<CreditIcon />} label="남은 생활비" value={won(financeSummary.livingBudgetLeft)} detail="이번 달" tone="green" />
-          <MetricCard icon={<RocketMini />} label="투자 가능 금액" value={won(financeSummary.investableAmount)} detail="바로 투자 가능" tone="violet" />
-        </div>
-        <div className="grid gap-5 xl:grid-cols-[1fr_.95fr]">
-          <div className="space-y-5">
-            <SpendingWarning />
-            <RecentActivity />
-          </div>
-          <div className="space-y-5">
-            <PortfolioMini />
-            <MonthSummary />
-          </div>
-        </div>
-      </div>
-    </>
-  )
+  return <TodayHome />
 }
 
 function GoalsPage() {
@@ -662,7 +638,6 @@ function PortfolioPage() {
           <HoldingsTable />
           <div className="space-y-5">
             <PortfolioInsight />
-            <CompanyPreview />
           </div>
         </div>
         <InvestmentTransactionManager />
@@ -749,23 +724,6 @@ function CoachPage() {
   )
 }
 
-function MobileHomePage() {
-  const { financeSummary } = useMyWaveData()
-
-  return (
-    <div className="mobile-page reveal-stack space-y-4">
-      <MobileHeroCard />
-      <div className="grid grid-cols-3 gap-3">
-        <MobileMiniMetric icon={<WalletCards className="h-6 w-6" />} label="총자산" value={`${Math.round(financeSummary.totalAsset / 10000).toLocaleString()}만원`} detail="▲ 1.8%" />
-        <MobileMiniMetric icon={<CreditIcon />} label="남은 생활비" value={`${Math.round(financeSummary.livingBudgetLeft / 10000)}만원`} detail="이번 달" tone="green" />
-        <MobileMiniMetric icon={<BarIcon />} label="투자 가능" value={`${Math.round(financeSummary.investableAmount / 10000)}만원`} detail="바로 가능" tone="violet" />
-      </div>
-      <MobileNotice />
-      <MobilePortfolioCard />
-    </div>
-  )
-}
-
 function MobileGoalsPage() {
   const navigate = useNavigate()
 
@@ -812,35 +770,6 @@ function MobilePortfolioPage() {
       <MobileHoldingsList />
       <MobileInsightBox />
     </div>
-  )
-}
-
-function MobileHeroCard() {
-  const { financeSummary } = useMyWaveData()
-
-  return (
-    <section className="motion-card pressable rounded-[20px] bg-blue-50 p-4 shadow-card">
-      <div className="flex items-center gap-2 text-sm font-black text-blue-700">
-        <TargetDot /> 이번 달 투자 목표
-      </div>
-      <div className="mt-4 grid grid-cols-[1fr_120px] items-center gap-2">
-        <div>
-          <div className="text-4xl font-black tracking-[-0.04em]">{financeSummary.goalRate}% <span className="text-2xl font-black">달성</span></div>
-          <Progress value={financeSummary.goalRate} className="mt-5 h-2.5" />
-          <div className="mt-6 grid grid-cols-2 divide-x divide-slate-200">
-            <div>
-              <div className="text-xs font-bold text-slate-500">현재 저축 금액</div>
-              <div className="mt-1 text-xl font-black text-blue-700">{Math.round(financeSummary.savedAmount / 10000).toLocaleString()}만원</div>
-            </div>
-            <div className="pl-5">
-              <div className="text-xs font-bold text-slate-500">남은 금액</div>
-              <div className="mt-1 text-xl font-black">{Math.round(financeSummary.remainingAmount / 10000).toLocaleString()}만원</div>
-            </div>
-          </div>
-        </div>
-        <img src={waveHero} alt="" className="animate-wave h-28 w-32 object-contain opacity-90 mix-blend-multiply" />
-      </div>
-    </section>
   )
 }
 
@@ -1101,30 +1030,6 @@ function MobileInsightBox() {
   )
 }
 
-function HeroGoalCard() {
-  const { financeSummary } = useMyWaveData()
-
-  return (
-    <BlueCard className="min-h-[240px] lg:min-h-[300px]">
-      <div className="relative z-10 flex h-full flex-col justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-lg font-black">이번 달 목표 달성률 <Pill>{financeSummary.month}</Pill></div>
-          <div className="mt-6 text-7xl font-black leading-none tracking-[-0.04em] text-white lg:text-8xl">{financeSummary.goalRate}%</div>
-          <Progress value={financeSummary.goalRate} className="mt-6 max-w-xl bg-white/25" barClassName="bg-[#65dbc2]" />
-        </div>
-        <div className="grid max-w-2xl grid-cols-2 gap-5 pt-6 lg:grid-cols-4">
-          <BlueMetric label="현재 저축 금액" value={won(financeSummary.savedAmount)} />
-          <BlueMetric label="남은 금액" value={won(financeSummary.remainingAmount)} />
-          <BlueMetric label="남은 기간" value={`${financeSummary.daysLeft}일`} />
-          <BlueMetric label="하루 목표 금액" value={won(financeSummary.dailyTarget)} />
-        </div>
-      </div>
-      <img src={waveHero} alt="" className="absolute bottom-0 right-2 h-40 w-56 object-contain opacity-90 mix-blend-multiply sm:h-48 sm:w-72 lg:right-8 lg:h-64 lg:w-[420px]" />
-      <ChevronRight className="absolute right-6 top-8 h-6 w-6 text-white/80" />
-    </BlueCard>
-  )
-}
-
 function MainGoalCard() {
   const { financeSummary, goals } = useMyWaveData()
   const mainGoal = goals[0]
@@ -1183,83 +1088,6 @@ function MetricCard({ icon, label, value, detail, tone }: { icon: ReactNode; lab
           <div className="mt-3 text-3xl font-black tracking-[-0.03em]">{value}</div>
           {detail && <div className={`mt-2 text-sm font-bold ${tone === 'blue' ? 'text-blue-700' : 'text-slate-500'}`}>{detail}</div>}
         </div>
-      </div>
-    </Card>
-  )
-}
-
-function SpendingWarning() {
-  const navigate = useNavigate()
-
-  return (
-    <Card className="border-orange-100 bg-orange-50/45">
-      <div className="flex items-center gap-6">
-        <div className="grid h-20 w-20 shrink-0 place-items-center rounded-[28px] bg-orange-100 text-orange-600">
-          <ShieldAlert className="h-11 w-11 fill-orange-500/10" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-2xl font-black text-orange-600">소비 위험도: 주의</div>
-          <p className="mt-2 text-base leading-7 text-slate-500">외식/배달 소비 금액이 평소보다 많아요. 예산을 조금만 조정해보세요!</p>
-        </div>
-        <button onClick={() => navigate('/spending/detail')} className="hidden rounded-full border border-orange-200 px-5 py-2.5 text-sm font-black text-slate-800 lg:block">자세히 보기 <ChevronRight className="inline h-4 w-4" /></button>
-      </div>
-    </Card>
-  )
-}
-
-function RecentActivity() {
-  const { activities } = useMyWaveData()
-
-  return (
-    <Card title="최근 활동" action="모두 보기" actionTo="/spending/detail">
-      <div className="space-y-4">
-        {activities.map((item) => {
-          const Icon = item.icon
-          return (
-            <div key={item.title} className="flex items-center gap-4">
-              <div className="grid h-12 w-12 place-items-center rounded-full text-white" style={{ background: item.color }}>
-                <Icon className="h-6 w-6" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-black">{item.title}</div>
-                <div className="mt-1 truncate text-sm font-medium text-slate-500">{item.detail}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-bold text-slate-400">{item.when}</div>
-                <div className={`mt-1 font-black ${item.amount > 0 ? 'text-blue-700' : 'text-slate-900'}`}>{item.amount > 0 ? '+' : '-'}{won(Math.abs(item.amount))}</div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </Card>
-  )
-}
-
-function PortfolioMini() {
-  const { financeSummary, portfolioAllocation } = useMyWaveData()
-
-  return (
-    <Card title="포트폴리오 현황" action="자세히 보기" actionTo="/portfolio/allocation">
-      <div className="grid items-center gap-5 sm:grid-cols-[220px_1fr]">
-        <Donut data={portfolioAllocation} center={`${won(financeSummary.totalAsset)}`} />
-        <Legend items={portfolioAllocation} />
-      </div>
-    </Card>
-  )
-}
-
-function MonthSummary() {
-  const { financeSummary } = useMyWaveData()
-
-  return (
-    <Card className="bg-blue-50/70">
-      <h3 className="text-lg font-black text-blue-800">이번 달 한눈에 보기</h3>
-      <div className="mt-5 grid grid-cols-2 gap-5 lg:grid-cols-4">
-        <MiniStat label="수입" value={won(4_200_000)} change="▲ 12.5%" />
-        <MiniStat label="지출" value={won(financeSummary.totalSpending)} change="▼ 4.3%" />
-        <MiniStat label="저축" value={won(financeSummary.savedAmount)} change="▲ 8.1%" />
-        <MiniStat label="투자 수익" value={won(financeSummary.investmentProfit)} change="▲ 5.7%" />
       </div>
     </Card>
   )
@@ -2002,25 +1830,6 @@ function PortfolioInsight() {
   return (
     <Card className="bg-blue-50/70" title="포트폴리오 인사이트" action={<InlineAction to="/coach" label="AI 코치" primary />}>
       <p className="text-base leading-8 text-slate-600">현재 포트폴리오는 성장주 비중이 높아 변동성이 클 수 있어요. 안정적인 수익을 위해 채권 비중을 10~15%까지 늘리는 것을 추천드려요.</p>
-    </Card>
-  )
-}
-
-function CompanyPreview() {
-  return (
-    <Card title="관련 기업 분석 미리보기" action="자세히 보기" actionTo="/company/AAPL">
-      <div className="grid grid-cols-[1fr_140px] items-center gap-4">
-        <div>
-          <div className="text-lg font-black">AAPL <span className="text-sm text-slate-500">애플</span></div>
-          <div className="mt-1 text-sm font-medium text-slate-500">미국 · 기술 · 시가총액 2.8조 USD</div>
-        </div>
-        <TinySparkline />
-      </div>
-      <div className="mt-5 grid grid-cols-3 divide-x divide-slate-100 text-center">
-        <MiniStat label="투자 의견" value="매수" />
-        <MiniStat label="목표가 (12M)" value="$210.00" />
-        <MiniStat label="상승 여력" value="+22.4%" />
-      </div>
     </Card>
   )
 }
@@ -3005,7 +2814,6 @@ function PortfolioDetailPage() {
       <MobileTitle title="보유 자산" />
       <PortfolioHero />
       <HoldingsTable />
-      <CompanyPreview />
       <InvestmentTransactionManager />
     </div>
   )
@@ -3578,35 +3386,6 @@ function SegmentedTabs({ items, active }: { items: string[]; active: string }) {
   )
 }
 
-function MobileMiniMetric({ icon, label, value, detail, tone = 'blue' }: { icon: ReactNode; label: string; value: string; detail: string; tone?: 'blue' | 'green' | 'violet' }) {
-  void tone
-  return (
-    <MobileCard className="min-h-30 p-4">
-      <div className="grid h-9 w-9 place-items-center rounded-[10px] bg-slate-100 text-slate-400">{icon}</div>
-      <div className="mt-3 text-[12px] font-medium text-slate-400">{label}</div>
-      <div className="mt-1.5 whitespace-nowrap text-[17px] font-bold leading-tight tracking-[-0.02em] text-slate-900">{value}</div>
-      <div className="mt-0.5 text-[11px] font-medium text-slate-400">{detail}</div>
-    </MobileCard>
-  )
-}
-
-function MobileNotice() {
-  return (
-    <section className="rounded-[20px] bg-white p-4">
-      <div className="flex items-center gap-3.5">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-red-50 text-red-500">
-          <ShieldAlert className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-bold text-slate-900">지출이 평소보다 많아요</div>
-          <p className="mt-0.5 text-[13px] font-medium leading-5 text-slate-400">카페·간식 지출이 지난달보다 32% 늘었어요.</p>
-        </div>
-        <ChevronRight className="h-5 w-5 shrink-0 text-slate-300" />
-      </div>
-    </section>
-  )
-}
-
 function MobileRing({ value }: { value: number }) {
   return (
     <div className="relative h-32 w-32">
@@ -3784,22 +3563,6 @@ function MonthPicker() {
 
 function Pill({ children }: { children: ReactNode }) {
   return <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-black text-white">{children}</span>
-}
-
-function TinySparkline() {
-  return (
-    <svg viewBox="0 0 140 48" className="h-12 w-36">
-      <polyline points="0,38 15,25 28,30 42,18 56,31 70,24 84,28 98,12 112,18 126,10 140,4" fill="none" stroke="#2563eb" strokeWidth="3" />
-    </svg>
-  )
-}
-
-function CreditIcon() {
-  return <WalletCards className="h-8 w-8" />
-}
-
-function RocketMini() {
-  return <BarChart3 className="h-8 w-8" />
 }
 
 function BriefcaseIcon() {
