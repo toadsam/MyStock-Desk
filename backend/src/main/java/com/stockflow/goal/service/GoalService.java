@@ -1,6 +1,8 @@
 package com.stockflow.goal.service;
 
 import com.stockflow.auth.security.CurrentMemberProvider;
+import com.stockflow.expense.entity.Expense;
+import com.stockflow.expense.repository.ExpenseRepository;
 import com.stockflow.goal.dto.GoalActionDto;
 import com.stockflow.goal.dto.GoalSummaryDto;
 import com.stockflow.goal.dto.SavingGoalDto;
@@ -9,6 +11,11 @@ import com.stockflow.goal.entity.SavingGoal;
 import com.stockflow.goal.repository.SavingGoalRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
+import java.time.YearMonth;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -23,8 +30,12 @@ public class GoalService {
 
     private static final String ACTIVE = "ACTIVE";
 
+    private static final BigDecimal REDUCTION_RATE = BigDecimal.valueOf(20);
+
     private final SavingGoalRepository goalRepository;
+    private final ExpenseRepository expenseRepository;
     private final CurrentMemberProvider currentMemberProvider;
+    private final Clock clock;
 
     public List<SavingGoalDto> getGoals(String status) {
         Long memberId = currentMemberProvider.currentMemberId();
@@ -34,8 +45,9 @@ public class GoalService {
                 : allGoals.stream()
                 .filter(goal -> status.equals(goal.getStatus()))
                 .toList();
+        List<GoalActionDto> actions = recommendedActions();
         return goals.stream()
-                .map(goal -> SavingGoalDto.of(goal, recommendedActions()))
+                .map(goal -> SavingGoalDto.of(goal, actions))
                 .toList();
     }
 
@@ -100,12 +112,45 @@ public class GoalService {
                 .orElse(null);
     }
 
+    /**
+     * 이번 달 가장 많이 쓴 카테고리 세 곳을 20% 줄였을 때 남는 돈.
+     *
+     * <p>예전에는 "배달비 줄이기 월 24,000원" 같은 고정 목록이었다. 배달을 안 시키는 사람에게도
+     * 배달을 줄이라고 했다. 이제 그 사람이 실제로 돈을 쓴 곳에서만 고른다. 기록이 없으면 빈 목록이다.
+     * impactScore 는 그 카테고리가 이번 달 소비에서 차지하는 비율(%)이다.
+     */
     public List<GoalActionDto> recommendedActions() {
-        return List.of(
-                new GoalActionDto("배달비 줄이기", "주 2회 줄이면 목표에 더 가까워져요.", BigDecimal.valueOf(24000), "배달비", 92),
-                new GoalActionDto("카페 지출 줄이기", "테이크아웃 횟수를 조정해보세요.", BigDecimal.valueOf(15000), "카페", 78),
-                new GoalActionDto("구독 정리", "잘 쓰지 않는 정기결제를 점검하세요.", BigDecimal.valueOf(9900), "구독", 68)
-        );
+        Long memberId = currentMemberProvider.currentMemberId();
+        YearMonth month = YearMonth.now(clock);
+        List<Expense> rows = expenseRepository.findByMemberIdAndSpentDateBetweenOrderBySpentDateDesc(
+                memberId, month.atDay(1), month.atEndOfMonth());
+        BigDecimal total = rows.stream().map(Expense::getAmount).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (total.signum() == 0) {
+            return List.of();
+        }
+        Map<String, List<Expense>> byCategory = rows.stream()
+                .filter(row -> row.getCategory() != null && row.getAmount() != null)
+                .collect(Collectors.groupingBy(Expense::getCategory));
+        return byCategory.entrySet().stream()
+                .map(entry -> Map.entry(entry.getKey(), entry.getValue().stream().map(Expense::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add)))
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .limit(3)
+                .map(entry -> {
+                    String category = entry.getKey();
+                    BigDecimal spent = entry.getValue();
+                    int count = byCategory.get(category).size();
+                    BigDecimal saving = spent.multiply(REDUCTION_RATE)
+                            .divide(BigDecimal.valueOf(100 * 100L), 0, RoundingMode.DOWN)
+                            .multiply(BigDecimal.valueOf(100));
+                    int share = spent.multiply(BigDecimal.valueOf(100)).divide(total, 0, RoundingMode.HALF_UP).intValue();
+                    return new GoalActionDto(
+                            category + " 20% 줄이기",
+                            String.format("이번 달 %d번 썼어요. 다섯 번 중 한 번만 참으면 돼요.", count),
+                            saving,
+                            category,
+                            share);
+                })
+                .toList();
     }
 
     private SavingGoal findOwnedGoal(Long id) {

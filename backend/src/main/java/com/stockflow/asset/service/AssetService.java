@@ -11,6 +11,8 @@ import com.stockflow.asset.repository.FinancialAccountRepository;
 import com.stockflow.asset.repository.MonthlyBudgetRepository;
 import com.stockflow.auth.security.CurrentMemberProvider;
 import com.stockflow.expense.service.ExpenseService;
+import com.stockflow.global.type.TransactionType;
+import com.stockflow.transaction.repository.InvestmentTransactionRepository;
 import com.stockflow.portfolio.entity.Portfolio;
 import com.stockflow.portfolio.repository.PortfolioRepository;
 import java.math.BigDecimal;
@@ -29,6 +31,7 @@ public class AssetService {
     private final FinancialAccountRepository accountRepository;
     private final MonthlyBudgetRepository budgetRepository;
     private final PortfolioRepository portfolioRepository;
+    private final InvestmentTransactionRepository transactionRepository;
     private final ExpenseService expenseService;
     private final CurrentMemberProvider currentMemberProvider;
 
@@ -46,10 +49,14 @@ public class AssetService {
                 .orElse(BigDecimal.ZERO);
         BigDecimal monthlyExpense = expenseService.getMonthlySummary(targetMonth).totalAmount();
         BigDecimal remainingLivingBudget = budget.getLivingBudgetAmount().subtract(monthlyExpense).max(BigDecimal.ZERO);
-        BigDecimal investmentAvailable = remainingLivingBudget
-                .add(budget.getPlannedInvestmentAmount())
-                .subtract(budget.getPlannedSavingAmount().divide(BigDecimal.valueOf(2), 0, RoundingMode.HALF_UP))
-                .max(BigDecimal.ZERO);
+        // 투자 가능 금액은 이번 달 예산에 적어 둔 투자 계획에서 이번 달에 이미 산 금액을 뺀 것이다.
+        // 예전 식은 남은 생활비까지 더해서, 밥값을 투자해도 된다고 말하고 있었다.
+        BigDecimal boughtThisMonth = transactionRepository.findByMemberIdOrderByTransactionDateDescCreatedAtDesc(memberId).stream()
+                .filter(tx -> tx.getTransactionType() == TransactionType.BUY)
+                .filter(tx -> tx.getTransactionDate() != null && YearMonth.from(tx.getTransactionDate()).equals(targetMonth))
+                .map(tx -> tx.getTotalAmount() == null ? BigDecimal.ZERO : tx.getTotalAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal investmentAvailable = budget.getPlannedInvestmentAmount().subtract(boughtThisMonth).max(BigDecimal.ZERO);
         BigDecimal savingRate = budget.getIncomeAmount().compareTo(BigDecimal.ZERO) == 0
                 ? BigDecimal.ZERO
                 : budget.getPlannedSavingAmount().multiply(BigDecimal.valueOf(100)).divide(budget.getIncomeAmount(), 1, RoundingMode.HALF_UP);

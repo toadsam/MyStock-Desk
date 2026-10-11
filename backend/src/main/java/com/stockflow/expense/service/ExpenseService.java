@@ -17,6 +17,7 @@ import com.stockflow.goal.dto.SavingGoalDto;
 import com.stockflow.goal.service.GoalService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -37,6 +38,7 @@ public class ExpenseService {
     private final MonthlyBudgetRepository budgetRepository;
     private final GoalService goalService;
     private final CurrentMemberProvider currentMemberProvider;
+    private final Clock clock;
 
     public List<ExpenseDto> getExpenses(YearMonth month) {
         return getMonthlyExpenses(currentMemberProvider.currentMemberId(), resolveMonth(month)).stream()
@@ -48,7 +50,17 @@ public class ExpenseService {
         Long memberId = currentMemberProvider.currentMemberId();
         YearMonth targetMonth = resolveMonth(month);
         List<Expense> expenses = getMonthlyExpenses(memberId, targetMonth);
-        List<Expense> previousExpenses = getMonthlyExpenses(memberId, targetMonth.minusMonths(1));
+        // 이번 달은 아직 끝나지 않았다. 11일까지 쓴 돈을 지난 달 한 달 전체와 비교하면 늘 "줄었다"가 된다.
+        // 그래서 이번 달이면 지난 달도 같은 날짜까지만 더하고, 일평균도 지난 날수로 나눈다.
+        LocalDate today = LocalDate.now(clock);
+        boolean inProgress = targetMonth.equals(YearMonth.from(today));
+        int elapsedDays = inProgress ? today.getDayOfMonth() : targetMonth.lengthOfMonth();
+        YearMonth previousMonth = targetMonth.minusMonths(1);
+        LocalDate previousEnd = inProgress
+                ? previousMonth.atDay(Math.min(today.getDayOfMonth(), previousMonth.lengthOfMonth()))
+                : previousMonth.atEndOfMonth();
+        List<Expense> previousExpenses = expenseRepository.findByMemberIdAndSpentDateBetweenOrderBySpentDateDesc(
+                memberId, previousMonth.atDay(1), previousEnd);
         BigDecimal total = sum(expenses);
         BigDecimal previousTotal = sum(previousExpenses);
         List<ExpenseCategorySummaryDto> categories = categorySummaries(expenses, total);
@@ -58,7 +70,7 @@ public class ExpenseService {
                 total,
                 previousTotal,
                 rate(total.subtract(previousTotal), previousTotal),
-                total.divide(BigDecimal.valueOf(targetMonth.lengthOfMonth()), 0, RoundingMode.HALF_UP),
+                total.divide(BigDecimal.valueOf(elapsedDays), 0, RoundingMode.HALF_UP),
                 categories,
                 blockers,
                 trends(memberId, targetMonth)
@@ -266,6 +278,6 @@ public class ExpenseService {
     }
 
     private YearMonth resolveMonth(YearMonth month) {
-        return month == null ? YearMonth.now() : month;
+        return month == null ? YearMonth.now(clock) : month;
     }
 }
