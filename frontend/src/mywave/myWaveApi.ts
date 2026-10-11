@@ -18,9 +18,21 @@ export type MyWaveDashboardResponse = {
     monthlyIncome: number
     monthlyExpense: number
     savingRate: number
+    accountBalance: number
+    investmentAsset: number
+    budget: {
+      incomeAmount: number
+      livingBudgetAmount: number
+      fixedExpenseAmount: number
+      plannedSavingAmount: number
+      plannedInvestmentAmount: number
+    }
   }
   goalSummary: {
+    activeGoalCount: number
+    averageProgressRate: number
     mainGoal?: {
+      id: number
       title: string
       targetAmount: number
       currentAmount: number
@@ -34,6 +46,7 @@ export type MyWaveDashboardResponse = {
   }
   expenseSummary: {
     totalAmount: number
+    previousMonthAmount: number
     changeRate: number
     dailyAverageAmount: number
     categories: Array<{ category: string; amount: number; ratio: number; count: number; averageAmount: number }>
@@ -42,8 +55,12 @@ export type MyWaveDashboardResponse = {
   }
   portfolio?: {
     totalAsset: number
+    cash: number
+    totalPurchaseAmount: number
+    totalEvaluationAmount: number
     totalProfitLoss: number
     totalReturnRate: number
+    dailyProfitLoss: number
     dailyReturnRate: number
   } | null
   portfolioAllocation: Array<{ name: string; value: number; rate: number }>
