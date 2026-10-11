@@ -39,7 +39,9 @@ import {
   QuickExpenseButtons,
 } from './ExpenseCapture'
 import { actionTone, allocationColor, categoryStyle, goalStyle, mobileNavItems, navItems } from './myWaveData'
-import waveHero from '../assets/mywave/wave-hero.png'
+import belugaJumpArt from '../assets/mywave/beluga-jump.png'
+import belugaPhoneArt from '../assets/mywave/beluga-phone.png'
+import { Celebration } from './Celebration'
 import {
   addMyWaveWatchlist,
   chatWithMyWaveCoach,
@@ -294,6 +296,7 @@ function StockRedirect() {
 
 function Shell() {
   const runtimeData = useMyWaveRuntimeData()
+  const location = useLocation()
 
   return (
     <MyWaveDataContext.Provider value={runtimeData}>
@@ -307,7 +310,10 @@ function Shell() {
               <div className="mx-auto w-full max-w-[1460px] px-5 py-5 sm:px-7 lg:px-10 lg:py-8">
                 <DesktopHeader />
                 <DataStatusBanner />
-                <Outlet />
+                {/* 화면이 바뀔 때마다 살짝 떠오르며 들어온다. */}
+                <div key={location.pathname} className="page-enter">
+                  <Outlet />
+                </div>
               </div>
             </main>
           </div>
@@ -608,7 +614,7 @@ function Sidebar() {
         <div className="font-black text-blue-700">MyWave 시작하기</div>
         <p className="mt-3 text-sm leading-6 text-slate-500">3분 만에 나에게 맞는 투자 흐름을 설계해보세요.</p>
         <button onClick={() => navigate('/onboarding')} className="mt-4 rounded-full border border-blue-600 px-4 py-2 text-sm font-bold text-blue-700">시작하기 <ChevronRight className="inline h-4 w-4" /></button>
-        <img src={waveHero} alt="" className="ml-auto mt-2 h-20 w-32 object-contain" />
+        <img src={belugaJumpArt} alt="" className="wave-bob ml-auto mt-2 h-24 w-24 object-contain" />
       </div>
       <div className="mt-10 border-t border-slate-200 pt-8">
         <div className="flex items-center gap-4">
@@ -1241,7 +1247,7 @@ function MainGoalCard() {
           <BlueMetric label="하루 목표 금액" value={won(financeSummary.dailyTarget)} />
         </div>
       </div>
-      <img src={waveHero} alt="" className="absolute bottom-0 right-0 hidden h-44 w-64 object-contain opacity-90 mix-blend-multiply md:block lg:h-72 lg:w-[420px]" />
+      <img src={belugaJumpArt} alt="" className="wave-bob absolute bottom-4 right-6 hidden h-40 w-40 object-contain drop-shadow-[0_14px_20px_rgba(10,40,140,.35)] md:block lg:h-52 lg:w-52" />
     </BlueCard>
   )
 }
@@ -1289,7 +1295,8 @@ function ActionPanel() {
 
   return (
     <Card title={<span>목표 달성을 위한 추천 행동 <Info className="inline h-4 w-4 text-slate-400" /></span>}>
-      <div className="grid gap-4 lg:grid-cols-3">
+      {recommendedActions.length === 0 && <p className="text-sm font-bold text-slate-500">이번 달 소비 기록이 쌓이면 줄일 만한 곳을 골라 드려요.</p>}
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))]">
         {recommendedActions.map((action) => {
           const Icon = action.icon
           return (
@@ -1320,7 +1327,7 @@ function GoalsList() {
         {goals.slice(1).map((goal) => {
           const Icon = goal.icon
           return (
-            <div key={goal.title} className="grid gap-4 py-5 first:pt-0 last:pb-0 lg:grid-cols-[1fr_280px_80px] lg:items-center">
+            <div key={goal.title} className="grid gap-4 py-5 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
               <div className="flex min-w-0 items-center gap-5">
                 <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full" style={{ background: `${goal.accent}18`, color: goal.accent }}>
                   <Icon className="h-8 w-8" />
@@ -1350,6 +1357,7 @@ function GoalManagementPanel() {
   const navigate = useNavigate()
   const [goals, setGoals] = useState<MyWaveGoalResponse[]>([])
   const [message, setMessage] = useState('')
+  const [celebrating, setCelebrating] = useState<string | null>(null)
 
   async function loadGoals() {
     try {
@@ -1375,6 +1383,7 @@ function GoalManagementPanel() {
         priority: goal.priority,
       })
       setMessage(status === 'COMPLETED' ? '목표를 완료 처리했습니다.' : '목표 상태가 변경되었습니다.')
+      if (status === 'COMPLETED' && goal.status !== 'COMPLETED') setCelebrating(goal.title)
       await loadGoals()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '목표 상태 변경에 실패했습니다.')
@@ -1396,6 +1405,13 @@ function GoalManagementPanel() {
       title="목표 관리"
       action={<button onClick={() => navigate('/goals/new')} className="pressable rounded-full bg-blue-700 px-4 py-2 text-sm font-black text-white">+ 목표 추가</button>}
     >
+      {celebrating && (
+        <Celebration
+          title="목표를 이뤘어요!"
+          message={`"${celebrating}" 목표를 끝까지 해냈어요. 다음 목표도 같이 채워 봐요.`}
+          onClose={() => setCelebrating(null)}
+        />
+      )}
       {message && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{message}</div>}
       <div className="space-y-3">
         {goals.map((goal) => (
@@ -1484,7 +1500,7 @@ function SpendingHero() {
           <BlueMetric label="지난 달 같은 기간" value={won(financeSummary.previousSpending)} />
         </div>
       </div>
-      <img src={waveHero} alt="" className="absolute right-4 top-5 h-36 w-56 object-contain opacity-90 mix-blend-multiply lg:h-52 lg:w-80" />
+      <img src={belugaPhoneArt} alt="" className="wave-bob absolute right-6 top-6 h-32 w-32 object-contain drop-shadow-[0_14px_20px_rgba(10,40,140,.35)] lg:h-44 lg:w-44" />
     </BlueCard>
   )
 }
@@ -1679,7 +1695,7 @@ function PortfolioHero() {
           <BlueMetric label="보유 종목" value={`${holdings.length}개`} />
         </div>
       </div>
-      <img src={waveHero} alt="" className="absolute bottom-0 right-3 hidden h-44 w-72 object-contain opacity-90 mix-blend-multiply lg:block" />
+      <img src={belugaPhoneArt} alt="" className="wave-bob absolute bottom-4 right-6 hidden h-40 w-40 object-contain drop-shadow-[0_14px_20px_rgba(10,40,140,.35)] lg:block" />
     </BlueCard>
   )
 }
