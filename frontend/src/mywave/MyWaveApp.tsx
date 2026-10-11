@@ -465,12 +465,11 @@ function mapSpendingCategories(dashboard: MyWaveDashboardResponse): RuntimeCateg
 }
 
 function mapSpendingBlockers(dashboard: MyWaveDashboardResponse): RuntimeBlocker[] {
-  const ratios = new Map(dashboard.expenseSummary.categories.map((category) => [category.category, toNumber(category.ratio)]))
   return dashboard.expenseSummary.goalBlockers.map((blocker) => ({
     name: blocker.category,
     amount: toNumber(blocker.amount),
     count: toNumber(blocker.count),
-    rate: ratios.get(blocker.category) ?? 0,
+    rate: toNumber(blocker.ratio),
     ...categoryStyle(blocker.category),
   }))
 }

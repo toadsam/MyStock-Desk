@@ -50,8 +50,8 @@ export type MyWaveDashboardResponse = {
     changeRate: number
     dailyAverageAmount: number
     categories: Array<{ category: string; amount: number; ratio: number; count: number; averageAmount: number }>
-    goalBlockers: Array<{ rank: number; category: string; amount: number; count: number; goalImpactRate: number }>
-    trends: Array<{ month: string; amount: number; budget: number; goalImpactAmount: number }>
+    goalBlockers: Array<{ rank: number; category: string; amount: number; count: number; ratio: number }>
+    trends: Array<{ month: string; amount: number; budget: number }>
   }
   portfolio?: {
     totalAsset: number
@@ -171,8 +171,8 @@ export type MyWaveExpenseSummaryResponse = {
   changeRate: number
   dailyAverageAmount: number
   categories: Array<{ category: string; amount: number; ratio: number; count: number; averageAmount: number }>
-  goalBlockers: Array<{ rank: number; category: string; amount: number; count: number; goalImpactRate: number }>
-  trends: Array<{ month: string; amount: number; budget: number; goalImpactAmount: number }>
+  goalBlockers: Array<{ rank: number; category: string; amount: number; count: number; ratio: number }>
+  trends: Array<{ month: string; amount: number; budget: number }>
 }
 
 export type MyWaveMemberResponse = {
