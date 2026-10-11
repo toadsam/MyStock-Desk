@@ -1,5 +1,6 @@
 package com.stockflow.dashboard.service;
 
+import com.stockflow.global.format.Formats;
 import com.stockflow.asset.dto.AssetSummaryDto;
 import com.stockflow.asset.service.AssetService;
 import com.stockflow.dashboard.dto.MyWaveDashboardDto;
@@ -52,8 +53,8 @@ public class MyWaveDashboardService {
 
     private List<String> insights(AssetSummaryDto assetSummary, GoalSummaryDto goalSummary, ExpenseMonthlySummaryDto expenseSummary) {
         return List.of(
-                "남은 생활비는 " + assetSummary.remainingLivingBudget().toPlainString() + "원이고, 투자 가능 금액은 " + assetSummary.investmentAvailableAmount().toPlainString() + "원입니다.",
-                "목표 달성률은 평균 " + goalSummary.averageProgressRate().toPlainString() + "%입니다.",
+                "남은 생활비는 " + Formats.won(assetSummary.remainingLivingBudget()) + "이고, 투자 가능 금액은 " + Formats.won(assetSummary.investmentAvailableAmount()) + "입니다.",
+                "목표 달성률은 평균 " + Formats.rate(goalSummary.averageProgressRate()) + "입니다.",
                 expenseSummary.goalBlockers().isEmpty()
                         ? "이번 달 목표를 방해하는 주요 소비가 아직 없습니다."
                         : expenseSummary.goalBlockers().get(0).category() + " 지출이 목표 달성에 가장 큰 영향을 주고 있습니다."

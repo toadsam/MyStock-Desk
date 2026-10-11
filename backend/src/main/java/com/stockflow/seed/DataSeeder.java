@@ -26,6 +26,8 @@ import com.stockflow.market.repository.PricePointRepository;
 import com.stockflow.market.repository.SectorPerformanceRepository;
 import com.stockflow.member.entity.Member;
 import com.stockflow.member.repository.MemberRepository;
+import com.stockflow.notification.entity.Notification;
+import com.stockflow.notification.repository.NotificationRepository;
 import com.stockflow.news.entity.News;
 import com.stockflow.news.repository.NewsRepository;
 import com.stockflow.portfolio.entity.Holding;
@@ -81,6 +83,7 @@ public class DataSeeder implements CommandLineRunner {
     private final SavingGoalRepository goalRepository;
     private final ExpenseRepository expenseRepository;
     private final ExpenseTemplateRepository expenseTemplateRepository;
+    private final NotificationRepository notificationRepository;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
@@ -152,6 +155,26 @@ public class DataSeeder implements CommandLineRunner {
         rows.add(expense(memberId, "카페", "학교 앞 카페", 3_000, today, today.atTime(8, 42)));
         rows.add(expense(memberId, "식비", "학생식당", 3_800, today, today.atTime(12, 10)));
         expenseRepository.saveAll(rows);
+
+        // 알림도 위에서 넣은 기록과 맞는 사실만 쓴다. (112,000 / 300,000 = 37%, 삼성전자 비중 52%)
+        notificationRepository.saveAll(List.of(
+                notification(memberId, "목표", "목표 달성률 업데이트", "\"다음 달까지 30만원 모으기\" 목표가 37% 달성되었어요.", "/goals", "green", now.minusMinutes(10)),
+                notification(memberId, "투자", "한 종목 비중이 커요", "삼성전자가 투자 자산의 절반 넘게 차지해요. 구성을 확인해 보세요.", "/portfolio/risk", "blue", now.minusHours(3)),
+                notification(memberId, "이벤트", "MyWave 에 오신 걸 환영해요", "기록을 넣을수록 하루 예산이 정확해져요. 시작 안내를 볼까요?", "/onboarding", "violet", now.minusDays(1))
+        ));
+    }
+
+    private Notification notification(Long memberId, String category, String title, String body, String targetPath, String tone, LocalDateTime createdAt) {
+        return Notification.builder()
+                .memberId(memberId)
+                .category(category)
+                .title(title)
+                .body(body)
+                .targetPath(targetPath)
+                .tone(tone)
+                .read(false)
+                .createdAt(createdAt)
+                .build();
     }
 
     /** 요일과 날짜로만 정해지는 하루치 소비. 무작위를 쓰지 않아 띄울 때마다 같은 모양이 나온다. */
