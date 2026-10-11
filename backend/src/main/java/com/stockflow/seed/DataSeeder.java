@@ -1,5 +1,15 @@
 package com.stockflow.seed;
 
+import com.stockflow.asset.entity.FinancialAccount;
+import com.stockflow.asset.entity.MonthlyBudget;
+import com.stockflow.asset.repository.FinancialAccountRepository;
+import com.stockflow.asset.repository.MonthlyBudgetRepository;
+import com.stockflow.expense.entity.Expense;
+import com.stockflow.expense.entity.ExpenseTemplate;
+import com.stockflow.expense.repository.ExpenseRepository;
+import com.stockflow.expense.repository.ExpenseTemplateRepository;
+import com.stockflow.goal.entity.SavingGoal;
+import com.stockflow.goal.repository.SavingGoalRepository;
 import com.stockflow.global.type.ImpactType;
 import com.stockflow.global.type.InsightType;
 import com.stockflow.global.type.SectorPerformanceType;
@@ -32,8 +42,13 @@ import com.stockflow.watchlist.entity.Watchlist;
 import com.stockflow.watchlist.repository.WatchlistRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -61,7 +76,13 @@ public class DataSeeder implements CommandLineRunner {
     private final NewsRepository newsRepository;
     private final AiInsightRepository aiInsightRepository;
     private final SectorPerformanceRepository sectorPerformanceRepository;
+    private final FinancialAccountRepository accountRepository;
+    private final MonthlyBudgetRepository budgetRepository;
+    private final SavingGoalRepository goalRepository;
+    private final ExpenseRepository expenseRepository;
+    private final ExpenseTemplateRepository expenseTemplateRepository;
     private final PasswordEncoder passwordEncoder;
+    private final Clock clock;
 
     @Override
     public void run(String... args) {
@@ -89,6 +110,137 @@ public class DataSeeder implements CommandLineRunner {
         seedEarnings(stocks);
         seedNews();
         seedInsights();
+        seedMyWaveLife(member.getId());
+    }
+
+    /**
+     * 데모 계정 한 명의 생활 기록. 알바비로 생활하는 대학생 한 달을 가정한다.
+     *
+     * <p>예전에는 서비스가 조회 시점에 "비어 있으면 데모로 채우기"를 했다. 그러면 새로 가입한
+     * 실제 사용자 계정에도 남의 소비가 들어간다. 이제 데모 데이터는 여기, 데모 계정에만 넣는다.
+     * 날짜는 전부 오늘을 기준으로 잡아서 언제 띄워도 "이번 달"과 "이번 주"가 채워져 있다.
+     */
+    private void seedMyWaveLife(Long memberId) {
+        LocalDate today = LocalDate.now(clock);
+        YearMonth month = YearMonth.from(today);
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        accountRepository.saveAll(List.of(
+                account(memberId, "생활비 통장", "BANK", 57_600, now),
+                account(memberId, "목표 저축 통장", "SAVINGS", 112_000, now),
+                account(memberId, "비상금 통장", "SAVINGS", 350_000, now)
+        ));
+        budgetRepository.saveAll(List.of(
+                budget(memberId, month.minusMonths(1)),
+                budget(memberId, month)
+        ));
+        goalRepository.saveAll(List.of(
+                goal(memberId, "다음 달까지 30만원 모으기", 300_000, 112_000, today.plusDays(16), 1, now),
+                goal(memberId, "비상금 50만원 만들기", 500_000, 350_000, today.plusDays(90), 2, now),
+                goal(memberId, "여름방학 여행비", 400_000, 85_000, today.plusDays(120), 3, now)
+        ));
+        expenseTemplateRepository.saveAll(List.of(
+                template(memberId, "카페", "카페", "학교 앞 카페", 3_000, 14, now),
+                template(memberId, "편의점", "식비", "편의점", 2_500, 9, now),
+                template(memberId, "학식", "식비", "학생식당", 3_800, 12, now)
+        ));
+
+        List<Expense> rows = new ArrayList<>();
+        for (LocalDate day = month.minusMonths(1).atDay(1); day.isBefore(today); day = day.plusDays(1)) {
+            rows.addAll(dailyLife(memberId, day));
+        }
+        rows.add(expense(memberId, "카페", "학교 앞 카페", 3_000, today, today.atTime(8, 42)));
+        rows.add(expense(memberId, "식비", "학생식당", 3_800, today, today.atTime(12, 10)));
+        expenseRepository.saveAll(rows);
+    }
+
+    /** 요일과 날짜로만 정해지는 하루치 소비. 무작위를 쓰지 않아 띄울 때마다 같은 모양이 나온다. */
+    private List<Expense> dailyLife(Long memberId, LocalDate day) {
+        boolean weekday = day.getDayOfWeek().getValue() <= 5;
+        int n = day.getDayOfMonth();
+        List<Expense> rows = new ArrayList<>();
+        if (n % 3 != 0) {
+            rows.add(expense(memberId, "카페", "학교 앞 카페", 3_000, day, day.atTime(LocalTime.of(9, 5))));
+        }
+        if (weekday) {
+            rows.add(expense(memberId, "식비", "학생식당", 3_800, day, day.atTime(12, 20)));
+            rows.add(expense(memberId, "교통", "대중교통", 2_900, day, day.atTime(18, 30)));
+        }
+        if (n % 2 == 0) {
+            rows.add(expense(memberId, "식비", "편의점", 2_500, day, day.atTime(21, 10)));
+        }
+        if (day.getDayOfWeek() == DayOfWeek.FRIDAY || (day.getDayOfWeek() == DayOfWeek.SATURDAY && n % 2 == 1)) {
+            rows.add(expense(memberId, "배달비", "배달의민족", 18_900, day, day.atTime(19, 40)));
+        }
+        if (n % 9 == 4) {
+            rows.add(expense(memberId, "쇼핑", "온라인 쇼핑", 15_800, day, day.atTime(23, 0)));
+        }
+        return rows;
+    }
+
+    private FinancialAccount account(Long memberId, String name, String type, long balance, LocalDateTime now) {
+        return FinancialAccount.builder()
+                .memberId(memberId)
+                .name(name)
+                .accountType(type)
+                .institutionName("MyWave Bank")
+                .balance(bd(balance))
+                .includedInAssets(true)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+    }
+
+    private MonthlyBudget budget(Long memberId, YearMonth month) {
+        return MonthlyBudget.builder()
+                .memberId(memberId)
+                .budgetMonth(month)
+                .incomeAmount(bd(850_000))
+                .livingBudgetAmount(bd(550_000))
+                .fixedExpenseAmount(bd(120_000))
+                .plannedSavingAmount(bd(100_000))
+                .plannedInvestmentAmount(bd(30_000))
+                .build();
+    }
+
+    private SavingGoal goal(Long memberId, String title, long target, long current, LocalDate targetDate, int priority, LocalDateTime now) {
+        return SavingGoal.builder()
+                .memberId(memberId)
+                .title(title)
+                .targetAmount(bd(target))
+                .currentAmount(bd(current))
+                .targetDate(targetDate)
+                .status("ACTIVE")
+                .priority(priority)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+    }
+
+    private ExpenseTemplate template(Long memberId, String name, String category, String merchant, long amount, int usage, LocalDateTime now) {
+        return ExpenseTemplate.builder()
+                .memberId(memberId)
+                .name(name)
+                .category(category)
+                .merchant(merchant)
+                .amount(bd(amount))
+                .usageCount(usage)
+                .lastUsedAt(now)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+    }
+
+    private Expense expense(Long memberId, String category, String merchant, long amount, LocalDate day, LocalDateTime at) {
+        return Expense.builder()
+                .memberId(memberId)
+                .category(category)
+                .merchant(merchant)
+                .amount(bd(amount))
+                .spentDate(day)
+                .createdAt(at)
+                .updatedAt(at)
+                .build();
     }
 
     private Map<String, Stock> seedStocks() {

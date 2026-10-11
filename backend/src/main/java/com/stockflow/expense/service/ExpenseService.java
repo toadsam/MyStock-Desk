@@ -1,5 +1,6 @@
 package com.stockflow.expense.service;
 
+import com.stockflow.asset.repository.MonthlyBudgetRepository;
 import com.stockflow.auth.security.CurrentMemberProvider;
 import com.stockflow.expense.dto.ExpenseBlockerDto;
 import com.stockflow.expense.dto.ExpenseCategorySummaryDto;
@@ -12,6 +13,8 @@ import com.stockflow.expense.dto.SavingSimulationRequest;
 import com.stockflow.expense.dto.SavingSimulationResultDto;
 import com.stockflow.expense.entity.Expense;
 import com.stockflow.expense.repository.ExpenseRepository;
+import com.stockflow.goal.dto.SavingGoalDto;
+import com.stockflow.goal.service.GoalService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -31,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
+    private final MonthlyBudgetRepository budgetRepository;
+    private final GoalService goalService;
     private final CurrentMemberProvider currentMemberProvider;
 
     public List<ExpenseDto> getExpenses(YearMonth month) {
@@ -164,8 +169,15 @@ public class ExpenseService {
         }
         BigDecimal fixed = request == null || request.fixedSavingAmount() == null ? BigDecimal.ZERO : request.fixedSavingAmount();
         BigDecimal totalSaving = variableSaving.add(fixed);
-        BigDecimal currentRate = BigDecimal.valueOf(37);
-        BigDecimal expectedRate = currentRate.add(totalSaving.divide(BigDecimal.valueOf(3000), 1, RoundingMode.HALF_UP)).min(BigDecimal.valueOf(100));
+        // 아낀 돈이 그대로 가장 가까운 목표로 들어간다고 보고 달성률을 다시 계산한다.
+        SavingGoalDto mainGoal = goalService.getSummary().mainGoal();
+        BigDecimal currentRate = mainGoal == null ? BigDecimal.ZERO : mainGoal.progressRate();
+        BigDecimal expectedRate = mainGoal == null || mainGoal.targetAmount().signum() == 0
+                ? BigDecimal.ZERO
+                : mainGoal.currentAmount().add(totalSaving)
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(mainGoal.targetAmount(), 1, RoundingMode.HALF_UP)
+                        .min(BigDecimal.valueOf(100));
         return new SavingSimulationResultDto(currentRate, expectedRate, totalSaving, savings);
     }
 
@@ -178,43 +190,13 @@ public class ExpenseService {
         return expense;
     }
 
+    /** 기록이 없으면 빈 목록이다. 비어 있는 달을 데모 소비로 채우지 않는다. */
     private List<Expense> getMonthlyExpenses(Long memberId, YearMonth month) {
-        List<Expense> expenses = expenseRepository.findByMemberIdAndSpentDateBetweenOrderBySpentDateDesc(
+        return expenseRepository.findByMemberIdAndSpentDateBetweenOrderBySpentDateDesc(
                 memberId,
                 month.atDay(1),
                 month.atEndOfMonth()
         );
-        if (!expenses.isEmpty()) {
-            return expenses;
-        }
-        if (month.equals(YearMonth.now())) {
-            seedDemoExpenses(memberId, month);
-            return expenseRepository.findByMemberIdAndSpentDateBetweenOrderBySpentDateDesc(memberId, month.atDay(1), month.atEndOfMonth());
-        }
-        return List.of();
-    }
-
-    private void seedDemoExpenses(Long memberId, YearMonth month) {
-        expenseRepository.saveAll(List.of(
-                demo(memberId, "배달비", "배달의민족", 98500, month.atDay(3)),
-                demo(memberId, "쇼핑", "온라인 쇼핑", 68000, month.atDay(8)),
-                demo(memberId, "식비", "학식·편의점", 186000, month.atDay(12)),
-                demo(memberId, "카페", "학교 앞 카페", 74200, month.atDay(18)),
-                demo(memberId, "교통", "대중교통", 62000, month.atDay(21))
-        ));
-    }
-
-    private Expense demo(Long memberId, String category, String merchant, long amount, LocalDate date) {
-        return Expense.builder()
-                .memberId(memberId)
-                .category(category)
-                .merchant(merchant)
-                .amount(BigDecimal.valueOf(amount))
-                .spentDate(date)
-                .memo("MyWave 데모 소비")
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
     }
 
     private List<ExpenseCategorySummaryDto> categorySummaries(List<Expense> expenses, BigDecimal total) {
@@ -253,18 +235,19 @@ public class ExpenseService {
     }
 
     private List<ExpenseTrendDto> trends(Long memberId, YearMonth targetMonth) {
-        return java.util.stream.IntStream.rangeClosed(5, 0)
-                .mapToObj(offset -> targetMonth.minusMonths(offset))
+        // 오래된 달부터 이번 달까지 여섯 달. 예산은 그 달에 정해 둔 생활비이고, 없으면 0 이다.
+        return java.util.stream.IntStream.rangeClosed(0, 5)
+                .mapToObj(index -> targetMonth.minusMonths(5 - index))
                 .map(month -> {
                     BigDecimal amount = sum(expenseRepository.findByMemberIdAndSpentDateBetweenOrderBySpentDateDesc(
                             memberId,
                             month.atDay(1),
                             month.atEndOfMonth()
                     ));
-                    if (amount.compareTo(BigDecimal.ZERO) == 0 && month.equals(targetMonth)) {
-                        amount = BigDecimal.valueOf(612_400);
-                    }
-                    return new ExpenseTrendDto(month.toString(), amount, BigDecimal.valueOf(670_000), amount.multiply(BigDecimal.valueOf(0.2)).setScale(0, RoundingMode.HALF_UP));
+                    BigDecimal budget = budgetRepository.findByMemberIdAndBudgetMonth(memberId, month)
+                            .map(found -> found.getLivingBudgetAmount())
+                            .orElse(BigDecimal.ZERO);
+                    return new ExpenseTrendDto(month.toString(), amount, budget, amount.multiply(BigDecimal.valueOf(0.2)).setScale(0, RoundingMode.HALF_UP));
                 })
                 .toList();
     }

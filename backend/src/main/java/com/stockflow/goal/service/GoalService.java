@@ -28,7 +28,7 @@ public class GoalService {
 
     public List<SavingGoalDto> getGoals(String status) {
         Long memberId = currentMemberProvider.currentMemberId();
-        List<SavingGoal> allGoals = ensureDemoGoals(memberId);
+        List<SavingGoal> allGoals = goalRepository.findByMemberIdOrderByPriorityAscTargetDateAsc(memberId);
         List<SavingGoal> goals = status == null || status.isBlank()
                 ? allGoals
                 : allGoals.stream()
@@ -115,34 +115,6 @@ public class GoalService {
             throw new IllegalArgumentException("접근할 수 없는 목표입니다.");
         }
         return goal;
-    }
-
-    private List<SavingGoal> ensureDemoGoals(Long memberId) {
-        List<SavingGoal> goals = goalRepository.findByMemberIdOrderByPriorityAscTargetDateAsc(memberId);
-        if (!goals.isEmpty()) {
-            return goals;
-        }
-        LocalDate today = LocalDate.now();
-        goalRepository.saveAll(List.of(
-                demo(memberId, "다음 달까지 30만원 모으기", 300_000, 112_000, today.plusDays(16), ACTIVE, 1),
-                demo(memberId, "비상금 50만원 만들기", 500_000, 350_000, today.plusDays(90), ACTIVE, 2),
-                demo(memberId, "여름방학 여행비", 400_000, 85_000, today.plusDays(120), ACTIVE, 3)
-        ));
-        return goalRepository.findByMemberIdOrderByPriorityAscTargetDateAsc(memberId);
-    }
-
-    private SavingGoal demo(Long memberId, String title, long target, long current, LocalDate targetDate, String status, int priority) {
-        return SavingGoal.builder()
-                .memberId(memberId)
-                .title(title)
-                .targetAmount(BigDecimal.valueOf(target))
-                .currentAmount(BigDecimal.valueOf(current))
-                .targetDate(targetDate)
-                .status(status)
-                .priority(priority)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
     }
 
     private String resolveStatus(String status) {
