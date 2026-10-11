@@ -31,27 +31,17 @@ import { won } from './format'
 import { Card, Field, ListRow } from './uiKit'
 import { Beluga, BelugaSays } from './Beluga'
 import { Amount } from './Amount'
+import { TodayHome } from './TodayHome'
 import {
   CashFlowCard,
   ExpenseImportCard,
   MerchantAutocomplete,
   QuickExpenseButtons,
 } from './ExpenseCapture'
-import {
-  activities as defaultActivities,
-  coachMessages as defaultCoachMessages,
-  financeSummary as defaultFinanceSummary,
-  goals as defaultGoals,
-  holdings as defaultHoldings,
-  mobileNavItems,
-  navItems,
-  portfolioAllocation as defaultPortfolioAllocation,
-  recommendedActions as defaultRecommendedActions,
-  spendingBlockers as defaultSpendingBlockers,
-  spendingCategories as defaultSpendingCategories,
-  spendingTrend as defaultSpendingTrend,
-} from './myWaveData'
-import waveHero from '../assets/mywave/wave-hero.png'
+import { actionTone, allocationColor, categoryStyle, goalStyle, mobileNavItems, navItems } from './myWaveData'
+import belugaJumpArt from '../assets/mywave/beluga-jump.png'
+import belugaPhoneArt from '../assets/mywave/beluga-phone.png'
+import { Celebration } from './Celebration'
 import {
   addMyWaveWatchlist,
   chatWithMyWaveCoach,
@@ -130,42 +120,128 @@ import {
 const activeClass = 'bg-blue-50 text-blue-700 shadow-[inset_0_0_0_1px_rgba(37,99,235,.04)]'
 const inactiveClass = 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
 
-type RuntimeGoal = (typeof defaultGoals)[number]
-type RuntimeAction = (typeof defaultRecommendedActions)[number]
-type RuntimeCategory = (typeof defaultSpendingCategories)[number]
-type RuntimeBlocker = (typeof defaultSpendingBlockers)[number]
-type RuntimeAllocation = (typeof defaultPortfolioAllocation)[number]
-type RuntimeCoachMessage = (typeof defaultCoachMessages)[number]
+type IconType = ComponentType<{ className?: string; style?: { color?: string } }>
+
+/**
+ * 화면 전체가 같이 쓰는 숫자. 전부 API 에서 온다.
+ *
+ * 불러오기 전과 실패했을 때는 0 과 빈 목록이다. 그럴듯한 데모 숫자로 채우지 않는다.
+ * 대신 status 를 보고 Shell 이 "불러오는 중 / 불러오지 못함"을 따로 알린다.
+ */
+type FinanceSummary = {
+  month: string
+  goalRate: number
+  averageGoalRate: number
+  targetAmount: number
+  savedAmount: number
+  remainingAmount: number
+  daysLeft: number
+  dailyTarget: number
+  mainGoalTargetDate: string
+  totalAsset: number
+  accountBalance: number
+  livingBudget: number
+  livingBudgetLeft: number
+  investableAmount: number
+  plannedSaving: number
+  totalSpending: number
+  previousSpending: number
+  spendingChangeRate: number
+  dailySpending: number
+  /** 생활비 예산 대비 이번 달 소비. 예산이 없으면 null. */
+  budgetRate: number | null
+  investmentValue: number
+  investmentPrincipal: number
+  investmentProfit: number
+  investmentReturn: number
+  dailyProfit: number
+  dailyReturn: number
+  savingRate: number
+}
+
+type RuntimeGoal = {
+  id: number
+  title: string
+  dueDate: string
+  status: string
+  saved: number
+  target: number
+  rate: number
+  daysLeft: number
+  accent: string
+  icon: IconType
+}
+
+type RuntimeAction = { title: string; detail: string; saving: number; category: string; icon: IconType; tone: 'violet' | 'green' | 'orange' }
+type RuntimeCategory = { name: string; amount: number; rate: number; count: number; average: number; icon: IconType; color: string }
+type RuntimeBlocker = { name: string; amount: number; count: number; rate: number; icon: IconType; color: string }
+type RuntimeAllocation = { name: string; amount: number; rate: number; color: string }
+type RuntimeHolding = { symbol: string; name: string; quantity: number; averagePrice: number; value: number; profit: number; returnRate: number; weight: number }
+type RuntimeActivity = { id: number; title: string; detail: string; amount: number; icon: IconType; color: string }
+type RuntimeCoachMessage = { from: 'bot' | 'user'; text: string; stats?: Array<{ label: string; value: string }>; suggestions?: string[] }
+type RuntimeTrend = { month: string; amount: number; budget: number }
 
 type MyWaveRuntimeData = {
-  financeSummary: typeof defaultFinanceSummary
+  financeSummary: FinanceSummary
   goals: RuntimeGoal[]
   recommendedActions: RuntimeAction[]
   spendingCategories: RuntimeCategory[]
   spendingBlockers: RuntimeBlocker[]
-  spendingTrend: typeof defaultSpendingTrend
+  spendingTrend: RuntimeTrend[]
   portfolioAllocation: RuntimeAllocation[]
-  holdings: typeof defaultHoldings
-  activities: typeof defaultActivities
+  holdings: RuntimeHolding[]
+  activities: RuntimeActivity[]
   coachMessages: RuntimeCoachMessage[]
-  source: 'api' | 'demo'
+  status: 'loading' | 'ready' | 'error'
+  reload: () => void
 }
 
-const defaultRuntimeData: MyWaveRuntimeData = {
-  financeSummary: defaultFinanceSummary,
-  goals: defaultGoals,
-  recommendedActions: defaultRecommendedActions,
-  spendingCategories: defaultSpendingCategories,
-  spendingBlockers: defaultSpendingBlockers,
-  spendingTrend: defaultSpendingTrend,
-  portfolioAllocation: defaultPortfolioAllocation,
-  holdings: defaultHoldings,
-  activities: defaultActivities,
-  coachMessages: defaultCoachMessages,
-  source: 'demo',
+const emptyFinanceSummary: FinanceSummary = {
+  month: '',
+  goalRate: 0,
+  averageGoalRate: 0,
+  targetAmount: 0,
+  savedAmount: 0,
+  remainingAmount: 0,
+  daysLeft: 0,
+  dailyTarget: 0,
+  mainGoalTargetDate: '',
+  totalAsset: 0,
+  accountBalance: 0,
+  livingBudget: 0,
+  livingBudgetLeft: 0,
+  investableAmount: 0,
+  plannedSaving: 0,
+  totalSpending: 0,
+  previousSpending: 0,
+  spendingChangeRate: 0,
+  dailySpending: 0,
+  budgetRate: null,
+  investmentValue: 0,
+  investmentPrincipal: 0,
+  investmentProfit: 0,
+  investmentReturn: 0,
+  dailyProfit: 0,
+  dailyReturn: 0,
+  savingRate: 0,
 }
 
-const MyWaveDataContext = createContext<MyWaveRuntimeData>(defaultRuntimeData)
+const emptyRuntimeData: MyWaveRuntimeData = {
+  financeSummary: emptyFinanceSummary,
+  goals: [],
+  recommendedActions: [],
+  spendingCategories: [],
+  spendingBlockers: [],
+  spendingTrend: [],
+  portfolioAllocation: [],
+  holdings: [],
+  activities: [],
+  coachMessages: [],
+  status: 'loading',
+  reload: () => {},
+}
+
+const MyWaveDataContext = createContext<MyWaveRuntimeData>(emptyRuntimeData)
 
 function useMyWaveData() {
   return useContext(MyWaveDataContext)
@@ -204,7 +280,7 @@ export default function MyWaveApp() {
           <Route path="market" element={<Navigate to="/portfolio" replace />} />
           <Route path="research" element={<Navigate to="/reports" replace />} />
           <Route path="themes" element={<Navigate to="/portfolio" replace />} />
-          <Route path="stock/:symbol" element={<Navigate to="/company/005930" replace />} />
+          <Route path="stock/:symbol" element={<StockRedirect />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Route>
@@ -212,8 +288,15 @@ export default function MyWaveApp() {
   )
 }
 
+/** 옛 주소 /stock/:symbol 은 같은 종목의 기업 상세로 보낸다. */
+function StockRedirect() {
+  const { symbol = '' } = useParams()
+  return <Navigate to={symbol ? `/company/${symbol}` : '/portfolio'} replace />
+}
+
 function Shell() {
   const runtimeData = useMyWaveRuntimeData()
+  const location = useLocation()
 
   return (
     <MyWaveDataContext.Provider value={runtimeData}>
@@ -226,7 +309,11 @@ function Shell() {
               <MobileTop />
               <div className="mx-auto w-full max-w-[1460px] px-5 py-5 sm:px-7 lg:px-10 lg:py-8">
                 <DesktopHeader />
-                <Outlet />
+                <DataStatusBanner />
+                {/* 화면이 바뀔 때마다 살짝 떠오르며 들어온다. */}
+                <div key={location.pathname} className="page-enter">
+                  <Outlet />
+                </div>
               </div>
             </main>
           </div>
@@ -237,21 +324,42 @@ function Shell() {
   )
 }
 
-function useMyWaveRuntimeData() {
-  const [data, setData] = useState<MyWaveRuntimeData>(defaultRuntimeData)
+/** 공통 숫자를 불러오지 못했을 때만 뜬다. 화면의 0 이 "기록이 없어서"인지 "못 불러와서"인지 구분하게 한다. */
+function DataStatusBanner() {
+  const { status, reload } = useMyWaveData()
+  if (status !== 'error') return null
+  return (
+    <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[20px] bg-red-50 px-5 py-4 text-sm font-bold text-red-700">
+      <span>서버에서 숫자를 불러오지 못했어요. 화면의 금액은 실제 기록이 아닐 수 있어요.</span>
+      <button onClick={reload} className="pressable rounded-full bg-white px-4 py-2 text-red-700">다시 불러오기</button>
+    </div>
+  )
+}
+
+function useMyWaveRuntimeData(): MyWaveRuntimeData {
+  const [data, setData] = useState<Omit<MyWaveRuntimeData, 'reload'>>(emptyRuntimeData)
+  const [reloadKey, setReloadKey] = useState(0)
+  const reload = useCallback(() => setReloadKey((value) => value + 1), [])
 
   useEffect(() => {
     let ignore = false
+    const month = new Date().toISOString().slice(0, 7)
 
-    Promise.allSettled([getMyWaveDashboard(), getMyWaveGoals(), getMyWaveActions(), getMyWaveCoachMessages()]).then((results) => {
+    Promise.allSettled([
+      getMyWaveDashboard(),
+      getMyWaveGoals(),
+      getMyWaveActions(),
+      getMyWaveCoachMessages(),
+      getMyWaveHoldings(),
+      getMyWaveExpenses(month),
+    ]).then((results) => {
       if (ignore) return
       const dashboard = settledValue<MyWaveDashboardResponse>(results[0])
       if (!dashboard) {
-        setData(defaultRuntimeData)
+        setData((previous) => ({ ...previous, status: 'error' }))
         return
       }
       setData({
-        ...defaultRuntimeData,
         financeSummary: mapFinanceSummary(dashboard),
         goals: mapGoals(settledValue<MyWaveGoalResponse[]>(results[1]) ?? [], dashboard),
         recommendedActions: mapActions(settledValue<MyWaveActionResponse[]>(results[2]) ?? []),
@@ -259,152 +367,204 @@ function useMyWaveRuntimeData() {
         spendingBlockers: mapSpendingBlockers(dashboard),
         spendingTrend: mapSpendingTrend(dashboard),
         portfolioAllocation: mapPortfolioAllocation(dashboard),
+        holdings: mapHoldings(settledValue<MyWaveHoldingResponse[]>(results[4]) ?? []),
+        activities: mapActivities(settledValue<MyWaveExpenseResponse[]>(results[5]) ?? []),
         coachMessages: mapCoachMessages(settledValue<MyWaveCoachMessageResponse[]>(results[3]) ?? []),
-        source: 'api',
+        status: 'ready',
       })
     })
 
     return () => {
       ignore = true
     }
-  }, [])
+  }, [reloadKey])
 
-  return data
+  return useMemo(() => ({ ...data, reload }), [data, reload])
 }
 
 function settledValue<T>(result: PromiseSettledResult<unknown>) {
   return result.status === 'fulfilled' ? (result.value as T) : null
 }
 
-function mapFinanceSummary(dashboard: MyWaveDashboardResponse): typeof defaultFinanceSummary {
+function mapFinanceSummary(dashboard: MyWaveDashboardResponse): FinanceSummary {
   const mainGoal = dashboard.goalSummary.mainGoal
   const portfolio = dashboard.portfolio
+  const budget = dashboard.assetSummary.budget
+  const livingBudget = toNumber(budget?.livingBudgetAmount)
+  const totalSpending = toNumber(dashboard.expenseSummary.totalAmount)
   return {
-    ...defaultFinanceSummary,
     month: formatMonth(dashboard.assetSummary.month),
-    goalRate: toNumber(dashboard.goalProgressRate, defaultFinanceSummary.goalRate),
-    targetAmount: toNumber(mainGoal?.targetAmount, defaultFinanceSummary.targetAmount),
-    savedAmount: toNumber(dashboard.currentSavingAmount, defaultFinanceSummary.savedAmount),
-    remainingAmount: toNumber(dashboard.remainingGoalAmount, defaultFinanceSummary.remainingAmount),
-    daysLeft: toNumber(mainGoal?.remainingDays, defaultFinanceSummary.daysLeft),
-    dailyTarget: toNumber(mainGoal?.dailyRequiredAmount, defaultFinanceSummary.dailyTarget),
-    totalAsset: toNumber(dashboard.totalAsset, defaultFinanceSummary.totalAsset),
-    livingBudgetLeft: toNumber(dashboard.remainingLivingBudget, defaultFinanceSummary.livingBudgetLeft),
-    investableAmount: toNumber(dashboard.investmentAvailableAmount, defaultFinanceSummary.investableAmount),
-    totalSpending: toNumber(dashboard.expenseSummary.totalAmount, defaultFinanceSummary.totalSpending),
-    dailySpending: toNumber(dashboard.expenseSummary.dailyAverageAmount, defaultFinanceSummary.dailySpending),
-    goalImpact: toNumber(dashboard.expenseSummary.changeRate, defaultFinanceSummary.goalImpact),
-    investmentProfit: toNumber(portfolio?.totalProfitLoss, defaultFinanceSummary.investmentProfit),
-    investmentReturn: toNumber(portfolio?.totalReturnRate, defaultFinanceSummary.investmentReturn),
-    yearlyReturn: toNumber(portfolio?.dailyReturnRate, defaultFinanceSummary.yearlyReturn),
-    savingRate: toNumber(dashboard.assetSummary.savingRate, defaultFinanceSummary.savingRate),
+    goalRate: toNumber(dashboard.goalProgressRate),
+    averageGoalRate: toNumber(dashboard.goalSummary.averageProgressRate),
+    targetAmount: toNumber(mainGoal?.targetAmount),
+    savedAmount: toNumber(dashboard.currentSavingAmount),
+    remainingAmount: toNumber(dashboard.remainingGoalAmount),
+    daysLeft: toNumber(mainGoal?.remainingDays),
+    dailyTarget: toNumber(mainGoal?.dailyRequiredAmount),
+    mainGoalTargetDate: formatDate(mainGoal?.targetDate ?? ''),
+    totalAsset: toNumber(dashboard.totalAsset),
+    accountBalance: toNumber(dashboard.assetSummary.accountBalance),
+    livingBudget,
+    livingBudgetLeft: toNumber(dashboard.remainingLivingBudget),
+    investableAmount: toNumber(dashboard.investmentAvailableAmount),
+    plannedSaving: toNumber(budget?.plannedSavingAmount),
+    totalSpending,
+    previousSpending: toNumber(dashboard.expenseSummary.previousMonthAmount),
+    spendingChangeRate: toNumber(dashboard.expenseSummary.changeRate),
+    dailySpending: toNumber(dashboard.expenseSummary.dailyAverageAmount),
+    budgetRate: livingBudget > 0 ? Math.round((totalSpending / livingBudget) * 100) : null,
+    investmentValue: toNumber(portfolio?.totalEvaluationAmount),
+    investmentPrincipal: toNumber(portfolio?.totalPurchaseAmount),
+    investmentProfit: toNumber(portfolio?.totalProfitLoss),
+    investmentReturn: toNumber(portfolio?.totalReturnRate),
+    dailyProfit: toNumber(portfolio?.dailyProfitLoss),
+    dailyReturn: toNumber(portfolio?.dailyReturnRate),
+    savingRate: toNumber(dashboard.assetSummary.savingRate),
   }
 }
 
+const GOAL_STATUS_LABEL: Record<string, string> = { ACTIVE: '진행 중', PAUSED: '일시정지', COMPLETED: '완료' }
+
+/** 목표 목록. 대시보드가 고른 "가장 가까운 목표"를 맨 앞에 둔다. 화면은 첫 번째를 메인 목표로 그린다. */
 function mapGoals(apiGoals: MyWaveGoalResponse[], dashboard: MyWaveDashboardResponse): RuntimeGoal[] {
-  const goals = apiGoals.length > 0 ? apiGoals : dashboard.goalSummary.mainGoal ? [dashboard.goalSummary.mainGoal] : []
-  if (goals.length === 0) return defaultGoals
-  return goals.map((goal, index) => ({
-    ...defaultGoals[index % defaultGoals.length],
+  const mainId = dashboard.goalSummary.mainGoal?.id
+  const ordered = [...apiGoals].sort((a, b) => (a.id === mainId ? -1 : b.id === mainId ? 1 : 0))
+  return ordered.map((goal, index) => ({
+    id: goal.id,
     title: goal.title,
     dueDate: formatDate(goal.targetDate),
-    status: goal.status === 'ACTIVE' ? '진행 중' : goal.status,
-    saved: toNumber(goal.currentAmount, 0),
-    target: toNumber(goal.targetAmount, 0),
-    rate: toNumber(goal.progressRate, 0),
-    daysLeft: toNumber(goal.remainingDays, 0),
+    status: GOAL_STATUS_LABEL[goal.status] ?? goal.status,
+    saved: toNumber(goal.currentAmount),
+    target: toNumber(goal.targetAmount),
+    rate: toNumber(goal.progressRate),
+    daysLeft: toNumber(goal.remainingDays),
+    ...goalStyle(index),
   }))
 }
 
 function mapActions(actions: MyWaveActionResponse[]): RuntimeAction[] {
-  if (actions.length === 0) return defaultRecommendedActions
   return actions.map((action, index) => ({
-    ...defaultRecommendedActions[index % defaultRecommendedActions.length],
     title: action.title,
     detail: action.description,
-    saving: toNumber(action.monthlySavingAmount, 0),
+    saving: toNumber(action.monthlySavingAmount),
+    category: action.category,
+    icon: categoryStyle(action.category).icon,
+    tone: actionTone(index),
   }))
 }
 
 function mapSpendingCategories(dashboard: MyWaveDashboardResponse): RuntimeCategory[] {
-  const categories = dashboard.expenseSummary.categories
-  if (categories.length === 0) return defaultSpendingCategories
-  return categories.map((category, index) => {
-    const fallback = findCategoryFallback(category.category, index)
-    return {
-      ...fallback,
-      name: category.category,
-      amount: toNumber(category.amount, 0),
-      rate: toNumber(category.ratio, 0),
-      change: toNumber(dashboard.expenseSummary.changeRate, fallback.change),
-    }
-  })
+  return dashboard.expenseSummary.categories.map((category) => ({
+    name: category.category,
+    amount: toNumber(category.amount),
+    rate: toNumber(category.ratio),
+    count: toNumber(category.count),
+    average: toNumber(category.averageAmount),
+    ...categoryStyle(category.category),
+  }))
 }
 
 function mapSpendingBlockers(dashboard: MyWaveDashboardResponse): RuntimeBlocker[] {
-  const blockers = dashboard.expenseSummary.goalBlockers
-  if (blockers.length === 0) return defaultSpendingBlockers
-  return blockers.map((blocker, index) => {
-    const fallback = findBlockerFallback(blocker.category, index)
-    return {
-      ...fallback,
-      name: blocker.category,
-      amount: toNumber(blocker.amount, 0),
-      impact: toNumber(blocker.goalImpactRate, fallback.impact),
-    }
-  })
+  const ratios = new Map(dashboard.expenseSummary.categories.map((category) => [category.category, toNumber(category.ratio)]))
+  return dashboard.expenseSummary.goalBlockers.map((blocker) => ({
+    name: blocker.category,
+    amount: toNumber(blocker.amount),
+    count: toNumber(blocker.count),
+    rate: ratios.get(blocker.category) ?? 0,
+    ...categoryStyle(blocker.category),
+  }))
 }
 
-function mapSpendingTrend(dashboard: MyWaveDashboardResponse) {
-  const trends = dashboard.expenseSummary.trends
-  if (trends.length === 0) return defaultSpendingTrend
-  return trends.map((trend) => ({
+function mapSpendingTrend(dashboard: MyWaveDashboardResponse): RuntimeTrend[] {
+  return dashboard.expenseSummary.trends.map((trend) => ({
     month: formatMonth(trend.month),
-    amount: toNumber(trend.amount, 0),
-    budget: toNumber(trend.budget, 0),
-    goal: toNumber(trend.goalImpactAmount, 0),
+    amount: toNumber(trend.amount),
+    budget: toNumber(trend.budget),
   }))
 }
 
 function mapPortfolioAllocation(dashboard: MyWaveDashboardResponse): RuntimeAllocation[] {
-  if (dashboard.portfolioAllocation.length === 0) return defaultPortfolioAllocation
   return dashboard.portfolioAllocation.map((item, index) => ({
-    ...defaultPortfolioAllocation[index % defaultPortfolioAllocation.length],
     name: item.name,
-    amount: toNumber(item.value, 0),
-    rate: toNumber(item.rate, 0),
+    amount: toNumber(item.value),
+    rate: toNumber(item.rate),
+    color: allocationColor(item.name, index),
+  }))
+}
+
+function mapHoldings(holdings: MyWaveHoldingResponse[]): RuntimeHolding[] {
+  return holdings.map((holding) => ({
+    symbol: holding.symbol,
+    name: holding.stockName,
+    quantity: toNumber(holding.quantity),
+    averagePrice: toNumber(holding.averagePrice),
+    value: toNumber(holding.evaluationAmount),
+    profit: toNumber(holding.profitLoss),
+    returnRate: toNumber(holding.returnRate),
+    weight: toNumber(holding.weight),
+  }))
+}
+
+/** 최근 활동은 이번 달 소비 기록 최근 다섯 건이다. */
+function mapActivities(expenses: MyWaveExpenseResponse[]): RuntimeActivity[] {
+  return expenses.slice(0, 5).map((expense) => ({
+    id: expense.id,
+    title: expense.merchant,
+    detail: `${expense.category} · ${formatDate(expense.spentDate)}`,
+    amount: -toNumber(expense.amount),
+    ...categoryStyle(expense.category),
   }))
 }
 
 function mapCoachMessages(messages: MyWaveCoachMessageResponse[]): RuntimeCoachMessage[] {
-  if (messages.length === 0) return defaultCoachMessages
   return messages.map((message) => ({
     from: message.role === 'USER' ? 'user' : 'bot',
     text: message.content,
   }))
 }
 
-function findCategoryFallback(name: string, index: number) {
-  return defaultSpendingCategories.find((item) => name.includes(item.name) || item.name.includes(name)) ?? defaultSpendingCategories[index % defaultSpendingCategories.length]
-}
-
-function findBlockerFallback(name: string, index: number) {
-  return defaultSpendingBlockers.find((item) => name.includes(item.name) || item.name.includes(name)) ?? defaultSpendingBlockers[index % defaultSpendingBlockers.length]
-}
-
-function toNumber(value: unknown, fallback: number) {
+function toNumber(value: unknown) {
   const numberValue = Number(value)
-  return Number.isFinite(numberValue) ? numberValue : fallback
+  return Number.isFinite(numberValue) ? numberValue : 0
 }
 
 function formatMonth(value: string) {
-  if (!value) return defaultFinanceSummary.month
+  if (!value) return ''
   const [year, month] = value.split('-')
   return year && month ? `${year}.${month}` : value
 }
 
 function formatDate(value: string) {
   return value ? value.replaceAll('-', '.') : ''
+}
+
+/** 오르면 ▲, 내리면 ▼. 부호를 코드에 박지 않는다. */
+function signed(value: number, suffix = '%') {
+  if (value === 0) return `0${suffix}`
+  return `${value > 0 ? '▲' : '▼'} ${Math.abs(value).toLocaleString('ko-KR', { maximumFractionDigits: 2 })}${suffix}`
+}
+
+function signedWon(value: number) {
+  if (value === 0) return won(0)
+  return `${value > 0 ? '▲' : '▼'} ${won(Math.abs(value))}`
+}
+
+/** 국내 시세 관행: 오르면 빨강, 내리면 파랑. */
+function gainClass(value: number) {
+  return value > 0 ? 'text-[#f04452]' : value < 0 ? 'text-blue-600' : 'text-slate-500'
+}
+
+/**
+ * 보유 구성을 보고 한 줄 안내를 만든다. 금액은 말하지 않는다.
+ * 무엇을 사라고 하지 않고, 확인해 볼 점만 짚는다.
+ */
+function portfolioInsightLine(allocation: RuntimeAllocation[], holdings: RuntimeHolding[]) {
+  if (holdings.length === 0) return '아직 보유 종목이 없어요. 거래 기록을 넣으면 구성과 쏠림을 정리해 드려요.'
+  const top = [...holdings].sort((a, b) => b.weight - a.weight)[0]
+  if (top && top.weight >= 50) return `${top.name} 한 종목이 절반 이상을 차지해요. 한쪽에 몰려 있지 않은지 확인해 볼 만해요.`
+  const topGroup = [...allocation].sort((a, b) => b.rate - a.rate)[0]
+  if (topGroup && topGroup.rate >= 60) return `${topGroup.name} 비중이 높은 편이에요. 같은 방향으로 움직이는 자산이 많은지 살펴보세요.`
+  return '한 종목이나 한 자산군에 크게 쏠려 있지는 않아요.'
 }
 
 function WindowBar() {
@@ -428,6 +588,7 @@ function Logo() {
 
 function Sidebar() {
   const navigate = useNavigate()
+  const auth = useAuth()
 
   return (
     <aside className="hidden w-80 shrink-0 border-r border-slate-200 px-7 py-8 lg:flex lg:flex-col">
@@ -453,14 +614,14 @@ function Sidebar() {
         <div className="font-black text-blue-700">MyWave 시작하기</div>
         <p className="mt-3 text-sm leading-6 text-slate-500">3분 만에 나에게 맞는 투자 흐름을 설계해보세요.</p>
         <button onClick={() => navigate('/onboarding')} className="mt-4 rounded-full border border-blue-600 px-4 py-2 text-sm font-bold text-blue-700">시작하기 <ChevronRight className="inline h-4 w-4" /></button>
-        <img src={waveHero} alt="" className="ml-auto mt-2 h-20 w-32 object-contain" />
+        <img src={belugaJumpArt} alt="" className="wave-bob ml-auto mt-2 h-24 w-24 object-contain" />
       </div>
       <div className="mt-10 border-t border-slate-200 pt-8">
         <div className="flex items-center gap-4">
           <Avatar />
           <div className="min-w-0 flex-1">
-            <div className="font-black">김마이 님</div>
-            <span className="mt-1 inline-block rounded-full bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-700">프리미엄</span>
+            <div className="font-black">{auth.member?.name ?? ''} 님</div>
+            <span className="mt-1 inline-block rounded-full bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-700">{auth.member?.membershipGrade || 'Wave 사용자'}</span>
           </div>
           <ChevronRight className="h-5 w-5 text-slate-400" />
         </div>
@@ -557,34 +718,9 @@ function Avatar() {
   )
 }
 
+/** 홈은 모바일과 데스크톱이 같은 화면 하나다. 넓어지면 두 열로 펼쳐질 뿐이다. */
 function HomePage() {
-  const { financeSummary } = useMyWaveData()
-
-  return (
-    <>
-      <div className="lg:hidden">
-        <MobileHomePage />
-      </div>
-      <div className="hidden space-y-5 lg:block lg:space-y-7">
-        <HeroGoalCard />
-        <div className="grid gap-4 lg:grid-cols-3">
-          <MetricCard icon={<WalletCards />} label="총자산" value={won(financeSummary.totalAsset)} detail="▲ 1.8% (전일 대비)" tone="blue" />
-          <MetricCard icon={<CreditIcon />} label="남은 생활비" value={won(financeSummary.livingBudgetLeft)} detail="이번 달" tone="green" />
-          <MetricCard icon={<RocketMini />} label="투자 가능 금액" value={won(financeSummary.investableAmount)} detail="바로 투자 가능" tone="violet" />
-        </div>
-        <div className="grid gap-5 xl:grid-cols-[1fr_.95fr]">
-          <div className="space-y-5">
-            <SpendingWarning />
-            <RecentActivity />
-          </div>
-          <div className="space-y-5">
-            <PortfolioMini />
-            <MonthSummary />
-          </div>
-        </div>
-      </div>
-    </>
-  )
+  return <TodayHome />
 }
 
 function GoalsPage() {
@@ -648,10 +784,10 @@ function PortfolioPage() {
       <div className="hidden space-y-5 lg:block">
         <PortfolioHero />
         <div className="grid gap-4 lg:grid-cols-4">
-          <MetricCard icon={<BriefcaseIcon />} label="투자 원금" value={won(20_650_000)} tone="blue" />
-          <MetricCard icon={<WalletCards />} label="총 평가금액" value={won(financeSummary.totalAsset)} tone="blue" />
-          <MetricCard icon={<BarIcon />} label="총 수익" value={won(financeSummary.investmentProfit)} detail="▲ 20.3%" tone="green" />
-          <MetricCard icon={<BarIcon />} label="총 수익률" value={`▲ ${financeSummary.investmentReturn}%`} tone="violet" />
+          <MetricCard icon={<BriefcaseIcon />} label="투자 원금" value={won(financeSummary.investmentPrincipal)} tone="blue" />
+          <MetricCard icon={<WalletCards />} label="총 평가금액" value={won(financeSummary.investmentValue)} tone="blue" />
+          <MetricCard icon={<BarIcon />} label="총 수익" value={signedWon(financeSummary.investmentProfit)} detail={signed(financeSummary.investmentReturn)} tone="green" />
+          <MetricCard icon={<BarIcon />} label="총 수익률" value={signed(financeSummary.investmentReturn)} tone="violet" />
         </div>
         <div className="grid gap-5 xl:grid-cols-[1.1fr_.95fr_.95fr]">
           <PortfolioAllocationCard />
@@ -662,7 +798,6 @@ function PortfolioPage() {
           <HoldingsTable />
           <div className="space-y-5">
             <PortfolioInsight />
-            <CompanyPreview />
           </div>
         </div>
         <InvestmentTransactionManager />
@@ -671,36 +806,42 @@ function PortfolioPage() {
   )
 }
 
+/**
+ * 리포트. 예전에는 삼성전자 요약문과 다섯 개 판정이 코드에 박혀 있었고, "매출 추이" 차트는
+ * 실제로는 내 소비 추이를 그리고 있었다. 이제 내 기록으로 만든 이번 달 돈 리포트와,
+ * 보유 종목의 실제 공시·재무 화면(기업 상세)으로 가는 길만 둔다.
+ */
 function ReportsPage() {
-  const { spendingTrend } = useMyWaveData()
+  const { financeSummary, spendingTrend, spendingCategories, holdings } = useMyWaveData()
+  const navigate = useNavigate()
+  const topCategory = [...spendingCategories].sort((a, b) => b.amount - a.amount)[0]
 
   return (
     <div className="space-y-5">
       <MobileTitle title="리포트" />
       <Card>
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div>
-            <div className="text-sm font-black text-blue-700">기업 재무제표 분석</div>
-            <h2 className="mt-3 text-3xl font-black">삼성전자 재무 상태 요약</h2>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-slate-500">
-              재무 안정성은 높은 편이지만 최근 수익성은 확인이 필요합니다. 메모리 업황 회복과 AI 수요 증가로 실적 개선이 기대되지만 경쟁 심화 리스크도 함께 봐야 합니다.
-            </p>
-          </div>
-          <img src={waveHero} alt="" className="h-40 w-full object-contain" />
+        <div className="text-sm font-black text-blue-700">{financeSummary.month || '이번 달'} 돈 리포트</div>
+        <h2 className="mt-3 text-3xl font-black">이번 달 {won(financeSummary.totalSpending)}을 썼어요</h2>
+        <div className="mt-5 grid gap-5 sm:grid-cols-3">
+          <MiniStat
+            label="지난 달과 비교"
+            value={financeSummary.previousSpending > 0 ? signed(financeSummary.spendingChangeRate) : '-'}
+            change={financeSummary.previousSpending > 0 ? `지난 달 같은 기간 ${won(financeSummary.previousSpending)}` : '지난 달 기록 없음'}
+          />
+          <MiniStat
+            label="생활비 예산 대비"
+            value={financeSummary.budgetRate === null ? '예산 없음' : `${financeSummary.budgetRate}%`}
+            change={financeSummary.livingBudget > 0 ? `예산 ${won(financeSummary.livingBudget)}` : undefined}
+          />
+          <MiniStat
+            label="가장 많이 쓴 곳"
+            value={topCategory ? topCategory.name : '-'}
+            change={topCategory ? `${won(topCategory.amount)} · ${topCategory.count}건` : undefined}
+          />
         </div>
       </Card>
-      <div className="grid gap-5 lg:grid-cols-5">
-        {['매출 증가', '영업이익 변동', '부채비율 안정', '현금흐름 양호', '배당 있음'].map((item, index) => (
-          <Card key={item} className="min-h-32">
-            <div className={`grid h-11 w-11 place-items-center rounded-2xl ${index === 1 ? 'bg-orange-50 text-orange-600' : 'bg-emerald-50 text-emerald-600'}`}>
-              {index === 1 ? <Info className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
-            </div>
-            <div className="mt-4 text-lg font-black">{item}</div>
-          </Card>
-        ))}
-      </div>
       <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
-        <Card title="매출 추이">
+        <Card title="월별 소비와 생활비 예산">
           <div className="h-80">
             <ResponsiveContainer>
               <AreaChart data={spendingTrend}>
@@ -714,17 +855,30 @@ function ReportsPage() {
                 <XAxis dataKey="month" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${Number(value) / 10000}만`} />
                 <Tooltip formatter={(value) => won(Number(value))} />
-                <Area dataKey="amount" stroke="#2563eb" strokeWidth={3} fill="url(#reportLine)" />
+                <Line dataKey="budget" name="생활비 예산" stroke="#aeb9c9" strokeDasharray="4 4" strokeWidth={2} dot={false} />
+                <Area dataKey="amount" name="소비" stroke="#2563eb" strokeWidth={3} fill="url(#reportLine)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </Card>
-        <Card title="AI 요약">
-          <p className="text-base leading-8 text-slate-600">
-            이 기업은 현금흐름과 부채비율 측면에서 안정적입니다. 다만 영업이익률 변동성이 있어 다음 분기 실적 발표에서 메모리 가격, AI 서버 수요, 설비투자 계획을 함께 확인하는 것이 좋습니다.
-          </p>
-          <div className="mt-6 rounded-[20px] bg-blue-50 p-5 text-sm font-bold leading-7 text-blue-800">
-            투자 판단이 아니라, 사용자가 기업 상태를 이해하기 위한 참고 요약입니다.
+        <Card title="보유 종목 기업 분석">
+          {holdings.length === 0 ? (
+            <p className="text-sm font-bold text-slate-500">보유 종목이 생기면 그 기업의 공시와 재무를 여기서 바로 열어 볼 수 있어요.</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {holdings.map((item) => (
+                <button key={item.symbol} onClick={() => navigate(`/company/${item.symbol}`)} className="pressable flex w-full items-center justify-between gap-3 py-3 text-left">
+                  <span>
+                    <span className="block font-black">{item.name}</span>
+                    <span className="text-sm font-bold text-slate-400">{item.symbol} · 공시·재무 보기</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 text-slate-400" />
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="mt-5 rounded-[20px] bg-blue-50 p-4 text-sm font-bold leading-6 text-blue-800">
+            투자 판단이 아니라, 기업 상태를 이해하기 위한 참고 자료예요.
           </div>
         </Card>
       </div>
@@ -745,23 +899,6 @@ function CoachPage() {
         <GoalOutlook />
         <RiskPanel />
       </div>
-    </div>
-  )
-}
-
-function MobileHomePage() {
-  const { financeSummary } = useMyWaveData()
-
-  return (
-    <div className="mobile-page reveal-stack space-y-4">
-      <MobileHeroCard />
-      <div className="grid grid-cols-3 gap-3">
-        <MobileMiniMetric icon={<WalletCards className="h-6 w-6" />} label="총자산" value={`${Math.round(financeSummary.totalAsset / 10000).toLocaleString()}만원`} detail="▲ 1.8%" />
-        <MobileMiniMetric icon={<CreditIcon />} label="남은 생활비" value={`${Math.round(financeSummary.livingBudgetLeft / 10000)}만원`} detail="이번 달" tone="green" />
-        <MobileMiniMetric icon={<BarIcon />} label="투자 가능" value={`${Math.round(financeSummary.investableAmount / 10000)}만원`} detail="바로 가능" tone="violet" />
-      </div>
-      <MobileNotice />
-      <MobilePortfolioCard />
     </div>
   )
 }
@@ -792,7 +929,7 @@ function MobileSpendingPage() {
         <MobileTitle title="소비 분석" />
         <MonthPicker />
       </div>
-      <MobileBlueSummary title="이번 달 총 소비" value={won(financeSummary.totalSpending)} detail={`지난 달 대비 ${Math.abs(financeSummary.goalImpact).toFixed(1)}% ▲`} />
+      <MobileBlueSummary title="이번 달 총 소비" value={won(financeSummary.totalSpending)} detail={financeSummary.previousSpending > 0 ? `지난 달 같은 기간 대비 ${signed(financeSummary.spendingChangeRate)}` : '지난 달 기록이 없어요'} />
       <ExpenseQuickEntry />
       <MobileSpendingCategories />
       <MobileTopSpending />
@@ -807,7 +944,7 @@ function MobilePortfolioPage() {
   return (
     <div className="mobile-page reveal-stack space-y-4">
       <MobileTitle title="투자 포트폴리오" />
-      <MobileBlueSummary title="총 투자금액" value={won(financeSummary.totalAsset)} detail={`평가손익 ${won(financeSummary.investmentProfit)} · 수익률 +${financeSummary.investmentReturn}%`} />
+      <MobileBlueSummary title="총 평가금액" value={won(financeSummary.investmentValue)} detail={`평가손익 ${signedWon(financeSummary.investmentProfit)} · 수익률 ${signed(financeSummary.investmentReturn)}`} />
       <MobilePortfolioCard compact />
       <MobileHoldingsList />
       <MobileInsightBox />
@@ -815,39 +952,12 @@ function MobilePortfolioPage() {
   )
 }
 
-function MobileHeroCard() {
-  const { financeSummary } = useMyWaveData()
-
-  return (
-    <section className="motion-card pressable rounded-[20px] bg-blue-50 p-4 shadow-card">
-      <div className="flex items-center gap-2 text-sm font-black text-blue-700">
-        <TargetDot /> 이번 달 투자 목표
-      </div>
-      <div className="mt-4 grid grid-cols-[1fr_120px] items-center gap-2">
-        <div>
-          <div className="text-4xl font-black tracking-[-0.04em]">{financeSummary.goalRate}% <span className="text-2xl font-black">달성</span></div>
-          <Progress value={financeSummary.goalRate} className="mt-5 h-2.5" />
-          <div className="mt-6 grid grid-cols-2 divide-x divide-slate-200">
-            <div>
-              <div className="text-xs font-bold text-slate-500">현재 저축 금액</div>
-              <div className="mt-1 text-xl font-black text-blue-700">{Math.round(financeSummary.savedAmount / 10000).toLocaleString()}만원</div>
-            </div>
-            <div className="pl-5">
-              <div className="text-xs font-bold text-slate-500">남은 금액</div>
-              <div className="mt-1 text-xl font-black">{Math.round(financeSummary.remainingAmount / 10000).toLocaleString()}만원</div>
-            </div>
-          </div>
-        </div>
-        <img src={waveHero} alt="" className="animate-wave h-28 w-32 object-contain opacity-90 mix-blend-multiply" />
-      </div>
-    </section>
-  )
-}
-
 function MobileGoalMainCard() {
   const { financeSummary, goals } = useMyWaveData()
   const navigate = useNavigate()
   const mainGoal = goals[0]
+
+  if (!mainGoal) return <EmptyGoalCard />
 
   return (
     <MobileCard>
@@ -898,9 +1008,7 @@ function MobileActionCards() {
               <div className="grid h-10 w-10 place-items-center rounded-[12px] bg-slate-100 text-slate-400">
                 <Icon className="h-5 w-5" />
               </div>
-              <div className="mt-3 whitespace-nowrap text-[14px] font-bold leading-5 text-slate-900">
-                {action.title === '카페 지출 줄이기' ? '카페 줄이기' : action.title === '대중교통 이용하기' ? '교통 이용' : '구독 정리'}
-              </div>
+              <div className="mt-3 text-[14px] font-bold leading-5 text-slate-900">{action.title}</div>
               <div className="mt-1 text-[12px] font-medium text-slate-400">월 {won(action.saving)} 절약</div>
             </button>
           )
@@ -928,7 +1036,7 @@ function MobileOtherGoals() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <div className="truncate text-[15px] font-bold text-slate-900">{goal.title}</div>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">진행 중</span>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">{goal.status}</span>
                   </div>
                   <Progress value={goal.rate} className="mt-2.5 h-1.5" />
                   <div className="mt-2 text-[12px] font-medium text-slate-400">목표 {Math.round(goal.target / 10000)}만원 · 현재 {Math.round(goal.saved / 10000)}만원</div>
@@ -1001,7 +1109,7 @@ function MobileTopSpending() {
               <Icon className="h-6 w-6" style={{ color: item.color }} />
               <div>
                 <div className="font-black">{item.name}</div>
-                <div className="text-xs font-bold text-slate-400">월 {index === 0 ? '18회' : index === 1 ? '6회' : '16회'}</div>
+                <div className="text-xs font-bold text-slate-400">이번 달 {item.count}건 · 소비의 {Math.round(item.rate)}%</div>
               </div>
               <div className="font-black">{won(item.amount)}</div>
               <ChevronRight className="h-5 w-5 text-slate-400" />
@@ -1016,8 +1124,11 @@ function MobileTopSpending() {
 function MobileSavingBox() {
   const { financeSummary } = useMyWaveData()
   const navigate = useNavigate()
-  const [amount, setAmount] = useState(100000)
-  const expectedRate = Math.min(100, financeSummary.goalRate + Math.round(amount / 5500))
+  const [amount, setAmount] = useState(10000)
+  // 이 금액이 그대로 가장 가까운 목표에 더해진다고 보고 다시 계산한다.
+  const expectedRate = financeSummary.targetAmount > 0
+    ? Math.min(100, Math.round(((financeSummary.savedAmount + amount) / financeSummary.targetAmount) * 1000) / 10)
+    : financeSummary.goalRate
 
   return (
     <MobileCard>
@@ -1039,7 +1150,7 @@ function MobileSavingBox() {
 }
 
 function MobilePortfolioCard({ compact = false }: { compact?: boolean }) {
-  const { financeSummary, portfolioAllocation } = useMyWaveData()
+  const { financeSummary, portfolioAllocation, holdings } = useMyWaveData()
   const navigate = useNavigate()
 
   return (
@@ -1050,7 +1161,7 @@ function MobilePortfolioCard({ compact = false }: { compact?: boolean }) {
       </div>
       <div className="grid grid-cols-[150px_1fr] items-center gap-3">
         <MobileCssDonut
-          center={compact ? `총 ${portfolioAllocation.length}개` : won(financeSummary.totalAsset)}
+          center={compact ? `총 ${portfolioAllocation.length}개` : won(financeSummary.investmentValue)}
           label={compact ? '자산' : '총자산'}
           items={portfolioAllocation}
         />
@@ -1058,7 +1169,7 @@ function MobilePortfolioCard({ compact = false }: { compact?: boolean }) {
       </div>
       {!compact && (
         <div className="mt-4">
-          <BelugaSays mood="cheer" size="sm">지난달보다 자산이 1,250,000원 늘었어요.</BelugaSays>
+          <BelugaSays mood="calm" size="sm">{portfolioInsightLine(portfolioAllocation, holdings)}</BelugaSays>
         </div>
       )}
     </MobileCard>
@@ -1082,8 +1193,8 @@ function MobileHoldingsList() {
             title={item.name}
             detail={`${item.symbol} · ${item.quantity}주`}
             value={won(item.value)}
-            valueDetail={`+${won(item.profit)}`}
-            valueDetailTone="gain"
+            valueDetail={signedWon(item.profit)}
+            valueDetailTone={item.profit >= 0 ? 'gain' : 'loss'}
           />
         ))}
       </MobileCard>
@@ -1092,36 +1203,25 @@ function MobileHoldingsList() {
 }
 
 function MobileInsightBox() {
+  const { portfolioAllocation, holdings } = useMyWaveData()
   return (
     <MobileCard>
-      <BelugaSays mood="calm" size="sm">
-        IT 섹터 비중이 높은 편이에요. 한쪽에 몰려 있지 않은지 확인해볼 만해요.
-      </BelugaSays>
+      <BelugaSays mood="calm" size="sm">{portfolioInsightLine(portfolioAllocation, holdings)}</BelugaSays>
     </MobileCard>
   )
 }
 
-function HeroGoalCard() {
-  const { financeSummary } = useMyWaveData()
-
+/** 목표가 하나도 없을 때. 남의 목표를 대신 보여주지 않고 만들기로 안내한다. */
+function EmptyGoalCard() {
+  const navigate = useNavigate()
   return (
-    <BlueCard className="min-h-[240px] lg:min-h-[300px]">
-      <div className="relative z-10 flex h-full flex-col justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-lg font-black">이번 달 목표 달성률 <Pill>{financeSummary.month}</Pill></div>
-          <div className="mt-6 text-7xl font-black leading-none tracking-[-0.04em] text-white lg:text-8xl">{financeSummary.goalRate}%</div>
-          <Progress value={financeSummary.goalRate} className="mt-6 max-w-xl bg-white/25" barClassName="bg-[#65dbc2]" />
-        </div>
-        <div className="grid max-w-2xl grid-cols-2 gap-5 pt-6 lg:grid-cols-4">
-          <BlueMetric label="현재 저축 금액" value={won(financeSummary.savedAmount)} />
-          <BlueMetric label="남은 금액" value={won(financeSummary.remainingAmount)} />
-          <BlueMetric label="남은 기간" value={`${financeSummary.daysLeft}일`} />
-          <BlueMetric label="하루 목표 금액" value={won(financeSummary.dailyTarget)} />
-        </div>
+    <Card>
+      <div className="flex flex-col items-start gap-3">
+        <h2 className="text-[20px] font-bold text-slate-900">아직 목표가 없어요</h2>
+        <p className="text-sm font-medium text-slate-500">모으고 싶은 금액과 날짜를 정하면 하루에 얼마씩 모으면 되는지 계산해 드려요.</p>
+        <button onClick={() => navigate('/goals/new')} className="pressable rounded-full bg-blue-700 px-5 py-2.5 text-sm font-black text-white">목표 만들기</button>
       </div>
-      <img src={waveHero} alt="" className="absolute bottom-0 right-2 h-40 w-56 object-contain opacity-90 mix-blend-multiply sm:h-48 sm:w-72 lg:right-8 lg:h-64 lg:w-[420px]" />
-      <ChevronRight className="absolute right-6 top-8 h-6 w-6 text-white/80" />
-    </BlueCard>
+    </Card>
   )
 }
 
@@ -1129,10 +1229,12 @@ function MainGoalCard() {
   const { financeSummary, goals } = useMyWaveData()
   const mainGoal = goals[0]
 
+  if (!mainGoal) return <EmptyGoalCard />
+
   return (
     <BlueCard className="min-h-[300px]">
       <div className="relative z-10">
-        <span className="rounded-xl bg-[#67d8aa] px-3 py-1.5 text-sm font-black text-blue-950">진행 중</span>
+        <span className="rounded-xl bg-[#67d8aa] px-3 py-1.5 text-sm font-black text-blue-950">{mainGoal.status}</span>
         <div className="mt-5 flex items-center gap-3 text-3xl font-black lg:text-4xl">
           {mainGoal.title} <Edit3 className="h-6 w-6" />
         </div>
@@ -1145,7 +1247,7 @@ function MainGoalCard() {
           <BlueMetric label="하루 목표 금액" value={won(financeSummary.dailyTarget)} />
         </div>
       </div>
-      <img src={waveHero} alt="" className="absolute bottom-0 right-0 hidden h-44 w-64 object-contain opacity-90 mix-blend-multiply md:block lg:h-72 lg:w-[420px]" />
+      <img src={belugaJumpArt} alt="" className="wave-bob absolute bottom-4 right-6 hidden h-40 w-40 object-contain drop-shadow-[0_14px_20px_rgba(10,40,140,.35)] md:block lg:h-52 lg:w-52" />
     </BlueCard>
   )
 }
@@ -1188,89 +1290,13 @@ function MetricCard({ icon, label, value, detail, tone }: { icon: ReactNode; lab
   )
 }
 
-function SpendingWarning() {
-  const navigate = useNavigate()
-
-  return (
-    <Card className="border-orange-100 bg-orange-50/45">
-      <div className="flex items-center gap-6">
-        <div className="grid h-20 w-20 shrink-0 place-items-center rounded-[28px] bg-orange-100 text-orange-600">
-          <ShieldAlert className="h-11 w-11 fill-orange-500/10" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-2xl font-black text-orange-600">소비 위험도: 주의</div>
-          <p className="mt-2 text-base leading-7 text-slate-500">외식/배달 소비 금액이 평소보다 많아요. 예산을 조금만 조정해보세요!</p>
-        </div>
-        <button onClick={() => navigate('/spending/detail')} className="hidden rounded-full border border-orange-200 px-5 py-2.5 text-sm font-black text-slate-800 lg:block">자세히 보기 <ChevronRight className="inline h-4 w-4" /></button>
-      </div>
-    </Card>
-  )
-}
-
-function RecentActivity() {
-  const { activities } = useMyWaveData()
-
-  return (
-    <Card title="최근 활동" action="모두 보기" actionTo="/spending/detail">
-      <div className="space-y-4">
-        {activities.map((item) => {
-          const Icon = item.icon
-          return (
-            <div key={item.title} className="flex items-center gap-4">
-              <div className="grid h-12 w-12 place-items-center rounded-full text-white" style={{ background: item.color }}>
-                <Icon className="h-6 w-6" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-black">{item.title}</div>
-                <div className="mt-1 truncate text-sm font-medium text-slate-500">{item.detail}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-bold text-slate-400">{item.when}</div>
-                <div className={`mt-1 font-black ${item.amount > 0 ? 'text-blue-700' : 'text-slate-900'}`}>{item.amount > 0 ? '+' : '-'}{won(Math.abs(item.amount))}</div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </Card>
-  )
-}
-
-function PortfolioMini() {
-  const { financeSummary, portfolioAllocation } = useMyWaveData()
-
-  return (
-    <Card title="포트폴리오 현황" action="자세히 보기" actionTo="/portfolio/allocation">
-      <div className="grid items-center gap-5 sm:grid-cols-[220px_1fr]">
-        <Donut data={portfolioAllocation} center={`${won(financeSummary.totalAsset)}`} />
-        <Legend items={portfolioAllocation} />
-      </div>
-    </Card>
-  )
-}
-
-function MonthSummary() {
-  const { financeSummary } = useMyWaveData()
-
-  return (
-    <Card className="bg-blue-50/70">
-      <h3 className="text-lg font-black text-blue-800">이번 달 한눈에 보기</h3>
-      <div className="mt-5 grid grid-cols-2 gap-5 lg:grid-cols-4">
-        <MiniStat label="수입" value={won(4_200_000)} change="▲ 12.5%" />
-        <MiniStat label="지출" value={won(financeSummary.totalSpending)} change="▼ 4.3%" />
-        <MiniStat label="저축" value={won(financeSummary.savedAmount)} change="▲ 8.1%" />
-        <MiniStat label="투자 수익" value={won(financeSummary.investmentProfit)} change="▲ 5.7%" />
-      </div>
-    </Card>
-  )
-}
-
 function ActionPanel() {
   const { recommendedActions } = useMyWaveData()
 
   return (
     <Card title={<span>목표 달성을 위한 추천 행동 <Info className="inline h-4 w-4 text-slate-400" /></span>}>
-      <div className="grid gap-4 lg:grid-cols-3">
+      {recommendedActions.length === 0 && <p className="text-sm font-bold text-slate-500">이번 달 소비 기록이 쌓이면 줄일 만한 곳을 골라 드려요.</p>}
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))]">
         {recommendedActions.map((action) => {
           const Icon = action.icon
           return (
@@ -1301,7 +1327,7 @@ function GoalsList() {
         {goals.slice(1).map((goal) => {
           const Icon = goal.icon
           return (
-            <div key={goal.title} className="grid gap-4 py-5 first:pt-0 last:pb-0 lg:grid-cols-[1fr_280px_80px] lg:items-center">
+            <div key={goal.title} className="grid gap-4 py-5 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
               <div className="flex min-w-0 items-center gap-5">
                 <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full" style={{ background: `${goal.accent}18`, color: goal.accent }}>
                   <Icon className="h-8 w-8" />
@@ -1331,6 +1357,7 @@ function GoalManagementPanel() {
   const navigate = useNavigate()
   const [goals, setGoals] = useState<MyWaveGoalResponse[]>([])
   const [message, setMessage] = useState('')
+  const [celebrating, setCelebrating] = useState<string | null>(null)
 
   async function loadGoals() {
     try {
@@ -1356,6 +1383,7 @@ function GoalManagementPanel() {
         priority: goal.priority,
       })
       setMessage(status === 'COMPLETED' ? '목표를 완료 처리했습니다.' : '목표 상태가 변경되었습니다.')
+      if (status === 'COMPLETED' && goal.status !== 'COMPLETED') setCelebrating(goal.title)
       await loadGoals()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '목표 상태 변경에 실패했습니다.')
@@ -1377,6 +1405,13 @@ function GoalManagementPanel() {
       title="목표 관리"
       action={<button onClick={() => navigate('/goals/new')} className="pressable rounded-full bg-blue-700 px-4 py-2 text-sm font-black text-white">+ 목표 추가</button>}
     >
+      {celebrating && (
+        <Celebration
+          title="목표를 이뤘어요!"
+          message={`"${celebrating}" 목표를 끝까지 해냈어요. 다음 목표도 같이 채워 봐요.`}
+          onClose={() => setCelebrating(null)}
+        />
+      )}
       {message && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{message}</div>}
       <div className="space-y-3">
         {goals.map((goal) => (
@@ -1385,7 +1420,7 @@ function GoalManagementPanel() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-base font-black">{goal.title}</h3>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-500">{goal.status}</span>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-500">{GOAL_STATUS_LABEL[goal.status] ?? goal.status}</span>
                 </div>
                 <div className="mt-2 text-sm font-bold text-slate-500">{won(Number(goal.currentAmount))} / {won(Number(goal.targetAmount))} · D-{goal.remainingDays}일</div>
               </div>
@@ -1406,31 +1441,27 @@ function GoalManagementPanel() {
   )
 }
 
+/**
+ * 메인 목표까지 남은 길.
+ *
+ * 저축 이력이 없어서 "달성 확률"이나 "예상 완료일"은 계산할 수 없다. 지어내지 않고,
+ * 목표일과 남은 금액으로 셈할 수 있는 것만 보여준다.
+ */
 function GoalPrediction() {
-  const { spendingTrend } = useMyWaveData()
+  const { financeSummary, goals } = useMyWaveData()
+  if (!goals[0]) return null
 
   return (
-    <Card title={<span>목표 달성 예상 <CircleHelp className="inline h-4 w-4 text-slate-400" /></span>}>
-      <div className="rounded-2xl bg-emerald-50/40 p-4 text-sm font-black text-emerald-700">
-        <CheckCircle2 className="mr-2 inline h-5 w-5" /> 예상대로 진행 중이에요!
+    <Card title="목표까지 남은 길">
+      <div className="grid grid-cols-2 divide-x divide-slate-100 text-center">
+        <MiniStat label="목표일" value={financeSummary.mainGoalTargetDate} change={`D-${financeSummary.daysLeft}`} />
+        <MiniStat label="남은 금액" value={won(financeSummary.remainingAmount)} />
       </div>
-      <div className="mt-5 grid grid-cols-2 divide-x divide-slate-100 text-center">
-        <MiniStat label="예상 완료일" value="2024. 06. 01" />
-        <MiniStat label="목표 달성 확률" value="87%" />
-      </div>
-      <div className="mt-5 h-56">
-        <ResponsiveContainer>
-          <AreaChart data={spendingTrend}>
-            <CartesianGrid stroke="#eef2f7" vertical={false} />
-            <XAxis dataKey="month" axisLine={false} tickLine={false} />
-            <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `${Number(v) / 10000}만`} />
-            <Tooltip formatter={(value) => won(Number(value))} />
-            <Line dataKey="budget" stroke="#9aa8bd" strokeDasharray="4 4" strokeWidth={2} dot={false} />
-            <Area dataKey="goal" stroke="#2563eb" strokeWidth={3} fill="#2563eb22" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-      <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm font-bold leading-6 text-slate-500">지금과 같은 페이스를 유지하면 목표 달성이 가능해요!</p>
+      <p className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-bold leading-6 text-slate-600">
+        {financeSummary.remainingAmount > 0
+          ? `목표일까지 하루 ${won(financeSummary.dailyTarget)}씩 모으면 닿아요.`
+          : '목표 금액을 다 모았어요.'}
+      </p>
     </Card>
   )
 }
@@ -1441,11 +1472,10 @@ function GoalSummary() {
   return (
     <Card title="목표 요약">
       <div className="space-y-4">
-        <SummaryLine label="진행 중인 목표" value={`${goals.length}개`} />
-        <SummaryLine label="연간 목표 달성률" value={`${financeSummary.goalRate}%`} />
-        <SummaryLine label="이번 달 목표 저축액" value={won(880_000)} muted />
-        <SummaryLine label="이번 달 저축 달성률" value="71%" />
-        <Progress value={71} className="mt-3" />
+        <SummaryLine label="진행 중인 목표" value={`${goals.filter((goal) => goal.status === '진행 중').length}개`} />
+        <SummaryLine label="평균 달성률" value={`${financeSummary.averageGoalRate}%`} />
+        <SummaryLine label="이번 달 저축 계획" value={financeSummary.plannedSaving > 0 ? won(financeSummary.plannedSaving) : '예산에서 정해 주세요'} muted />
+        <Progress value={financeSummary.averageGoalRate} className="mt-3" />
       </div>
     </Card>
   )
@@ -1459,14 +1489,18 @@ function SpendingHero() {
       <div className="relative z-10">
         <div className="flex items-center gap-2 text-lg font-black">총 소비 금액 <Pill>{financeSummary.month}</Pill></div>
         <div className="mt-6 text-5xl font-black lg:text-6xl">{won(financeSummary.totalSpending)}</div>
-        <div className="mt-5 text-lg font-black">전월 대비 ▲ 8.6% (+₩196,400)</div>
+        <div className="mt-5 text-lg font-black">
+          {financeSummary.previousSpending > 0
+            ? `지난 달 같은 기간 대비 ${signed(financeSummary.spendingChangeRate)} (${signedWon(financeSummary.totalSpending - financeSummary.previousSpending)})`
+            : '지난 달 기록이 없어 비교할 수 없어요'}
+        </div>
         <div className="mt-12 grid grid-cols-3 gap-6">
           <BlueMetric label="일평균 소비" value={won(financeSummary.dailySpending)} />
-          <BlueMetric label="예산 대비" value={`${financeSummary.budgetRate}%`} />
-          <BlueMetric label="목표 달성률 영향" value={`▼ ${financeSummary.goalImpact}%p`} />
+          <BlueMetric label="예산 대비" value={financeSummary.budgetRate === null ? '예산 없음' : `${financeSummary.budgetRate}%`} />
+          <BlueMetric label="지난 달 같은 기간" value={won(financeSummary.previousSpending)} />
         </div>
       </div>
-      <img src={waveHero} alt="" className="absolute right-4 top-5 h-36 w-56 object-contain opacity-90 mix-blend-multiply lg:h-52 lg:w-80" />
+      <img src={belugaPhoneArt} alt="" className="wave-bob absolute right-6 top-6 h-32 w-32 object-contain drop-shadow-[0_14px_20px_rgba(10,40,140,.35)] lg:h-44 lg:w-44" />
     </BlueCard>
   )
 }
@@ -1483,9 +1517,8 @@ function TrendCard() {
             <XAxis dataKey="month" axisLine={false} tickLine={false} />
             <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${Number(value) / 10000}만`} />
             <Tooltip formatter={(value) => won(Number(value))} />
-            <Line dataKey="budget" stroke="#aeb9c9" strokeDasharray="4 4" strokeWidth={2} dot={false} />
-            <Area dataKey="goal" stroke="#4fcfb0" strokeWidth={3} fill="#4fcfb022" />
-            <Line dataKey="amount" stroke="#2563eb" strokeWidth={3} dot={{ r: 4 }} />
+            <Line dataKey="budget" name="생활비 예산" stroke="#aeb9c9" strokeDasharray="4 4" strokeWidth={2} dot={false} />
+            <Area dataKey="amount" name="소비" stroke="#2563eb" strokeWidth={3} fill="#2563eb1a" dot={{ r: 4 }} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -1502,7 +1535,7 @@ function SpendingDonutCard() {
         <Donut data={spendingCategories.map((item) => ({ name: item.name, rate: item.rate, color: item.color, amount: item.amount }))} center={won(financeSummary.totalSpending)} label="총 소비" />
         <Legend items={spendingCategories.map((item) => ({ name: item.name, rate: item.rate, amount: item.amount, color: item.color }))} />
       </div>
-      <div className="mt-5 text-sm font-medium text-slate-400">기준일: 2024.05.20</div>
+      <div className="mt-5 text-sm font-medium text-slate-400">{financeSummary.month} 기록 기준</div>
     </Card>
   )
 }
@@ -1521,14 +1554,18 @@ function SpendingBlockers() {
               <Icon className="h-7 w-7" style={{ color: item.color }} />
               <div className="font-black">{item.name}</div>
               <div className="font-black">{won(item.amount)}</div>
-              <div className="text-sm font-black text-orange-600">목표 달성률 {item.impact}%p</div>
+              <div className="text-sm font-black text-orange-600">{item.count}건 · 소비의 {Math.round(item.rate)}%</div>
             </div>
           )
         })}
       </div>
-      <div className="mt-4 rounded-2xl border border-orange-200 bg-white/70 p-4 text-sm font-bold text-slate-600">
-        위 3개 항목을 줄이면 목표 달성률이 최대 <span className="text-orange-600">+4.8%p</span> 개선될 수 있어요!
-      </div>
+      {spendingBlockers.length > 0 ? (
+        <div className="mt-4 rounded-2xl border border-orange-200 bg-white/70 p-4 text-sm font-bold text-slate-600">
+          이 {spendingBlockers.length}가지가 이번 달 소비의 <span className="text-orange-600">{Math.round(spendingBlockers.reduce((sum, item) => sum + item.rate, 0))}%</span>예요. 여기서 줄이면 목표에 가장 빨리 닿아요.
+        </div>
+      ) : (
+        <p className="rounded-2xl bg-white p-4 text-sm font-bold text-slate-500">이번 달 소비 기록이 아직 없어요.</p>
+      )}
     </Card>
   )
 }
@@ -1544,7 +1581,8 @@ function SpendingTable() {
             <tr>
               <th>카테고리</th>
               <th>이번 달</th>
-              <th>전월 대비</th>
+              <th>건수</th>
+              <th>한 번에 평균</th>
               <th>비중</th>
             </tr>
           </thead>
@@ -1555,7 +1593,8 @@ function SpendingTable() {
                 <tr key={item.name}>
                   <td><span className="flex items-center gap-2"><Icon className="h-5 w-5" style={{ color: item.color }} />{item.name}</span></td>
                   <td>{won(item.amount)}</td>
-                  <td>▲ {item.change}%</td>
+                  <td>{item.count}건</td>
+                  <td>{won(item.average)}</td>
                   <td>{item.rate}%</td>
                 </tr>
               )
@@ -1567,40 +1606,51 @@ function SpendingTable() {
   )
 }
 
+/**
+ * 이번 달 소비가 큰 카테고리 세 개를 몇 % 줄이면 얼마가 남고, 그 돈이 가장 가까운 목표에
+ * 들어가면 달성률이 어떻게 바뀌는지. 화면 계산과 서버 계산은 같은 식이다.
+ */
 function SavingSimulation() {
-  const { financeSummary } = useMyWaveData()
-  const [delivery, setDelivery] = useState(30)
-  const [cafe, setCafe] = useState(30)
-  const [shopping, setShopping] = useState(20)
+  const { financeSummary, spendingCategories } = useMyWaveData()
+  const targets = useMemo(() => [...spendingCategories].sort((a, b) => b.amount - a.amount).slice(0, 3), [spendingCategories])
+  const [rates, setRates] = useState<Record<string, number>>({})
   const [applied, setApplied] = useState(false)
   const [savingResult, setSavingResult] = useState<{ amount: number; rate: number } | null>(null)
-  const savingAmount = delivery * 1800 + cafe * 2100 + shopping * 2900
-  const improvedRate = Math.min(100, financeSummary.goalRate + Math.round(savingAmount / 36500))
+  const rateOf = (name: string) => rates[name] ?? 20
+  const savingAmount = targets.reduce((sum, item) => sum + Math.round((item.amount * rateOf(item.name)) / 100), 0)
+  const improvedRate = financeSummary.targetAmount > 0
+    ? Math.min(100, Math.round(((financeSummary.savedAmount + savingAmount) / financeSummary.targetAmount) * 1000) / 10)
+    : 0
   const displaySavingAmount = savingResult?.amount ?? savingAmount
   const displayImprovedRate = savingResult?.rate ?? improvedRate
-  const simulations: Array<{ name: string; rate: number; setRate: (value: number) => void; unit: number }> = [
-    { name: '배달', rate: delivery, setRate: setDelivery, unit: 1800 },
-    { name: '카페/간식', rate: cafe, setRate: setCafe, unit: 2100 },
-    { name: '쇼핑', rate: shopping, setRate: setShopping, unit: 2900 },
-  ]
+  const simulations = targets.map((item) => ({
+    name: item.name,
+    rate: rateOf(item.name),
+    setRate: (value: number) => { setRates((current) => ({ ...current, [item.name]: value })); setSavingResult(null); setApplied(false) },
+    unit: item.amount / 100,
+  }))
 
   async function applySimulation() {
     setApplied(true)
     try {
       const result = await simulateMyWaveSaving({
-        categoryReductionRates: {
-          배달비: delivery,
-          카페: cafe,
-          쇼핑: shopping,
-        },
+        categoryReductionRates: Object.fromEntries(targets.map((item) => [item.name, rateOf(item.name)])),
       })
       setSavingResult({
         amount: Number(result.monthlySavingAmount),
         rate: Number(result.expectedGoalRate),
       })
     } catch {
-      setSavingResult({ amount: savingAmount, rate: improvedRate })
+      setApplied(false)
     }
+  }
+
+  if (targets.length === 0) {
+    return (
+      <Card title="소비를 줄이면 목표가 얼마나 가까워질까요?">
+        <p className="text-sm font-bold text-slate-500">이번 달 소비 기록이 쌓이면 줄일 만한 곳을 골라 계산해 드려요.</p>
+      </Card>
+    )
   }
 
   return (
@@ -1629,23 +1679,23 @@ function SavingSimulation() {
 }
 
 function PortfolioHero() {
-  const { financeSummary } = useMyWaveData()
+  const { financeSummary, holdings } = useMyWaveData()
 
   return (
     <BlueCard className="min-h-[220px]">
       <div className="relative z-10 grid gap-7 lg:grid-cols-[1fr_1.3fr]">
         <div>
           <div className="text-lg font-black">전체 투자 자산</div>
-          <div className="mt-4 text-5xl font-black lg:text-6xl">{won(financeSummary.totalAsset)}</div>
-          <div className="mt-6 text-lg font-black text-emerald-200">전일 대비 ▲ ₩425,000 (1.74%)</div>
+          <div className="mt-4 text-5xl font-black lg:text-6xl">{won(financeSummary.investmentValue)}</div>
+          <div className="mt-6 text-lg font-black text-white/90">전일 대비 {signedWon(financeSummary.dailyProfit)} ({signed(financeSummary.dailyReturn)})</div>
         </div>
         <div className="grid grid-cols-3 gap-5 self-center">
-          <BlueMetric label="총 투자 수익" value={won(financeSummary.investmentProfit)} />
-          <BlueMetric label="총 수익률" value={`▲ ${financeSummary.investmentReturn}%`} />
-          <BlueMetric label="연환산 수익률" value={`▲ ${financeSummary.yearlyReturn}%`} />
+          <BlueMetric label="총 투자 수익" value={signedWon(financeSummary.investmentProfit)} />
+          <BlueMetric label="총 수익률" value={signed(financeSummary.investmentReturn)} />
+          <BlueMetric label="보유 종목" value={`${holdings.length}개`} />
         </div>
       </div>
-      <img src={waveHero} alt="" className="absolute bottom-0 right-3 hidden h-44 w-72 object-contain opacity-90 mix-blend-multiply lg:block" />
+      <img src={belugaPhoneArt} alt="" className="wave-bob absolute bottom-4 right-6 hidden h-40 w-40 object-contain drop-shadow-[0_14px_20px_rgba(10,40,140,.35)] lg:block" />
     </BlueCard>
   )
 }
@@ -1656,10 +1706,10 @@ function PortfolioAllocationCard() {
   return (
     <Card title="포트폴리오 자산 배분">
       <div className="grid gap-5 sm:grid-cols-[220px_1fr]">
-        <Donut data={portfolioAllocation} center={won(financeSummary.totalAsset)} />
+        <Donut data={portfolioAllocation} center={won(portfolioAllocation.reduce((sum, item) => sum + item.amount, 0))} />
         <Legend items={portfolioAllocation} />
       </div>
-      <div className="mt-4 text-sm font-medium text-slate-400">기준일: 2024.05.20</div>
+      <div className="mt-4 text-sm font-medium text-slate-400">{financeSummary.month} 기록 기준</div>
     </Card>
   )
 }
@@ -1670,7 +1720,8 @@ function TopHoldingsCard() {
   return (
     <Card title="보유 종목 상위 성과" action="더보기" actionTo="/portfolio/detail">
       <div className="space-y-5">
-        {holdings.slice(0, 3).map((item, index) => (
+        {holdings.length === 0 && <p className="text-sm font-bold text-slate-500">아직 보유 종목이 없어요.</p>}
+        {[...holdings].sort((a, b) => b.returnRate - a.returnRate).slice(0, 3).map((item, index) => (
           <div key={item.symbol} className="grid grid-cols-[28px_1fr_auto] items-center gap-4">
             <span className="grid h-7 w-7 place-items-center rounded-full bg-orange-100 text-sm font-black text-orange-600">{index + 1}</span>
             <div>
@@ -1679,7 +1730,7 @@ function TopHoldingsCard() {
             </div>
             <div className="text-right">
               <div className="font-black">{won(item.value)}</div>
-              <div className="text-sm font-black text-emerald-600">▲ {item.returnRate}%</div>
+              <div className={`text-sm font-black ${gainClass(item.returnRate)}`}>{signed(item.returnRate)}</div>
             </div>
           </div>
         ))}
@@ -1724,14 +1775,17 @@ function HoldingsTable() {
             </tr>
           </thead>
           <tbody>
+            {holdings.length === 0 && (
+              <tr><td colSpan={6} className="text-slate-500">아직 보유 종목이 없어요. 아래에서 거래 기록을 추가해 보세요.</td></tr>
+            )}
             {holdings.map((item) => (
               <tr key={item.symbol}>
                 <td><b>{item.symbol}</b> <span className="ml-2 text-slate-400">{item.name}</span></td>
                 <td>{item.quantity}</td>
-                <td>{item.avgPrice}</td>
+                <td>{won(item.averagePrice)}</td>
                 <td>{won(item.value)}</td>
-                <td className="text-emerald-600">▲ {item.returnRate}%</td>
-                <td className="text-blue-700">+{won(item.profit)}</td>
+                <td className={gainClass(item.returnRate)}>{signed(item.returnRate)}</td>
+                <td className={gainClass(item.profit)}>{signedWon(item.profit)}</td>
               </tr>
             ))}
           </tbody>
@@ -1757,11 +1811,11 @@ type InvestmentTransactionFormState = {
 
 function defaultInvestmentTransactionForm(): InvestmentTransactionFormState {
   return {
-    symbol: '005930',
-    stockName: '삼성전자',
+    symbol: '',
+    stockName: '',
     transactionType: 'BUY',
     quantity: 1,
-    price: 79600,
+    price: 0,
     fee: 0,
     tax: 0,
     transactionDate: todayDateString(),
@@ -1999,28 +2053,11 @@ function InvestmentTransactionManager() {
 }
 
 function PortfolioInsight() {
+  const { portfolioAllocation, holdings } = useMyWaveData()
   return (
     <Card className="bg-blue-50/70" title="포트폴리오 인사이트" action={<InlineAction to="/coach" label="AI 코치" primary />}>
-      <p className="text-base leading-8 text-slate-600">현재 포트폴리오는 성장주 비중이 높아 변동성이 클 수 있어요. 안정적인 수익을 위해 채권 비중을 10~15%까지 늘리는 것을 추천드려요.</p>
-    </Card>
-  )
-}
-
-function CompanyPreview() {
-  return (
-    <Card title="관련 기업 분석 미리보기" action="자세히 보기" actionTo="/company/AAPL">
-      <div className="grid grid-cols-[1fr_140px] items-center gap-4">
-        <div>
-          <div className="text-lg font-black">AAPL <span className="text-sm text-slate-500">애플</span></div>
-          <div className="mt-1 text-sm font-medium text-slate-500">미국 · 기술 · 시가총액 2.8조 USD</div>
-        </div>
-        <TinySparkline />
-      </div>
-      <div className="mt-5 grid grid-cols-3 divide-x divide-slate-100 text-center">
-        <MiniStat label="투자 의견" value="매수" />
-        <MiniStat label="목표가 (12M)" value="$210.00" />
-        <MiniStat label="상승 여력" value="+22.4%" />
-      </div>
+      <p className="text-base leading-8 text-slate-600">{portfolioInsightLine(portfolioAllocation, holdings)}</p>
+      <p className="mt-3 text-xs font-bold text-slate-400">투자 판단이 아니라, 지금 구성을 이해하기 위한 참고예요.</p>
     </Card>
   )
 }
@@ -2086,7 +2123,7 @@ function ChatPanel() {
       const response = await chatWithMyWaveCoach(message)
       setMessages((items) => [...items, { from: 'bot', text: response.answer.content }])
     } catch {
-      setMessages((items) => [...items, { from: 'bot', text: '지금은 서버 연결이 불안정해서 데모 기준으로 답변할게요. 목표와 소비를 같이 보면 이번 달은 지출 조정 후 투자 여력을 확인하는 흐름이 좋아요.' }])
+      setMessages((items) => [...items, { from: 'bot', text: '지금은 답변을 받아오지 못했어요. 잠시 후 다시 물어봐 주세요.' }])
     } finally {
       setSending(false)
     }
@@ -2094,6 +2131,14 @@ function ChatPanel() {
 
   return (
     <section className="space-y-5">
+      {messages.length === 0 && (
+        <div className="flex gap-4">
+          <Beluga mood="hello" size="sm" float={false} className="mt-1" />
+          <div className="max-w-[720px] rounded-[18px] rounded-bl-[6px] bg-wave-foam px-5 py-3.5 text-[15px] font-medium leading-7 text-blue-950">
+            이번 달 소비, 목표, 투자에 대해 궁금한 걸 물어보세요. 기록된 숫자를 바탕으로 정리해 드려요.
+          </div>
+        </div>
+      )}
       {messages.map((message, index) => (
         <div key={`${message.from}-${index}`} className={`chat-row flex ${message.from === 'user' ? 'justify-end' : 'justify-start'} gap-4`} style={{ animationDelay: `${index * 120}ms` }}>
           {message.from === 'bot' && <Beluga mood="calm" size="sm" float={false} className="mt-1" />}
@@ -2154,7 +2199,7 @@ function FinanceState() {
     <Card title="이번 달 재무 상태" action="자세히 보기" actionTo="/assets">
       <div className="space-y-5">
         <SummaryLine label="총 자산" value={won(financeSummary.totalAsset)} />
-        <SummaryLine label="총 지출" value={won(2_420_000)} />
+        <SummaryLine label="총 지출" value={won(financeSummary.totalSpending)} />
         <SummaryLine label="저축률" value={`${financeSummary.savingRate}%`} />
       </div>
     </Card>
@@ -2162,36 +2207,49 @@ function FinanceState() {
 }
 
 function GoalOutlook() {
-  const { financeSummary } = useMyWaveData()
+  const { financeSummary, goals } = useMyWaveData()
 
   return (
     <Card title="목표 달성 전망" action="자세히 보기" actionTo="/goals">
       <div className="grid grid-cols-[120px_1fr] items-center gap-5">
         <RingProgress value={financeSummary.goalRate} />
-        <div>
-          <div className="text-sm font-bold text-slate-500">이번 달 목표 달성 가능성</div>
-          <div className="mt-2 text-4xl font-black text-emerald-500">88%</div>
-          <div className="mt-2 text-sm font-bold text-slate-500">추가 투자 시 95%+ 달성 가능</div>
-          <div className="mt-4 rounded-2xl bg-blue-50 p-3 font-black text-blue-700">필요 투자 금액<br />₩320,000</div>
-        </div>
+        {goals[0] ? (
+          <div>
+            <div className="text-sm font-bold text-slate-500">{goals[0].title}</div>
+            <div className="mt-2 text-3xl font-black text-slate-900">{won(financeSummary.remainingAmount)}</div>
+            <div className="mt-1 text-sm font-bold text-slate-500">남은 금액 · D-{financeSummary.daysLeft}</div>
+            <div className="mt-4 rounded-2xl bg-blue-50 p-3 font-black text-blue-700">하루에 모을 금액<br />{won(financeSummary.dailyTarget)}</div>
+          </div>
+        ) : (
+          <div className="text-sm font-bold text-slate-500">아직 목표가 없어요. 목표를 만들면 하루에 얼마씩 모으면 되는지 알려 드려요.</div>
+        )}
       </div>
     </Card>
   )
 }
 
+/**
+ * 보유 종목 비중으로 셈할 수 있는 것만 보여준다. 쏠림(가장 큰 종목 비중), 종목 수, 현금 비중.
+ * 시장·변동성 위험처럼 데이터로 계산하지 않는 항목은 그럴듯한 "보통"으로 채우지 않는다.
+ */
 function RiskPanel() {
+  const { holdings, portfolioAllocation } = useMyWaveData()
+  const top = [...holdings].sort((a, b) => b.weight - a.weight)[0]
+  const topWeight = top?.weight ?? 0
+  const level = holdings.length === 0 ? '기록 없음' : topWeight >= 50 ? '높음' : topWeight >= 30 ? '보통' : '낮음'
+  const cash = portfolioAllocation.find((item) => item.name.includes('현금'))
+
   return (
-    <Card title="포트폴리오 리스크" action="자세히 보기" actionTo="/portfolio/risk">
+    <Card title="포트폴리오 쏠림" action="자세히 보기" actionTo="/portfolio/risk">
       <div className="mx-auto h-28 w-40 rounded-t-full border-[18px] border-b-0 border-emerald-400 border-r-red-400 border-t-amber-400 text-center">
-        <div className="mt-10 text-lg font-black">보통</div>
+        <div className="mt-10 text-lg font-black">{level}</div>
       </div>
       <div className="mt-5 space-y-2 text-sm font-bold">
-        <SummaryLine label="시장 리스크" value="보통" />
-        <SummaryLine label="변동성 리스크" value="보통" />
-        <SummaryLine label="집중 리스크" value="높음" />
-        <SummaryLine label="유동성 리스크" value="낮음" />
+        <SummaryLine label="가장 큰 종목" value={top ? `${top.name} ${Math.round(topWeight)}%` : '-'} />
+        <SummaryLine label="보유 종목 수" value={`${holdings.length}개`} />
+        <SummaryLine label="현금 비중" value={cash ? `${Math.round(cash.rate)}%` : '-'} />
       </div>
-      <div className="mt-5 rounded-2xl bg-blue-50 p-4 text-sm font-bold leading-6 text-blue-800">AI 코치 TIP: 미국 기술주 비중이 높아요. ETF로 분산 투자하면 리스크를 줄일 수 있어요.</div>
+      <div className="mt-5 rounded-2xl bg-blue-50 p-4 text-sm font-bold leading-6 text-blue-800">{portfolioInsightLine(portfolioAllocation, holdings)}</div>
     </Card>
   )
 }
@@ -2210,8 +2268,8 @@ function NotificationsPage() {
       setUnreadCount(summary.unreadCount)
     }).catch(() => {
       if (ignore) return
-      setItems(defaultNotificationItems)
-      setUnreadCount(defaultNotificationItems.length)
+      setItems([])
+      setUnreadCount(0)
     })
     return () => {
       ignore = true
@@ -2328,6 +2386,15 @@ function ProfilePage() {
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState('')
   const [logoutSaving, setLogoutSaving] = useState(false)
+  const [accountCount, setAccountCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    let live = true
+    getMyWaveAccounts()
+      .then((accounts) => { if (live) setAccountCount(accounts.length) })
+      .catch(() => { if (live) setAccountCount(null) })
+    return () => { live = false }
+  }, [])
   const rows = [
     { icon: UserRound, title: '계정 설정', detail: '프로필, 이메일, 비밀번호 변경', to: '/profile' },
     { icon: Bell, title: '알림 설정', detail: '푸시 알림 및 이메일 알림 관리', to: '/notifications' },
@@ -2446,10 +2513,10 @@ function ProfilePage() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-2xl font-black">{member?.name ?? financeSummary.userName}</h2>
+              <h2 className="text-2xl font-black">{member?.name ?? auth.member?.name ?? ''}</h2>
               <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{member?.membershipGrade ?? 'Wave 사용자'}</span>
             </div>
-            <p className="mt-2 text-sm font-bold text-slate-500">{member?.email ?? 'mywave.user@example.com'}</p>
+            <p className="mt-2 text-sm font-bold text-slate-500">{member?.email ?? auth.member?.email ?? ''}</p>
           </div>
           <ChevronRight className="h-6 w-6 text-slate-400" />
         </div>
@@ -2464,8 +2531,8 @@ function ProfilePage() {
       </Card>
       <Card title="계정 요약">
         <div className="grid gap-5 sm:grid-cols-3">
-          <MiniStat label="연결 계좌" value="3개" change="은행/증권 계좌" />
-          <MiniStat label="총 자산" value={won(financeSummary.totalAsset)} change="방금 전 업데이트" />
+          <MiniStat label="등록한 계좌" value={accountCount === null ? '-' : `${accountCount}개`} change="직접 입력한 계좌" />
+          <MiniStat label="총 자산" value={won(financeSummary.totalAsset)} change="계좌 + 투자" />
           <MiniStat label="저축률" value={`${financeSummary.savingRate}%`} change="이번 달" />
         </div>
       </Card>
@@ -2632,7 +2699,7 @@ function GoalEditorPage() {
   const [searchParams] = useSearchParams()
   const editingId = Number(searchParams.get('id') ?? 0)
   const [title, setTitle] = useState('새 저축 목표')
-  const [targetAmount, setTargetAmount] = useState(1_000_000)
+  const [targetAmount, setTargetAmount] = useState(0)
   const [currentAmount, setCurrentAmount] = useState(0)
   const [targetDate, setTargetDate] = useState('2026-07-21')
   const [goalStatus, setGoalStatus] = useState('ACTIVE')
@@ -2768,7 +2835,7 @@ function SpendingDetailPage() {
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-orange-600 text-sm font-black text-white">{index + 1}</span>
                 <div className="flex-1">
                   <div className="font-black">{item.name}</div>
-                  <div className="text-sm font-bold text-slate-500">목표 달성률 {item.impact}%p 영향</div>
+                  <div className="text-sm font-bold text-slate-500">{item.count}건 · 소비의 {Math.round(item.rate)}%</div>
                 </div>
                 <div className="font-black">{won(item.amount)}</div>
               </div>
@@ -2778,9 +2845,17 @@ function SpendingDetailPage() {
       </div>
       <Card title="이번 달 소비 판단">
         <div className="grid gap-4 sm:grid-cols-3">
-          <MiniStat label="총 소비" value={won(financeSummary.totalSpending)} change="전월 대비 상승" />
+          <MiniStat
+            label="총 소비"
+            value={won(financeSummary.totalSpending)}
+            change={financeSummary.previousSpending > 0 ? `지난 달 같은 기간 대비 ${signed(financeSummary.spendingChangeRate)}` : '지난 달 기록 없음'}
+          />
           <MiniStat label="일평균 소비" value={won(financeSummary.dailySpending)} />
-          <MiniStat label="예산 대비" value={`${financeSummary.budgetRate}%`} change="조정 필요" />
+          <MiniStat
+            label="예산 대비"
+            value={financeSummary.budgetRate === null ? '예산 없음' : `${financeSummary.budgetRate}%`}
+            change={financeSummary.budgetRate === null ? '생활비 예산을 정해 주세요' : financeSummary.budgetRate > 100 ? '예산을 넘었어요' : `예산 안에서 쓰는 중`}
+          />
         </div>
       </Card>
       <ExpenseRecordsManager />
@@ -2988,13 +3063,6 @@ function SimulationDetailPage() {
       <MobileTitle title="절약 시뮬레이션" />
       <SavingSimulation />
       <ActionPanel />
-      <Card title="적용 후 예상 루틴">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <MiniStat label="주간 배달 횟수" value="4회 -> 2회" change="+78,000원" />
-          <MiniStat label="카페 지출" value="-30%" change="+45,000원" />
-          <MiniStat label="구독 정리" value="2개 해지" change="+32,000원" />
-        </div>
-      </Card>
     </div>
   )
 }
@@ -3005,7 +3073,6 @@ function PortfolioDetailPage() {
       <MobileTitle title="보유 자산" />
       <PortfolioHero />
       <HoldingsTable />
-      <CompanyPreview />
       <InvestmentTransactionManager />
     </div>
   )
@@ -3029,7 +3096,7 @@ function PortfolioAllocationDetailPage() {
 }
 
 function RiskDetailPage() {
-  const [selectedAction, setSelectedAction] = useState('ETF 비중 10~15% 확대')
+  const [selectedAction, setSelectedAction] = useState('')
   const [savedAction, setSavedAction] = useState('')
 
   async function chooseAction(action: string) {
@@ -3038,7 +3105,7 @@ function RiskDetailPage() {
       const saved = await saveMyWavePortfolioRiskAction(action)
       setSavedAction(saved.action)
     } catch {
-      setSavedAction(action)
+      setSavedAction('')
     }
   }
 
@@ -3048,14 +3115,14 @@ function RiskDetailPage() {
       <RiskPanel />
       <Card title="리스크 조정 액션">
         <div className="grid gap-3 sm:grid-cols-3">
-          {['ETF 비중 10~15% 확대', '현금 비중 5% 확보', '단일 종목 비중 35% 이하 유지'].map((item) => (
+          {['여러 종목에 나눠 담기', '현금 일부 남겨 두기', '한 종목 비중 줄이기'].map((item) => (
             <button key={item} onClick={() => chooseAction(item)} className={`pressable rounded-2xl border p-4 text-left font-black ${selectedAction === item ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-blue-50'}`}>
               {item}
             </button>
           ))}
         </div>
-        <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-600">선택한 액션: <span className="text-blue-700">{selectedAction}</span></div>
-        {savedAction && <div className="mt-3 rounded-2xl bg-blue-50 p-4 text-sm font-black text-blue-700">백엔드에 저장됨: {savedAction}</div>}
+        <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-600">내가 정한 원칙: <span className="text-blue-700">{selectedAction || '아직 고르지 않았어요'}</span></div>
+        {savedAction && <div className="mt-3 rounded-2xl bg-blue-50 p-4 text-sm font-black text-blue-700">저장했어요: {savedAction}</div>}
       </Card>
     </div>
   )
@@ -3111,11 +3178,11 @@ function defaultBudgetForm(): BudgetFormState {
   const now = new Date()
   return {
     budgetMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
-    incomeAmount: 4_200_000,
-    livingBudgetAmount: 2_100_000,
-    fixedExpenseAmount: 620_000,
-    plannedSavingAmount: 630_000,
-    plannedInvestmentAmount: 530_000,
+    incomeAmount: 850_000,
+    livingBudgetAmount: 550_000,
+    fixedExpenseAmount: 120_000,
+    plannedSavingAmount: 100_000,
+    plannedInvestmentAmount: 30_000,
   }
 }
 
@@ -3352,10 +3419,11 @@ function AssetDetailPage() {
       </Card>
       <Card title="최근 활동">
         <div className="divide-y divide-slate-100">
+          {activities.length === 0 && <p className="py-4 text-sm font-bold text-slate-500">이번 달 기록이 아직 없어요.</p>}
           {activities.map((item) => {
             const Icon = item.icon
             return (
-              <div key={item.title} className="flex items-center gap-4 py-4">
+              <div key={item.id} className="flex items-center gap-4 py-4">
                 <div className="grid h-11 w-11 place-items-center rounded-2xl text-white" style={{ background: item.color }}><Icon className="h-5 w-5" /></div>
                 <div className="flex-1">
                   <div className="font-black">{item.title}</div>
@@ -3372,24 +3440,17 @@ function AssetDetailPage() {
 }
 
 function CompanyDetailPage() {
-  const { symbol = '005930' } = useParams()
+  const { symbol = '' } = useParams()
   const [watched, setWatched] = useState(false)
-  const [analysis, setAnalysis] = useState<MyWaveCompanyAnalysisResponse>(() => fallbackCompanyAnalysis(symbol))
-  const company = {
-    name: analysis.stock.name,
-    ticker: analysis.stock.symbol,
-    market: `${analysis.stock.market ?? 'MARKET'} · ${analysis.stock.industry ?? analysis.stock.sector ?? '기업'}`,
-    price: formatCompanyPrice(analysis.stock.currentPrice, analysis.stock.market),
-    change: `${Number(analysis.stock.changeRate ?? 0) >= 0 ? '+' : ''}${Number(analysis.stock.changeRate ?? 0).toFixed(2)}%`,
-    logo: analysis.stock.name.slice(0, 1).toUpperCase(),
-  }
+  // 분석을 받기 전에는 아무 숫자도 그리지 않는다. 실패하면 실패했다고 말한다.
+  const [loaded, setLoaded] = useState<{ symbol: string; analysis: MyWaveCompanyAnalysisResponse | null } | null>(null)
 
   useEffect(() => {
     let ignore = false
     getMyWaveCompanyAnalysis(symbol).then((result) => {
-      if (!ignore) setAnalysis(result)
+      if (!ignore) setLoaded({ symbol, analysis: result })
     }).catch(() => {
-      if (!ignore) setAnalysis(fallbackCompanyAnalysis(symbol))
+      if (!ignore) setLoaded({ symbol, analysis: null })
     })
     return () => {
       ignore = true
@@ -3406,8 +3467,30 @@ function CompanyDetailPage() {
         await removeMyWaveWatchlist(symbol)
       }
     } catch {
-      // 백엔드가 꺼져 있어도 UI 토글은 유지합니다.
+      // 저장하지 못했으면 버튼도 되돌린다. 저장된 척하지 않는다.
+      setWatched(!next)
     }
+  }
+
+  if (!loaded || loaded.symbol !== symbol) {
+    return <Card><p className="text-sm font-bold text-slate-500">기업 정보를 불러오는 중이에요.</p></Card>
+  }
+  const analysis = loaded.analysis
+  if (!analysis) {
+    return (
+      <Card>
+        <h1 className="text-xl font-black">{symbol} 정보를 불러오지 못했어요</h1>
+        <p className="mt-2 text-sm font-bold text-slate-500">종목 코드가 맞는지, 서버가 켜져 있는지 확인해 주세요.</p>
+      </Card>
+    )
+  }
+  const company = {
+    name: analysis.stock.name,
+    ticker: analysis.stock.symbol,
+    market: `${analysis.stock.market ?? 'MARKET'} · ${analysis.stock.industry ?? analysis.stock.sector ?? '기업'}`,
+    price: formatCompanyPrice(analysis.stock.currentPrice, analysis.stock.market),
+    change: `${Number(analysis.stock.changeRate ?? 0) >= 0 ? '+' : ''}${Number(analysis.stock.changeRate ?? 0).toFixed(2)}%`,
+    logo: analysis.stock.name.slice(0, 1).toUpperCase(),
   }
 
   return (
@@ -3471,14 +3554,6 @@ function toneBg(tone: string) {
   return 'bg-blue-50 text-blue-700'
 }
 
-const defaultNotificationItems: MyWaveNotificationResponse[] = [
-  { id: 1, category: '목표', title: '목표 달성률 업데이트', body: '"다음 달까지 100만원 모으기" 목표가 63% 달성되었어요.', targetPath: '/goals', tone: 'green', read: false, createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString() },
-  { id: 2, category: '소비', title: '소비 경고', body: '이번 달 카페/간식 지출이 지난 달보다 32% 증가했어요.', targetPath: '/spending/detail', tone: 'orange', read: false, createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
-  { id: 3, category: '투자', title: '포트폴리오 변동', body: '국내 주식 비중이 2.3% 감소했어요.', targetPath: '/portfolio/allocation', tone: 'blue', read: false, createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() },
-  { id: 4, category: 'AI 코치', title: 'AI 코치 추천', body: '현금 비중을 10% 높이면 변동성 리스크를 줄일 수 있어요.', targetPath: '/coach', tone: 'violet', read: false, createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() },
-  { id: 5, category: '이벤트', title: '관심 종목 리포트 알림', body: '삼성전자 리포트가 업데이트 되었어요.', targetPath: '/company/005930', tone: 'yellow', read: false, createdAt: new Date(Date.now() - 33 * 60 * 60 * 1000).toISOString() },
-]
-
 function notificationIcon(category: string, title: string) {
   if (category.includes('소비')) return ShieldAlert
   if (category.includes('투자') || title.includes('포트폴리오')) return BarChart3
@@ -3502,43 +3577,6 @@ function formatCompanyPrice(price: number, market?: string) {
   }
   return `${Number(price).toLocaleString('ko-KR')}원`
 }
-
-function fallbackCompanyAnalysis(symbol: string): MyWaveCompanyAnalysisResponse {
-  const apple = symbol.toUpperCase() === 'AAPL'
-  return {
-    stock: apple
-      ? { symbol: 'AAPL', name: 'Apple', market: 'NASDAQ', currentPrice: 210, changePrice: 2.4, changeRate: 1.24, sector: '기술', industry: '소비자 전자' }
-      : { symbol: '005930', name: '삼성전자', market: 'KOSPI', currentPrice: 79600, changePrice: -1100, changeRate: -1.36, sector: '반도체', industry: '전자 장비 및 기기' },
-    metrics: [
-      { label: '매출 증가', value: apple ? 8.7 : 15.4, unit: '%', tone: 'green', description: '전년 대비 매출 성장' },
-      { label: '영업이익 변동', value: apple ? 12.3 : -5.2, unit: '%', tone: apple ? 'green' : 'orange', description: '수익성 변동' },
-      { label: '부채비율 안정', value: apple ? 62.1 : 39.8, unit: '%', tone: 'green', description: '재무 안정성' },
-      { label: '현금흐름 양호', value: apple ? 96.9 : 12.8, unit: apple ? 'B USD' : '조원', tone: 'blue', description: 'FCF 기준' },
-      { label: '배당 있음', value: apple ? 0.5 : 2.1, unit: '%', tone: 'violet', description: '배당 수익률' },
-    ],
-    performance: apple
-      ? [
-        { year: '2020', sales: 274.5, operatingProfit: 66.3 },
-        { year: '2021', sales: 365.8, operatingProfit: 108.9 },
-        { year: '2022', sales: 394.3, operatingProfit: 119.4 },
-        { year: '2023', sales: 383.3, operatingProfit: 114.3 },
-        { year: '2024', sales: 391.0, operatingProfit: 123.2 },
-      ]
-      : [
-        { year: '2020', sales: 236.8, operatingProfit: 35.9 },
-        { year: '2021', sales: 279.6, operatingProfit: 51.6 },
-        { year: '2022', sales: 302.2, operatingProfit: 43.4 },
-        { year: '2023', sales: 258.9, operatingProfit: 6.6 },
-        { year: '2024', sales: 298.1, operatingProfit: 32.7 },
-      ],
-    aiSummary: apple
-      ? '브랜드 충성도와 현금흐름은 강하지만 성장률 둔화와 규제 리스크를 함께 확인해야 합니다.'
-      : '재무 안정성은 높은 편이지만 최근 수익성은 확인이 필요합니다. 메모리 업황 회복과 AI 수요 증가로 실적 개선이 기대됩니다.',
-    portfolioImpact: '현재 포트폴리오에서 성장 노출도를 높이는 역할을 합니다.',
-    dividendAvailable: true,
-  }
-}
-
 
 function InlineAction({ to, label, primary = false }: { to: string; label: string; primary?: boolean }) {
   const navigate = useNavigate()
@@ -3575,35 +3613,6 @@ function SegmentedTabs({ items, active }: { items: string[]; active: string }) {
         </button>
       ))}
     </div>
-  )
-}
-
-function MobileMiniMetric({ icon, label, value, detail, tone = 'blue' }: { icon: ReactNode; label: string; value: string; detail: string; tone?: 'blue' | 'green' | 'violet' }) {
-  void tone
-  return (
-    <MobileCard className="min-h-30 p-4">
-      <div className="grid h-9 w-9 place-items-center rounded-[10px] bg-slate-100 text-slate-400">{icon}</div>
-      <div className="mt-3 text-[12px] font-medium text-slate-400">{label}</div>
-      <div className="mt-1.5 whitespace-nowrap text-[17px] font-bold leading-tight tracking-[-0.02em] text-slate-900">{value}</div>
-      <div className="mt-0.5 text-[11px] font-medium text-slate-400">{detail}</div>
-    </MobileCard>
-  )
-}
-
-function MobileNotice() {
-  return (
-    <section className="rounded-[20px] bg-white p-4">
-      <div className="flex items-center gap-3.5">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-red-50 text-red-500">
-          <ShieldAlert className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-bold text-slate-900">지출이 평소보다 많아요</div>
-          <p className="mt-0.5 text-[13px] font-medium leading-5 text-slate-400">카페·간식 지출이 지난달보다 32% 늘었어요.</p>
-        </div>
-        <ChevronRight className="h-5 w-5 shrink-0 text-slate-300" />
-      </div>
-    </section>
   )
 }
 
@@ -3729,7 +3738,7 @@ function RingProgress({ value }: { value: number }) {
       <div className="absolute inset-0 grid place-items-center text-center">
         <div>
           <div className="text-3xl font-black text-blue-700">{value}%</div>
-          <div className="text-xs font-bold text-slate-400">2024.05 목표</div>
+          <div className="text-xs font-bold text-slate-400">메인 목표</div>
         </div>
       </div>
     </div>
@@ -3759,47 +3768,21 @@ function MobileTitle({ title }: { title: string }) {
   return <h1 className="mb-2 text-[28px] font-black leading-tight tracking-[-0.04em] lg:hidden">{title}</h1>
 }
 
+/**
+ * 지금 보고 있는 달. 예전에는 2024년 달들을 고르는 척하는 버튼이었지만 실제로 데이터를
+ * 바꾸지 않았다. 다른 달 보기를 붙이기 전까지는 이번 달을 표시만 한다.
+ */
 function MonthPicker() {
-  const [open, setOpen] = useState(false)
-  const [month, setMonth] = useState('2024.05')
-  const months = ['2024.05', '2024.04', '2024.03']
-
+  const { financeSummary } = useMyWaveData()
   return (
-    <div className="relative">
-      <button onClick={() => setOpen((value) => !value)} className="flex h-10 items-center gap-2 rounded-full bg-white px-3 text-xs font-black text-slate-600 lg:h-12 lg:gap-3 lg:px-5 lg:text-sm">
-        <CalendarDays className="h-4 w-4 lg:h-5 lg:w-5" /> {month} <ChevronDown className="h-4 w-4" />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-12 z-20 w-32 rounded-2xl bg-white p-2 shadow-card">
-          {months.map((item) => (
-            <button key={item} onClick={() => { setMonth(item); setOpen(false) }} className="block w-full rounded-xl px-3 py-2 text-left text-sm font-black hover:bg-blue-50">
-              {item}
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="flex h-10 items-center gap-2 rounded-full bg-white px-3 text-xs font-black text-slate-600 lg:h-12 lg:gap-3 lg:px-5 lg:text-sm">
+      <CalendarDays className="h-4 w-4 lg:h-5 lg:w-5" /> {financeSummary.month || '이번 달'}
     </div>
   )
 }
 
 function Pill({ children }: { children: ReactNode }) {
   return <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-black text-white">{children}</span>
-}
-
-function TinySparkline() {
-  return (
-    <svg viewBox="0 0 140 48" className="h-12 w-36">
-      <polyline points="0,38 15,25 28,30 42,18 56,31 70,24 84,28 98,12 112,18 126,10 140,4" fill="none" stroke="#2563eb" strokeWidth="3" />
-    </svg>
-  )
-}
-
-function CreditIcon() {
-  return <WalletCards className="h-8 w-8" />
-}
-
-function RocketMini() {
-  return <BarChart3 className="h-8 w-8" />
 }
 
 function BriefcaseIcon() {

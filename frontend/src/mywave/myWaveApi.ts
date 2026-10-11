@@ -18,9 +18,21 @@ export type MyWaveDashboardResponse = {
     monthlyIncome: number
     monthlyExpense: number
     savingRate: number
+    accountBalance: number
+    investmentAsset: number
+    budget: {
+      incomeAmount: number
+      livingBudgetAmount: number
+      fixedExpenseAmount: number
+      plannedSavingAmount: number
+      plannedInvestmentAmount: number
+    }
   }
   goalSummary: {
+    activeGoalCount: number
+    averageProgressRate: number
     mainGoal?: {
+      id: number
       title: string
       targetAmount: number
       currentAmount: number
@@ -34,6 +46,7 @@ export type MyWaveDashboardResponse = {
   }
   expenseSummary: {
     totalAmount: number
+    previousMonthAmount: number
     changeRate: number
     dailyAverageAmount: number
     categories: Array<{ category: string; amount: number; ratio: number; count: number; averageAmount: number }>
@@ -42,8 +55,12 @@ export type MyWaveDashboardResponse = {
   }
   portfolio?: {
     totalAsset: number
+    cash: number
+    totalPurchaseAmount: number
+    totalEvaluationAmount: number
     totalProfitLoss: number
     totalReturnRate: number
+    dailyProfitLoss: number
     dailyReturnRate: number
   } | null
   portfolioAllocation: Array<{ name: string; value: number; rate: number }>
@@ -121,6 +138,30 @@ export type MyWaveExpenseResponse = {
   amount: number
   spentDate: string
   memo?: string | null
+  createdAt?: string | null
+}
+
+/** 홈 화면 한 장. 백엔드 TodayDto 와 같은 모양이다. */
+export type MyWaveTodayResponse = {
+  date: string
+  budgetSet: boolean
+  monthlyLivingBudget: number
+  dailyBudget: number
+  spentToday: number
+  remainingToday: number
+  overToday: number
+  remainingLivingBudget: number
+  daysLeftInMonth: number
+  baselineDailyBudget: number
+  week: Array<{ date: string; amount: number; today: boolean; future: boolean }>
+  todayExpenses: MyWaveExpenseResponse[]
+  mainGoal: MyWaveGoalResponse | null
+  investment: {
+    evaluationAmount: number
+    returnRate: number
+    plannedThisMonth: number
+    remainingThisMonth: number
+  } | null
 }
 
 export type MyWaveExpenseSummaryResponse = {
@@ -261,6 +302,10 @@ async function unwrap<T>(request: Promise<{ data: ApiResponse<T> }>): Promise<T>
 
 export async function getMyWaveDashboard() {
   return unwrap(api.get<ApiResponse<MyWaveDashboardResponse>>('/api/dashboard/mywave'))
+}
+
+export async function getMyWaveToday() {
+  return unwrap(api.get<ApiResponse<MyWaveTodayResponse>>('/api/dashboard/today'))
 }
 
 export async function getMyWaveGoals() {

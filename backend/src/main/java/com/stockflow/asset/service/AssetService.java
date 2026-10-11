@@ -11,6 +11,8 @@ import com.stockflow.asset.repository.FinancialAccountRepository;
 import com.stockflow.asset.repository.MonthlyBudgetRepository;
 import com.stockflow.auth.security.CurrentMemberProvider;
 import com.stockflow.expense.service.ExpenseService;
+import com.stockflow.global.type.TransactionType;
+import com.stockflow.transaction.repository.InvestmentTransactionRepository;
 import com.stockflow.portfolio.entity.Portfolio;
 import com.stockflow.portfolio.repository.PortfolioRepository;
 import java.math.BigDecimal;
@@ -29,27 +31,32 @@ public class AssetService {
     private final FinancialAccountRepository accountRepository;
     private final MonthlyBudgetRepository budgetRepository;
     private final PortfolioRepository portfolioRepository;
+    private final InvestmentTransactionRepository transactionRepository;
     private final ExpenseService expenseService;
     private final CurrentMemberProvider currentMemberProvider;
 
     public AssetSummaryDto getSummary(YearMonth month) {
         Long memberId = currentMemberProvider.currentMemberId();
         YearMonth targetMonth = month == null ? YearMonth.now() : month;
-        List<FinancialAccount> accounts = ensureDemoAccounts(memberId);
-        MonthlyBudget budget = ensureBudget(memberId, targetMonth);
+        List<FinancialAccount> accounts = accountRepository.findByMemberIdOrderByIdAsc(memberId);
+        MonthlyBudget budget = budgetOrEmpty(memberId, targetMonth);
         BigDecimal accountBalance = accounts.stream()
                 .filter(account -> Boolean.TRUE.equals(account.getIncludedInAssets()))
                 .map(FinancialAccount::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal investmentAsset = portfolioRepository.findByMemberId(memberId)
                 .map(Portfolio::getTotalAsset)
-                .orElse(BigDecimal.valueOf(24_850_000));
+                .orElse(BigDecimal.ZERO);
         BigDecimal monthlyExpense = expenseService.getMonthlySummary(targetMonth).totalAmount();
         BigDecimal remainingLivingBudget = budget.getLivingBudgetAmount().subtract(monthlyExpense).max(BigDecimal.ZERO);
-        BigDecimal investmentAvailable = remainingLivingBudget
-                .add(budget.getPlannedInvestmentAmount())
-                .subtract(budget.getPlannedSavingAmount().divide(BigDecimal.valueOf(2), 0, RoundingMode.HALF_UP))
-                .max(BigDecimal.ZERO);
+        // 투자 가능 금액은 이번 달 예산에 적어 둔 투자 계획에서 이번 달에 이미 산 금액을 뺀 것이다.
+        // 예전 식은 남은 생활비까지 더해서, 밥값을 투자해도 된다고 말하고 있었다.
+        BigDecimal boughtThisMonth = transactionRepository.findByMemberIdOrderByTransactionDateDescCreatedAtDesc(memberId).stream()
+                .filter(tx -> tx.getTransactionType() == TransactionType.BUY)
+                .filter(tx -> tx.getTransactionDate() != null && YearMonth.from(tx.getTransactionDate()).equals(targetMonth))
+                .map(tx -> tx.getTotalAmount() == null ? BigDecimal.ZERO : tx.getTotalAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal investmentAvailable = budget.getPlannedInvestmentAmount().subtract(boughtThisMonth).max(BigDecimal.ZERO);
         BigDecimal savingRate = budget.getIncomeAmount().compareTo(BigDecimal.ZERO) == 0
                 ? BigDecimal.ZERO
                 : budget.getPlannedSavingAmount().multiply(BigDecimal.valueOf(100)).divide(budget.getIncomeAmount(), 1, RoundingMode.HALF_UP);
@@ -69,7 +76,7 @@ public class AssetService {
     }
 
     public List<FinancialAccountDto> getAccounts() {
-        return ensureDemoAccounts(currentMemberProvider.currentMemberId()).stream()
+        return accountRepository.findByMemberIdOrderByIdAsc(currentMemberProvider.currentMemberId()).stream()
                 .map(FinancialAccountDto::from)
                 .toList();
     }
@@ -131,43 +138,21 @@ public class AssetService {
         return MonthlyBudgetDto.from(budget);
     }
 
-    private List<FinancialAccount> ensureDemoAccounts(Long memberId) {
-        List<FinancialAccount> accounts = accountRepository.findByMemberIdOrderByIdAsc(memberId);
-        if (!accounts.isEmpty()) {
-            return accounts;
-        }
-        accountRepository.saveAll(List.of(
-                demoAccount(memberId, "입출금 통장", "BANK", "MyWave Bank", 3_200_000),
-                demoAccount(memberId, "비상금 통장", "SAVINGS", "MyWave Bank", 2_250_000),
-                demoAccount(memberId, "월급 계좌", "BANK", "MyWave Bank", 1_450_000)
-        ));
-        return accountRepository.findByMemberIdOrderByIdAsc(memberId);
-    }
-
-    private FinancialAccount demoAccount(Long memberId, String name, String type, String institutionName, long balance) {
-        return FinancialAccount.builder()
-                .memberId(memberId)
-                .name(name)
-                .accountType(type)
-                .institutionName(institutionName)
-                .balance(BigDecimal.valueOf(balance))
-                .includedInAssets(true)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-    }
-
-    private MonthlyBudget ensureBudget(Long memberId, YearMonth month) {
+    /**
+     * 그 달 예산이 없으면 전부 0 인 예산을 돌려준다. 저장하지는 않는다.
+     * 예산을 정하지 않은 사람에게 남의 숫자를 대신 채워 넣지 않기 위해서다.
+     */
+    private MonthlyBudget budgetOrEmpty(Long memberId, YearMonth month) {
         return budgetRepository.findByMemberIdAndBudgetMonth(memberId, month)
-                .orElseGet(() -> budgetRepository.save(MonthlyBudget.builder()
+                .orElseGet(() -> MonthlyBudget.builder()
                         .memberId(memberId)
                         .budgetMonth(month)
-                        .incomeAmount(BigDecimal.valueOf(4_200_000))
-                        .livingBudgetAmount(BigDecimal.valueOf(2_100_000))
-                        .fixedExpenseAmount(BigDecimal.valueOf(620_000))
-                        .plannedSavingAmount(BigDecimal.valueOf(630_000))
-                        .plannedInvestmentAmount(BigDecimal.valueOf(530_000))
-                        .build()));
+                        .incomeAmount(BigDecimal.ZERO)
+                        .livingBudgetAmount(BigDecimal.ZERO)
+                        .fixedExpenseAmount(BigDecimal.ZERO)
+                        .plannedSavingAmount(BigDecimal.ZERO)
+                        .plannedInvestmentAmount(BigDecimal.ZERO)
+                        .build());
     }
 
     private FinancialAccount findOwnedAccount(Long id) {

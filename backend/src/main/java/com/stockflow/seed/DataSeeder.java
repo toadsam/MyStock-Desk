@@ -1,5 +1,15 @@
 package com.stockflow.seed;
 
+import com.stockflow.asset.entity.FinancialAccount;
+import com.stockflow.asset.entity.MonthlyBudget;
+import com.stockflow.asset.repository.FinancialAccountRepository;
+import com.stockflow.asset.repository.MonthlyBudgetRepository;
+import com.stockflow.expense.entity.Expense;
+import com.stockflow.expense.entity.ExpenseTemplate;
+import com.stockflow.expense.repository.ExpenseRepository;
+import com.stockflow.expense.repository.ExpenseTemplateRepository;
+import com.stockflow.goal.entity.SavingGoal;
+import com.stockflow.goal.repository.SavingGoalRepository;
 import com.stockflow.global.type.ImpactType;
 import com.stockflow.global.type.InsightType;
 import com.stockflow.global.type.SectorPerformanceType;
@@ -32,8 +42,13 @@ import com.stockflow.watchlist.entity.Watchlist;
 import com.stockflow.watchlist.repository.WatchlistRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -61,7 +76,13 @@ public class DataSeeder implements CommandLineRunner {
     private final NewsRepository newsRepository;
     private final AiInsightRepository aiInsightRepository;
     private final SectorPerformanceRepository sectorPerformanceRepository;
+    private final FinancialAccountRepository accountRepository;
+    private final MonthlyBudgetRepository budgetRepository;
+    private final SavingGoalRepository goalRepository;
+    private final ExpenseRepository expenseRepository;
+    private final ExpenseTemplateRepository expenseTemplateRepository;
     private final PasswordEncoder passwordEncoder;
+    private final Clock clock;
 
     @Override
     public void run(String... args) {
@@ -89,6 +110,137 @@ public class DataSeeder implements CommandLineRunner {
         seedEarnings(stocks);
         seedNews();
         seedInsights();
+        seedMyWaveLife(member.getId());
+    }
+
+    /**
+     * 데모 계정 한 명의 생활 기록. 알바비로 생활하는 대학생 한 달을 가정한다.
+     *
+     * <p>예전에는 서비스가 조회 시점에 "비어 있으면 데모로 채우기"를 했다. 그러면 새로 가입한
+     * 실제 사용자 계정에도 남의 소비가 들어간다. 이제 데모 데이터는 여기, 데모 계정에만 넣는다.
+     * 날짜는 전부 오늘을 기준으로 잡아서 언제 띄워도 "이번 달"과 "이번 주"가 채워져 있다.
+     */
+    private void seedMyWaveLife(Long memberId) {
+        LocalDate today = LocalDate.now(clock);
+        YearMonth month = YearMonth.from(today);
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        accountRepository.saveAll(List.of(
+                account(memberId, "생활비 통장", "BANK", 57_600, now),
+                account(memberId, "목표 저축 통장", "SAVINGS", 112_000, now),
+                account(memberId, "비상금 통장", "SAVINGS", 350_000, now)
+        ));
+        budgetRepository.saveAll(List.of(
+                budget(memberId, month.minusMonths(1)),
+                budget(memberId, month)
+        ));
+        goalRepository.saveAll(List.of(
+                goal(memberId, "다음 달까지 30만원 모으기", 300_000, 112_000, today.plusDays(16), 1, now),
+                goal(memberId, "비상금 50만원 만들기", 500_000, 350_000, today.plusDays(90), 2, now),
+                goal(memberId, "여름방학 여행비", 400_000, 85_000, today.plusDays(120), 3, now)
+        ));
+        expenseTemplateRepository.saveAll(List.of(
+                template(memberId, "카페", "카페", "학교 앞 카페", 3_000, 14, now),
+                template(memberId, "편의점", "식비", "편의점", 2_500, 9, now),
+                template(memberId, "학식", "식비", "학생식당", 3_800, 12, now)
+        ));
+
+        List<Expense> rows = new ArrayList<>();
+        for (LocalDate day = month.minusMonths(1).atDay(1); day.isBefore(today); day = day.plusDays(1)) {
+            rows.addAll(dailyLife(memberId, day));
+        }
+        rows.add(expense(memberId, "카페", "학교 앞 카페", 3_000, today, today.atTime(8, 42)));
+        rows.add(expense(memberId, "식비", "학생식당", 3_800, today, today.atTime(12, 10)));
+        expenseRepository.saveAll(rows);
+    }
+
+    /** 요일과 날짜로만 정해지는 하루치 소비. 무작위를 쓰지 않아 띄울 때마다 같은 모양이 나온다. */
+    private List<Expense> dailyLife(Long memberId, LocalDate day) {
+        boolean weekday = day.getDayOfWeek().getValue() <= 5;
+        int n = day.getDayOfMonth();
+        List<Expense> rows = new ArrayList<>();
+        if (n % 3 != 0) {
+            rows.add(expense(memberId, "카페", "학교 앞 카페", 3_000, day, day.atTime(LocalTime.of(9, 5))));
+        }
+        if (weekday) {
+            rows.add(expense(memberId, "식비", "학생식당", 3_800, day, day.atTime(12, 20)));
+            rows.add(expense(memberId, "교통", "대중교통", 2_900, day, day.atTime(18, 30)));
+        }
+        if (n % 2 == 0) {
+            rows.add(expense(memberId, "식비", "편의점", 2_500, day, day.atTime(21, 10)));
+        }
+        if (day.getDayOfWeek() == DayOfWeek.FRIDAY || (day.getDayOfWeek() == DayOfWeek.SATURDAY && n % 2 == 1)) {
+            rows.add(expense(memberId, "배달비", "배달의민족", 18_900, day, day.atTime(19, 40)));
+        }
+        if (n % 9 == 4) {
+            rows.add(expense(memberId, "쇼핑", "온라인 쇼핑", 15_800, day, day.atTime(23, 0)));
+        }
+        return rows;
+    }
+
+    private FinancialAccount account(Long memberId, String name, String type, long balance, LocalDateTime now) {
+        return FinancialAccount.builder()
+                .memberId(memberId)
+                .name(name)
+                .accountType(type)
+                .institutionName("MyWave Bank")
+                .balance(bd(balance))
+                .includedInAssets(true)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+    }
+
+    private MonthlyBudget budget(Long memberId, YearMonth month) {
+        return MonthlyBudget.builder()
+                .memberId(memberId)
+                .budgetMonth(month)
+                .incomeAmount(bd(850_000))
+                .livingBudgetAmount(bd(550_000))
+                .fixedExpenseAmount(bd(120_000))
+                .plannedSavingAmount(bd(100_000))
+                .plannedInvestmentAmount(bd(30_000))
+                .build();
+    }
+
+    private SavingGoal goal(Long memberId, String title, long target, long current, LocalDate targetDate, int priority, LocalDateTime now) {
+        return SavingGoal.builder()
+                .memberId(memberId)
+                .title(title)
+                .targetAmount(bd(target))
+                .currentAmount(bd(current))
+                .targetDate(targetDate)
+                .status("ACTIVE")
+                .priority(priority)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+    }
+
+    private ExpenseTemplate template(Long memberId, String name, String category, String merchant, long amount, int usage, LocalDateTime now) {
+        return ExpenseTemplate.builder()
+                .memberId(memberId)
+                .name(name)
+                .category(category)
+                .merchant(merchant)
+                .amount(bd(amount))
+                .usageCount(usage)
+                .lastUsedAt(now)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+    }
+
+    private Expense expense(Long memberId, String category, String merchant, long amount, LocalDate day, LocalDateTime at) {
+        return Expense.builder()
+                .memberId(memberId)
+                .category(category)
+                .merchant(merchant)
+                .amount(bd(amount))
+                .spentDate(day)
+                .createdAt(at)
+                .updatedAt(at)
+                .build();
     }
 
     private Map<String, Stock> seedStocks() {
@@ -251,26 +403,22 @@ public class DataSeeder implements CommandLineRunner {
     private Portfolio seedPortfolio(Long memberId) {
         return portfolioRepository.save(Portfolio.builder()
                 .memberId(memberId)
-                .totalAsset(bd(153_780_350))
-                .cash(bd(8_450_000))
-                .totalPurchaseAmount(bd(98_765_000))
-                .totalEvaluationAmount(bd(145_330_350))
-                .totalProfitLoss(bd(29_465_500))
-                .totalReturnRate(BigDecimal.valueOf(29.83))
-                .dailyProfitLoss(bd(1_845_200))
-                .dailyReturnRate(BigDecimal.valueOf(1.21))
+                .totalAsset(bd(450_900))
+                .cash(bd(23_600))
+                .totalPurchaseAmount(bd(401_940))
+                .totalEvaluationAmount(bd(427_300))
+                .totalProfitLoss(bd(25_360))
+                .totalReturnRate(BigDecimal.valueOf(6.31))
+                .dailyProfitLoss(bd(3_900))
+                .dailyReturnRate(BigDecimal.valueOf(0.87))
                 .build());
     }
 
     private void seedHoldings(Long portfolioId, Map<String, Stock> stocks) {
         holdingRepository.saveAll(List.of(
-                holding(portfolioId, stocks.get("005930"), 200, 71250, 15_720_000, 1_470_000, 10.32, 10.22),
-                holding(portfolioId, stocks.get("000660"), 100, 176000, 19_650_000, 2_050_000, 11.65, 12.77),
-                holding(portfolioId, stocks.get("373220"), 80, 395000, 27_760_000, -3_840_000, -12.14, 18.03),
-                holding(portfolioId, stocks.get("035420"), 50, 178000, 9_915_000, 1_015_000, 11.39, 6.44),
-                holding(portfolioId, stocks.get("035720"), 120, 51000, 5_418_000, -702_000, -11.46, 3.52),
-                holding(portfolioId, stocks.get("005380"), 60, 242000, 14_190_000, -330_000, -2.27, 9.21),
-                holding(portfolioId, stocks.get("005490"), 35, 331000, 12_880_000, 1_295_000, 11.18, 8.37)
+                holding(portfolioId, stocks.get("005930"), 3, 73700, 235_800, 14_800, 6.70, 52.3),
+                holding(portfolioId, stocks.get("360750"), 8, 12243, 101_200, 3_260, 3.33, 22.4),
+                holding(portfolioId, stocks.get("035720"), 2, 41500, 90_300, 7_300, 8.80, 20.0)
         ));
     }
 
@@ -299,14 +447,14 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedInvestmentTransactions(Long memberId, Map<String, Stock> stocks) {
         transactionRepository.saveAll(List.of(
-                transaction(memberId, stocks.get("005930"), TransactionType.BUY, 50, 78200, 587, 0, 0, 2, "HBM 수요 증가 기대", "6개월 이상 보유 예정", "반도체,장기보유"),
-                transaction(memberId, stocks.get("360750"), TransactionType.BUY, 30, 12480, 56, 0, 0, 3, "해외지수 분산 목적", "월 적립 후보", "ETF,분산"),
-                transaction(memberId, stocks.get("035720"), TransactionType.BUY, 80, 41500, 498, 0, 0, 20, "플랫폼 사업 회복 여부 확인", "매도 기록 계산을 위한 과거 매수 기록", "플랫폼,복기"),
-                transaction(memberId, stocks.get("035720"), TransactionType.SELL, 40, 44800, 269, 2790, 88000, 4, "기존 정리 기준에 도달", "플랫폼 규제 뉴스 확인 후 일부 정리", "플랫폼,리스크관리"),
-                transaction(memberId, stocks.get("000660"), TransactionType.BUY, 1, 196500, 29, 0, 0, 8, "HBM 매출 비중 확대", "실적 발표 전까지 뉴스 흐름 확인", "반도체,실적개선"),
-                transaction(memberId, stocks.get("005380"), TransactionType.BUY, 20, 236500, 710, 0, 0, 13, "북미 판매 회복 기대", "환율과 전기차 판매량 체크", "자동차,환율"),
-                cashTransaction(memberId, TransactionType.DEPOSIT, 1_000_000, 15, "월 투자금 입금", "정기 현금 유입"),
-                cashTransaction(memberId, TransactionType.DIVIDEND, 124_000, 22, "배당금 입금", "현금흐름 기록")
+                transaction(memberId, stocks.get("005930"), TransactionType.BUY, 1, 78200, 12, 0, 0, 2, "HBM 수요 증가 기대", "알바비 들어온 김에 1주 추가", "반도체,장기보유"),
+                transaction(memberId, stocks.get("360750"), TransactionType.BUY, 3, 12480, 6, 0, 0, 3, "해외지수 분산 목적", "월 3만원 적립 후보", "ETF,분산"),
+                transaction(memberId, stocks.get("035720"), TransactionType.BUY, 4, 41500, 25, 0, 0, 20, "플랫폼 사업 회복 여부 확인", "매도 기록 계산을 위한 과거 매수 기록", "플랫폼,복기"),
+                transaction(memberId, stocks.get("035720"), TransactionType.SELL, 2, 44800, 13, 161, 6600, 4, "기존 정리 기준에 도달", "교재비 필요해서 2주만 정리", "플랫폼,리스크관리"),
+                transaction(memberId, stocks.get("005930"), TransactionType.BUY, 2, 71400, 21, 0, 0, 8, "학기 초 소액 매수", "용돈 남은 걸로 시작", "반도체,첫투자"),
+                transaction(memberId, stocks.get("360750"), TransactionType.BUY, 5, 12100, 9, 0, 0, 13, "적립식으로 모으기", "한 달에 5주씩 목표", "ETF,적립"),
+                cashTransaction(memberId, TransactionType.DEPOSIT, 30_000, 15, "월 투자금 입금", "알바비에서 3만원 떼어 넣기"),
+                cashTransaction(memberId, TransactionType.DIVIDEND, 1_450, 22, "배당금 입금", "현금흐름 기록")
         ));
     }
 
