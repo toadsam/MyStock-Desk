@@ -1,11 +1,12 @@
-import { ChevronRight, Plus } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ChevronRight, Plus, RotateCcw } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import belugaArms from '../assets/mywave/beluga-arms.png'
 import belugaAvatar from '../assets/mywave/beluga-avatar.png'
-import belugaJump from '../assets/mywave/beluga-jump.png'
 import belugaPhone from '../assets/mywave/beluga-phone.png'
+import { BelugaTap, type BelugaMood } from './Beluga'
+import { useCountUp } from './useCountUp'
 import {
+  deleteMyWaveExpense,
   getMyWaveExpenseTemplates,
   getMyWaveToday,
   logMyWaveExpenseTemplate,
@@ -40,6 +41,20 @@ export function TodayHome() {
   const [failed, setFailed] = useState(false)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [notice, setNotice] = useState('')
+  // 기록이 저장된 횟수. 바뀔 때마다 잔에서 물방울이 튀고 벨루가가 뛴다.
+  const [splash, setSplash] = useState(0)
+  // 하루 예산을 막 넘긴 순간에만 잔을 흔든다.
+  const [shake, setShake] = useState(0)
+  const [toast, setToast] = useState<{ id: number | null; text: string } | null>(null)
+  const toastTimer = useRef<number | undefined>(undefined)
+
+  useEffect(() => () => window.clearTimeout(toastTimer.current), [])
+
+  function showToast(next: { id: number | null; text: string }) {
+    setToast(next)
+    window.clearTimeout(toastTimer.current)
+    toastTimer.current = window.setTimeout(() => setToast(null), 5000)
+  }
 
   function apply(home: Awaited<ReturnType<typeof fetchHome>>) {
     setToday(home.today)
@@ -73,14 +88,32 @@ export function TodayHome() {
 
   async function logQuick(template: MyWaveExpenseTemplateResponse) {
     setBusyId(template.id)
+    const wasOver = (today?.overToday ?? 0) > 0
     try {
-      await logMyWaveExpenseTemplate(template.id)
-      setNotice(`${template.name} ${fmt(Number(template.amount))}원을 기록했어요.`)
-      await load()
+      const saved = await logMyWaveExpenseTemplate(template.id)
+      setNotice('')
+      setSplash((value) => value + 1)
+      showToast({ id: saved.id, text: `${template.name} ${fmt(Number(template.amount))}원 기록했어요` })
+      const home = await fetchHome()
+      apply(home)
+      if (!wasOver && home.today.overToday > 0) setShake((value) => value + 1)
     } catch {
       setNotice('기록하지 못했어요. 잠시 후 다시 눌러 주세요.')
     } finally {
       setBusyId(null)
+    }
+  }
+
+  /** 방금 누른 퀵버튼을 되돌린다. 잘못 누르는 일이 많은 버튼이라 바로 되돌릴 수 있어야 한다. */
+  async function undo(id: number) {
+    window.clearTimeout(toastTimer.current)
+    setToast(null)
+    try {
+      await deleteMyWaveExpense(id)
+      showToast({ id: null, text: '기록을 되돌렸어요' })
+      await load()
+    } catch {
+      showToast({ id: null, text: '되돌리지 못했어요. 소비 화면에서 지워 주세요.' })
     }
   }
 
@@ -97,9 +130,9 @@ export function TodayHome() {
 
   if (!today) {
     return (
-      <div className="mx-auto grid max-w-[1120px] gap-5 lg:grid-cols-[minmax(0,1fr)_380px]" aria-busy="true">
-        <div className="h-[520px] animate-pulse rounded-[28px] bg-blue-100" />
-        <div className="h-[520px] animate-pulse rounded-[28px] bg-white" />
+      <div className="mx-auto flex min-h-[420px] max-w-[1120px] flex-col items-center justify-center gap-3" aria-busy="true">
+        <img src={belugaPhone} alt="" className="wave-bob h-32 w-32 object-contain" />
+        <p className="wave-jua text-[18px] text-slate-500">오늘의 잔을 채우는 중…</p>
       </div>
     )
   }
@@ -107,7 +140,7 @@ export function TodayHome() {
   return (
     <div className="mx-auto grid max-w-[1120px] gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
       <div className="space-y-5">
-        <SodaHero today={today} templates={templates} busyId={busyId} notice={notice} onQuick={logQuick} onManual={() => navigate('/spending')} onSetBudget={() => navigate('/assets')} />
+        <SodaHero today={today} templates={templates} busyId={busyId} notice={notice} splash={splash} shake={shake} onQuick={logQuick} onManual={() => navigate('/spending')} onSetBudget={() => navigate('/assets')} />
         <WeekCups today={today} />
       </div>
       <div className="space-y-5">
@@ -116,8 +149,41 @@ export function TodayHome() {
         <GoalGlance today={today} onCreate={() => navigate('/goals/new')} onOpen={() => navigate('/goals')} />
         <InvestGlance today={today} onOpen={() => navigate('/portfolio')} />
       </div>
+      {toast && (
+        <div role="status" className="toast-in fixed bottom-24 left-1/2 z-50 flex items-center gap-3 rounded-full bg-slate-900 py-2.5 pl-5 pr-2.5 text-[14px] font-semibold text-white shadow-[0_12px_30px_rgba(25,31,40,.3)] lg:bottom-8">
+          <span className="whitespace-nowrap">{toast.text}</span>
+          {toast.id !== null && (
+            <button onClick={() => undo(toast.id as number)} className="flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-white/15 px-3 text-[13px] font-bold">
+              <RotateCcw className="h-3.5 w-3.5" /> 되돌리기
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
+}
+
+/** 벨루가를 누르면 하는 말. 시간대에 따라 첫마디가 다르다. 금액은 말하지 않는다. */
+function belugaLines(date: Date) {
+  const hour = date.getHours()
+  const greeting = hour < 11
+    ? '좋은 아침이에요! 오늘도 한 잔 가득 시작해요.'
+    : hour < 17
+      ? '점심은 맛있게 먹었어요? 기록도 잊지 말아요.'
+      : '오늘 하루도 수고했어요. 남은 잔은 내일로 흘려보내요.'
+  return [
+    greeting,
+    '쓰자마자 기록하면 잔이 정확해져요.',
+    '자주 가는 가게는 버튼이 돼요. 한 번에 기록!',
+    '안 쓴 돈은 남은 날들에 조금씩 나눠 담겨요.',
+    '간지러워요!',
+  ]
+}
+
+/** 큰 숫자는 이전 값에서 새 값으로 흘러간다. 잔이 줄어드는 것과 같은 속도다. */
+function FlowingNumber({ value }: { value: number }) {
+  const animated = useCountUp(value, 900)
+  return <>{fmt(animated)}</>
 }
 
 /** 잔에 남은 비율. 하루 예산이 0 이면(예산 미설정 포함) 잔은 비어 있다. */
@@ -136,6 +202,8 @@ function SodaHero({
   templates,
   busyId,
   notice,
+  splash,
+  shake,
   onQuick,
   onManual,
   onSetBudget,
@@ -144,6 +212,8 @@ function SodaHero({
   templates: MyWaveExpenseTemplateResponse[]
   busyId: number | null
   notice: string
+  splash: number
+  shake: number
   onQuick: (template: MyWaveExpenseTemplateResponse) => void
   onManual: () => void
   onSetBudget: () => void
@@ -151,8 +221,14 @@ function SodaHero({
   const level = glassLevel(today)
   const over = today.overToday > 0
   // 나쁜 소식 앞에서는 신난 얼굴을 쓰지 않는다. 팔짱 낀 얼굴로 바꾸고 작게 물린다.
-  const face = !today.budgetSet || over || level === 0 ? belugaArms : level >= 0.5 ? belugaJump : belugaPhone
-  const faceAlt = face === belugaJump ? '손을 흔드는 벨루가' : face === belugaPhone ? '휴대폰을 보는 벨루가' : '팔짱 낀 벨루가'
+  const mood: BelugaMood = !today.budgetSet || over || level === 0 ? 'concern' : level >= 0.5 ? 'hello' : 'cheer'
+  const faceAlt = mood === 'hello' ? '손을 흔드는 벨루가' : mood === 'cheer' ? '휴대폰을 보는 벨루가' : '팔짱 낀 벨루가'
+  const [lines] = useState(() => belugaLines(new Date()))
+  const bumpLine = over
+    ? '오늘은 여기까지만 해요. 내일 다시 채워져요.'
+    : level < 0.25
+      ? '기록했어요. 잔이 거의 비었어요!'
+      : '기록했어요! 잔이 정확해졌어요.'
 
   return (
     <section className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#194fe5_0%,#1d67f2_48%,#51b9ff_100%)] px-6 pb-6 pt-6 text-white lg:px-8 lg:pt-8">
@@ -163,13 +239,15 @@ function SodaHero({
         <span className="rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold">이번 달 {today.daysLeftInMonth}일 남음</span>
       </div>
 
-      {/* 벨루가는 날짜와 제목 줄 높이 안에서만 앉는다. 큰 숫자 줄은 가리지 않는다. */}
-      <div className={`pointer-events-none absolute right-3 top-2 z-10 sm:right-5 ${face === belugaArms ? '' : 'wave-bob'}`}>
-        <img
-          key={face}
-          src={face}
+      {/* 벨루가는 날짜와 제목 줄 높이 안에서만 앉는다. 큰 숫자 줄은 가리지 않는다. 누르면 말을 건다. */}
+      <div key={mood} className={`wave-pop absolute right-3 top-2 z-20 sm:right-5 ${mood === 'concern' ? '' : 'wave-bob'}`}>
+        <BelugaTap
+          mood={mood}
           alt={faceAlt}
-          className={`wave-pop object-contain drop-shadow-[0_10px_14px_rgba(10,40,140,.35)] ${face === belugaArms ? 'h-[80px] w-[72px] sm:h-[92px] sm:w-[84px]' : 'h-[92px] w-[86px] sm:h-[104px] sm:w-[96px]'}`}
+          lines={lines}
+          bump={splash}
+          bumpLine={bumpLine}
+          imgClassName={mood === 'concern' ? 'h-[80px] w-[72px] sm:h-[92px] sm:w-[84px]' : 'h-[92px] w-[86px] sm:h-[104px] sm:w-[96px]'}
         />
       </div>
 
@@ -177,7 +255,7 @@ function SodaHero({
         <span className="wave-jua text-[20px]">오늘 더 써도 되는 돈</span>
         <div className="flex items-baseline gap-x-1.5 whitespace-nowrap">
           <span className="wave-num text-[56px] font-bold leading-[1.1] [text-shadow:0_5px_0_rgba(25,79,229,.35)] sm:text-[76px]">
-            {fmt(today.remainingToday)}
+            <FlowingNumber value={today.remainingToday} />
           </span>
           <span className="wave-jua text-[28px] sm:text-[30px]">원</span>
         </div>
@@ -190,7 +268,7 @@ function SodaHero({
           <button onClick={onSetBudget} className="pressable mt-4 h-11 rounded-full bg-blue-700 px-5 text-[14px] font-bold text-white">생활비 정하기</button>
         </div>
       ) : (
-        <SodaGlass today={today} level={level} over={over} />
+        <SodaGlass today={today} level={level} over={over} splash={splash} shake={shake} />
       )}
 
       <div className="relative mt-5">
@@ -219,13 +297,37 @@ function SodaHero({
   )
 }
 
-function SodaGlass({ today, level, over }: { today: MyWaveTodayResponse; level: number; over: boolean }) {
+// 물방울이 흩어지는 방향. 매번 같은 모양으로 튀어야 "같은 동작"으로 읽힌다.
+const DROPS = [
+  { left: 22, dx: -34, dy: -58, size: 9 },
+  { left: 34, dx: -14, dy: -78, size: 7 },
+  { left: 46, dx: 4, dy: -92, size: 11 },
+  { left: 55, dx: 18, dy: -70, size: 8 },
+  { left: 66, dx: 36, dy: -84, size: 10 },
+  { left: 76, dx: 44, dy: -52, size: 7 },
+  { left: 40, dx: -26, dy: -40, size: 6 },
+  { left: 60, dx: 28, dy: -36, size: 6 },
+]
+
+function SodaGlass({ today, level, over, splash, shake }: { today: MyWaveTodayResponse; level: number; over: boolean; splash: number; shake: number }) {
   return (
     <div
+      key={`shake-${shake}`}
       role="img"
       aria-label={`하루 예산 ${fmt(today.dailyBudget)}원 중 ${fmt(today.spentToday)}원 사용, ${fmt(today.remainingToday)}원 남음`}
-      className="relative mt-4 h-[220px] overflow-hidden rounded-[34px] border-4 border-white/95 bg-[#eef4ff] shadow-[inset_0_-6px_0_rgba(25,31,40,.06),0_14px_30px_rgba(25,79,229,.35)]"
+      className={`relative mt-4 h-[220px] overflow-hidden rounded-[34px] border-4 border-white/95 bg-[#eef4ff] shadow-[inset_0_-6px_0_rgba(25,31,40,.06),0_14px_30px_rgba(25,79,229,.35)] ${shake > 0 ? 'wave-shake' : ''}`}
     >
+      {splash > 0 && (
+        <div key={`splash-${splash}`} className="pointer-events-none absolute inset-x-0 z-20" style={{ bottom: `${Math.max(level * 100, 6)}%` }} aria-hidden="true">
+          {DROPS.map((drop, index) => (
+            <span
+              key={index}
+              className="wave-drop absolute bottom-0 rounded-full bg-[#51b9ff]"
+              style={{ left: `${drop.left}%`, width: drop.size, height: drop.size, animationDelay: `${index * 25}ms`, ['--dx' as string]: `${drop.dx}px`, ['--dy' as string]: `${drop.dy}px` }}
+            />
+          ))}
+        </div>
+      )}
       <div className="absolute left-5 top-4 z-10 text-slate-900">
         <div className="wave-jua text-[15px]">하루 예산 한 잔</div>
         <div className="text-[13px] font-medium text-slate-500">
@@ -271,15 +373,19 @@ function SodaGlass({ today, level, over }: { today: MyWaveTodayResponse; level: 
 
 function WeekCups({ today }: { today: MyWaveTodayResponse }) {
   const baseline = today.baselineDailyBudget
+  // 잔을 누르면 그날 얼마를 썼는지 보여준다. 처음에는 오늘이 골라져 있다.
+  const [picked, setPicked] = useState<string | null>(null)
   const overDays = today.week.filter((day) => !day.future && !day.today && baseline > 0 && day.amount > baseline)
   const cups = today.week.map((day) => {
     const date = new Date(`${day.date}T00:00:00`)
     const label = day.today ? '오늘' : WEEKDAY[date.getDay()]
-    if (day.future) return { key: day.date, label, fill: 0, spill: false, future: true, today: false }
-    if (day.today) return { key: day.date, label, fill: glassLevel(today), spill: today.overToday > 0, future: false, today: true }
+    const longLabel = `${date.getMonth() + 1}월 ${date.getDate()}일 ${WEEKDAY[date.getDay()]}요일`
+    if (day.future) return { key: day.date, label, longLabel, amount: 0, fill: 0, spill: false, future: true, today: false }
+    if (day.today) return { key: day.date, label, longLabel, amount: today.spentToday, fill: glassLevel(today), spill: today.overToday > 0, future: false, today: true }
     const fill = baseline > 0 ? Math.max(0, 1 - day.amount / baseline) : 0
-    return { key: day.date, label, fill, spill: baseline > 0 && day.amount > baseline, future: false, today: false }
+    return { key: day.date, label, longLabel, amount: day.amount, fill, spill: baseline > 0 && day.amount > baseline, future: false, today: false }
   })
+  const selected = cups.find((cup) => cup.key === picked) ?? cups.find((cup) => cup.today)
 
   return (
     <section className="rounded-[26px] bg-white p-5 lg:p-6">
@@ -293,18 +399,35 @@ function WeekCups({ today }: { today: MyWaveTodayResponse }) {
       </div>
       <div className="mt-4 grid grid-cols-7 items-end gap-2">
         {cups.map((cup) => (
-          <div key={cup.key} className="flex flex-col items-center gap-1.5">
+          <button
+            key={cup.key}
+            type="button"
+            onClick={() => setPicked(cup.key)}
+            aria-pressed={selected?.key === cup.key}
+            aria-label={cup.future ? `${cup.longLabel}, 아직 오지 않은 날` : `${cup.longLabel}, ${fmt(cup.amount)}원 사용`}
+            className="group flex flex-col items-center gap-1.5"
+          >
             <div
-              className={`relative h-[60px] w-full max-w-[38px] overflow-hidden rounded-b-[12px] rounded-t-[8px] border-[2.5px] ${
+              className={`relative h-[60px] w-full max-w-[38px] overflow-hidden rounded-b-[12px] rounded-t-[8px] border-[2.5px] transition-transform duration-200 group-hover:-translate-y-1 ${
+                selected?.key === cup.key ? '-translate-y-1.5 shadow-[0_8px_14px_rgba(29,103,242,.25)]' : ''
+              } ${
                 cup.future ? 'border-dashed border-slate-300 bg-transparent' : cup.spill ? 'border-[#f04452] bg-[#feeced]' : cup.today ? 'border-blue-700 bg-[#eef4ff]' : 'border-[#c3d9ff] bg-[#eef4ff]'
               }`}
             >
               <div className={`wave-liquid absolute inset-x-0 bottom-0 ${cup.today ? 'bg-blue-700' : 'bg-[#6cb4ff]'}`} style={{ height: `${cup.fill * 100}%` }} />
             </div>
             <span className={`wave-jua text-[13px] ${cup.spill ? 'text-[#d32f3d]' : cup.today ? 'text-slate-900' : 'text-slate-500'}`}>{cup.label}</span>
-          </div>
+          </button>
         ))}
       </div>
+      {selected && (
+        <div key={selected.key} className="cup-tip mt-3 flex items-center justify-between rounded-[14px] bg-[#eef4ff] px-4 py-2.5 text-[13px] font-semibold text-slate-700">
+          <span>{selected.longLabel}</span>
+          <span className="wave-num text-[15px] text-slate-900">
+            {selected.future ? '아직 오지 않은 날' : `${fmt(selected.amount)}원 썼어요`}
+          </span>
+        </div>
+      )}
       <p className="mt-3 text-[12px] text-slate-500">
         {baseline > 0
           ? `잔에 남은 만큼이 평소 하루 예산(${fmt(baseline)}원)보다 덜 쓴 돈이에요.`
