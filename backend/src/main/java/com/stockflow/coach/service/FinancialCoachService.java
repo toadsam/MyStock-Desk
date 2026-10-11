@@ -1,5 +1,6 @@
 package com.stockflow.coach.service;
 
+import com.stockflow.global.format.Formats;
 import com.stockflow.auth.security.CurrentMemberProvider;
 import com.stockflow.coach.dto.CoachChatRequest;
 import com.stockflow.coach.dto.CoachChatResponse;
@@ -70,8 +71,8 @@ public class FinancialCoachService {
     private String answer(String message, MyWaveDashboardDto context) {
         String normalized = message == null ? "" : message.toLowerCase();
         if (normalized.contains("투자")) {
-            return "이번 달 투자 가능 금액은 " + context.investmentAvailableAmount().toPlainString()
-                    + "원입니다. 목표 달성률과 남은 생활비를 같이 보면, 이 금액 안에서 분할 투자하는 쪽이 현재 흐름에 맞습니다.";
+            return "이번 달 투자 가능 금액은 " + Formats.won(context.investmentAvailableAmount())
+                    + "입니다. 목표 달성률과 남은 생활비를 같이 보면, 이 금액 안에서 분할 투자하는 쪽이 현재 흐름에 맞습니다.";
         }
         if (normalized.contains("줄") || normalized.contains("소비") || normalized.contains("지출")) {
             String blocker = context.expenseSummary().goalBlockers().isEmpty()
@@ -80,12 +81,12 @@ public class FinancialCoachService {
             return blocker + " 지출을 먼저 점검하는 것이 좋습니다. 이 항목을 10~20% 줄이면 목표 달성률을 바로 끌어올릴 수 있습니다.";
         }
         if (normalized.contains("목표")) {
-            return "현재 주요 목표 달성률은 " + context.goalProgressRate().toPlainString()
-                    + "%이고 남은 금액은 " + context.remainingGoalAmount().toPlainString()
-                    + "원입니다. 지금 페이스를 유지하되 고정 지출과 반복 소비를 같이 줄이면 안정적으로 달성할 수 있습니다.";
+            return "현재 주요 목표 달성률은 " + Formats.rate(context.goalProgressRate())
+                    + "이고 남은 금액은 " + Formats.won(context.remainingGoalAmount())
+                    + "입니다. 지금 페이스를 유지하되 고정 지출과 반복 소비를 같이 줄이면 안정적으로 달성할 수 있습니다.";
         }
-        return "현재 총자산은 " + context.totalAsset().toPlainString()
-                + "원, 남은 생활비는 " + context.remainingLivingBudget().toPlainString()
-                + "원입니다. 목표와 투자 여력을 같이 보면 이번 달은 소비 조정 후 남는 금액을 우선 확인하는 흐름이 좋습니다.";
+        return "현재 총자산은 " + Formats.won(context.totalAsset())
+                + ", 남은 생활비는 " + Formats.won(context.remainingLivingBudget())
+                + "입니다. 목표와 투자 여력을 같이 보면 이번 달은 소비 조정 후 남는 금액을 우선 확인하는 흐름이 좋습니다.";
     }
 }

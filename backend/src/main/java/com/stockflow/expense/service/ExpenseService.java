@@ -241,7 +241,7 @@ public class ExpenseService {
                         top.get(index).category(),
                         top.get(index).amount(),
                         top.get(index).count(),
-                        top.get(index).ratio().divide(BigDecimal.valueOf(10), 1, RoundingMode.HALF_UP).negate()
+                        top.get(index).ratio()
                 ))
                 .toList();
     }
@@ -259,7 +259,7 @@ public class ExpenseService {
                     BigDecimal budget = budgetRepository.findByMemberIdAndBudgetMonth(memberId, month)
                             .map(found -> found.getLivingBudgetAmount())
                             .orElse(BigDecimal.ZERO);
-                    return new ExpenseTrendDto(month.toString(), amount, budget, amount.multiply(BigDecimal.valueOf(0.2)).setScale(0, RoundingMode.HALF_UP));
+                    return new ExpenseTrendDto(month.toString(), amount, budget);
                 })
                 .toList();
     }

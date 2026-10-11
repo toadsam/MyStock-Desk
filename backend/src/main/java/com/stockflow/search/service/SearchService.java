@@ -1,5 +1,6 @@
 package com.stockflow.search.service;
 
+import com.stockflow.global.format.Formats;
 import com.stockflow.expense.dto.ExpenseCategorySummaryDto;
 import com.stockflow.expense.service.ExpenseService;
 import com.stockflow.goal.service.GoalService;
@@ -25,20 +26,20 @@ public class SearchService {
         goalService.getGoals(null).forEach(goal -> results.add(new SearchResultDto(
                 "GOAL",
                 goal.title(),
-                "목표 달성률 " + goal.progressRate() + "%",
+                "목표 달성률 " + Formats.rate(goal.progressRate()),
                 "/goals"
         )));
         expenseService.getMonthlySummary(YearMonth.now()).categories().forEach(category -> results.add(spending(category)));
         portfolioService.getHoldings().forEach(holding -> results.add(new SearchResultDto(
                 "HOLDING",
                 holding.stock().symbol() + " " + holding.stock().name(),
-                "수익률 " + holding.returnRate() + "%",
+                "수익률 " + Formats.rate(holding.returnRate()),
                 "/company/" + holding.stock().symbol()
         )));
         goalService.recommendedActions().forEach(action -> results.add(new SearchResultDto(
                 "ACTION",
                 action.title(),
-                action.monthlySavingAmount() + "원 절약 가능",
+                Formats.won(action.monthlySavingAmount()) + " 절약 가능",
                 "/spending/simulation"
         )));
 
@@ -54,7 +55,7 @@ public class SearchService {
         return new SearchResultDto(
                 "SPENDING",
                 category.category(),
-                "이번 달 " + category.amount() + "원 지출",
+                "이번 달 " + Formats.won(category.amount()) + " 지출",
                 "/spending/detail"
         );
     }

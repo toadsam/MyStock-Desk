@@ -1,5 +1,6 @@
 package com.stockflow.expense.service;
 
+import com.stockflow.global.format.Formats;
 import com.stockflow.auth.security.CurrentMemberProvider;
 import com.stockflow.expense.dto.ParseResultDto;
 import com.stockflow.expense.dto.ParsedExpenseDto;
@@ -143,8 +144,8 @@ public class ExpenseImportService {
         if (reportedTotal != null && reportedTotal.signum() > 0) {
             matched = reportedTotal.compareTo(total) == 0;
             if (!matched) {
-                warnings.add("화면의 합계(" + reportedTotal.toPlainString() + "원)와 읽어낸 항목의 합("
-                        + total.toPlainString() + "원)이 다릅니다. 금액을 다시 확인해 주세요.");
+                warnings.add("화면의 합계(" + Formats.won(reportedTotal) + ")와 읽어낸 항목의 합("
+                        + Formats.won(total) + ")이 다릅니다. 금액을 다시 확인해 주세요.");
             }
         }
         int duplicates = (int) items.stream().filter(ParsedExpenseDto::duplicate).count();
