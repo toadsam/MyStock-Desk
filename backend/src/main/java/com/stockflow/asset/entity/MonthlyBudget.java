@@ -1,5 +1,8 @@
 package com.stockflow.asset.entity;
 
+import com.stockflow.global.persistence.YearMonthConverter;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -23,6 +26,8 @@ public class MonthlyBudget {
     private Long id;
 
     private Long memberId;
+    @Convert(converter = YearMonthConverter.class)
+    @Column(length = 7)
     private YearMonth budgetMonth;
     private BigDecimal incomeAmount;
     private BigDecimal livingBudgetAmount;
