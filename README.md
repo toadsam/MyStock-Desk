@@ -1,41 +1,66 @@
 # MyStock-Desk
 
-증권사 계좌에 연결하지 않고, 직접 입력한 매매 기록만으로 평균단가, 수익률, 자산 비중을 계산하는 개인 재무 웹앱입니다. 여기에 소비와 저축 목표를 같은 화면에 얹어서 "이번 달 얼마까지 투자해도 되는가"를 하나의 숫자로 보여 줍니다.
+대학생이 매일 여는 개인 재무 웹앱입니다. 홈에는 숫자 하나만 크게 둡니다. **오늘 더 써도 되는 돈**입니다. 이번 달 남은 생활비를 남은 날수로 나눈 하루 예산에서 오늘 쓴 돈을 뺀 값이고, 소비를 하나 기록할 때마다 서버가 기록에서 다시 계산합니다.
 
-![홈. 이번 달 목표 달성률 63%, 총자산, 남은 생활비, 투자 가능 금액](docs/screenshots/home.webp)
-
-이름이 셋입니다. 저장소 이름은 `MyStock-Desk`, 자바 패키지는 `com.stockflow`, 화면에 뜨는 이름은 MyWave입니다. 2026-06-21 커밋에서 UI를 MyWave로 갈아엎었고, 그 앞의 이름들이 아래층에 그대로 남아 있습니다.
+그 아래에 저축 목표와 투자가 붙습니다. 투자는 증권사 계좌에 연결하지 않고 직접 입력한 매매 기록만으로 평균단가, 수익률, 자산 비중을 계산합니다. 화면 어디에도 예시 숫자를 채워 넣지 않습니다. 기록이 없으면 0이고, 서버에 닿지 못하면 그렇다고 알립니다.
 
 | | |
 |---|---|
-| 기간 | 2026.05.25 ~ 2026.06.22 (첫 커밋 `주식 체계 프론트 디자인`, 커밋 14개) |
+| ![홈 데스크톱. 오늘 더 써도 되는 돈 12,900원, 하루 예산 한 잔, 퀵버튼, 오늘 나간 돈, 목표와 투자 카드](docs/screens/home.webp) | <img src="docs/screens/home-mobile.webp" alt="홈 모바일. 오늘 더 써도 되는 돈 12,900원과 하루 예산 잔" width="240"> |
+
+이름이 셋입니다. 저장소 이름은 `MyStock-Desk`, 자바 패키지는 `com.stockflow`, 화면에 뜨는 이름은 MyWave입니다. 2026-06-21 커밋에서 UI를 MyWave로 갈아엎었고, 2026-10에 홈을 "오늘 더 써도 되는 돈" 중심으로 다시 설계하면서 남아 있던 옛 화면과 예시 숫자를 걷어냈습니다. 옛 이름들은 아직 아래층(패키지 이름, 쓰지 않는 백엔드 API)에 남아 있습니다.
+
+| | |
+|---|---|
+| 기간 | 2026.05.25 ~ (첫 커밋 `주식 체계 프론트 디자인`). 2026.10 홈 재설계와 정리 |
 | 인원 | 1명. 도메인 설계, Spring Boot API, React 화면 전부 |
 | 배포 | 없음. 로컬에서만 동작합니다 (아래 "실행하기" 참고. 로그인 화면에 데모 계정 버튼이 있습니다) |
 | 영상 | 없음 |
-| 규모 | 백엔드 Java 214개 파일(테스트 7개 별도), 엔드포인트 98개, 엔티티 23개, 도메인 패키지 27개 |
+| 규모 | 백엔드 Java 238개 파일(테스트 9개 파일, 21개 별도), 엔드포인트 111개 중 MyWave가 쓰는 것 55개, 엔티티 24개 중 14개 |
+
+## 문서
+
+| 문서 | 내용 |
+|---|---|
+| [ERD](docs/ERD.md) | MyWave가 쓰는 테이블 14개와 관계, 아직 고치지 않은 스키마 문제 |
+| [API 명세](docs/API.md) | 화면이 부르는 엔드포인트 55개, 요청과 응답 모양, 오류 코드 |
+| [계산 규칙](docs/RULES.md) | 하루 예산, 투자 가능 금액, 목표 달성률 같은 숫자가 나오는 식과 실제 예시 |
+| [시스템 구조](docs/ARCHITECTURE.md) | React, Spring Boot, DB, 외부 연동이 이어지는 모양, 요청 하나의 흐름, 폴더 |
+| [화면 목록](docs/SCREENS.md) | 화면 19개의 캡처, 하는 일, 부르는 API |
 
 ## 주요 코드
 
-1. [`Holding.buy()` / `sell()`](backend/src/main/java/com/stockflow/portfolio/entity/Holding.java#L39-L52). 이 서비스의 숫자를 전부 결정하는 14줄입니다. 매수는 직전 매입원가와 새 매입금액을 더해 나누고(이동평균), 매도는 수량만 줄이고 평균단가를 건드리지 않습니다. 이 차이가 "전량 매도 후 재매수"에서 수익률이 갈리는 지점입니다.
-2. [`TransactionService.rebuildPortfolioFromTransactions()`](backend/src/main/java/com/stockflow/transaction/service/TransactionService.java#L306-L332). 거래 하나를 고치거나 지우면 보유 종목을 전부 지우고 거래 기록을 날짜순으로 다시 재생합니다. 증분 갱신을 쓰지 않은 이유는 아래 "설계 결정"에 있습니다.
-3. [`ThemeAiExplanationService.explainWithOpenAi()`](backend/src/main/java/com/stockflow/theme/service/ThemeAiExplanationService.java#L46-L56). 이 저장소에서 언어 모델을 부르는 유일한 자리입니다. 지시문이 매수/매도 추천, 목표가, 상승 확률을 금지하고, 호출이 실패하면 규칙 기반 설명으로 내려갑니다.
+1. [`TodayService.today()`](backend/src/main/java/com/stockflow/dashboard/service/TodayService.java). 홈의 큰 숫자를 만드는 곳입니다. 하루 예산을 "어제까지 쓴 돈"으로 정하고 100원 단위로 내립니다. 저장하지 않고 요청마다 기록에서 다시 계산하고, 날짜는 주입받은 `Clock`에서 얻어서 [테스트](backend/src/test/java/com/stockflow/dashboard/service/TodayServiceTest.java)가 날짜를 고정해 확인합니다. 식은 [계산 규칙](docs/RULES.md#1-오늘-더-써도-되는-돈)에 있습니다.
+2. [`Holding.buy()` / `sell()`](backend/src/main/java/com/stockflow/portfolio/entity/Holding.java#L39-L52). 이 서비스의 숫자를 전부 결정하는 14줄입니다. 매수는 직전 매입원가와 새 매입금액을 더해 나누고(이동평균), 매도는 수량만 줄이고 평균단가를 건드리지 않습니다. 이 차이가 "전량 매도 후 재매수"에서 수익률이 갈리는 지점입니다.
+3. [`TransactionService.rebuildPortfolioFromTransactions()`](backend/src/main/java/com/stockflow/transaction/service/TransactionService.java#L306-L332). 거래 하나를 고치거나 지우면 보유 종목을 전부 지우고 거래 기록을 날짜순으로 다시 재생합니다. 증분 갱신을 쓰지 않은 이유는 아래 "설계 결정"에 있습니다.
+4. [`ThemeAiExplanationService.explainWithOpenAi()`](backend/src/main/java/com/stockflow/theme/service/ThemeAiExplanationService.java#L46-L56). 이 저장소에서 언어 모델을 부르는 유일한 자리입니다. 지시문이 매수/매도 추천, 목표가, 상승 확률을 금지하고, 호출이 실패하면 규칙 기반 설명으로 내려갑니다.
 
 ## 주요 화면
 
 | | |
 |---|---|
-| ![투자 거래 기록. 매수, 매도, 입금, 배당 목록과 거래 기록 추가 폼, API 보유 종목](docs/screenshots/transactions.webp) | ![소비 분석. 총 소비 금액, 월별 추이, 목표 달성을 방해하는 소비 TOP 3](docs/screenshots/spending.webp) |
-| 이 서비스의 출발점입니다. 왼쪽 목록에 거래를 넣고 고치고 지우면, 오른쪽 "API 보유 종목"의 수량과 평균단가가 `Holding.buy()`를 다시 거쳐 나옵니다. 시세는 Yahoo Finance로 갱신하고, 갱신에 실패한 종목은 마지막 값을 유지합니다. | 소비를 카테고리로 묶어서 목표 달성률을 몇 %p 깎고 있는지로 환산합니다. 소비 화면이 투자 화면과 이어지는 지점입니다. |
-| ![목표 관리. 다음 달까지 100만원 모으기 63%, 목표 달성 예상](docs/screenshots/goals.webp) | ![AI 코치. 이번 달 재무 상태, 목표 달성 전망, 포트폴리오 리스크](docs/screenshots/coach.webp) |
-| 저축 목표에 현재 페이스를 얹어 예상 완료일을 계산합니다. 소비를 줄였을 때 달성률이 어떻게 움직이는지가 "추천 행동"으로 붙습니다. | 총자산, 지출, 목표, 리스크를 한 화면에 모았습니다. 다만 이 화면의 답변은 언어 모델이 아니라 규칙이 만듭니다. 바로 아래에 적었습니다. |
+| ![소비 분석. 총 소비 162,700원, 지난달 같은 기간 대비, 카테고리별 지출, TOP 3](docs/screens/spending.webp) | ![목표 관리. 다음 달까지 30만원 모으기 37.3%, 추천 행동](docs/screens/goals.webp) |
+| 이번 달 소비를 **지난달 같은 날짜까지**와 비교합니다. 12일까지 쓴 돈을 지난달 한 달 전체와 비교하면 매달 초에는 늘 "줄었다"가 되기 때문입니다. 기록은 직접 입력, 퀵버튼, 카드 문자 붙여넣기, 결제 캡처로 넣습니다. | 진행 중인 목표 중 목표일이 가장 가까운 것을 메인 목표로 두고, 하루에 얼마씩 모으면 되는지 보여 줍니다. 추천 행동은 이번 달 실제로 많이 쓴 카테고리 세 곳을 20% 줄였을 때 아끼는 돈입니다. |
+| ![투자 상세. 총 투자자산, 보유 종목 표, 거래 기록](docs/screens/portfolio-detail.webp) | ![AI 코치. 이번 달 재무 상태, 목표 전망, 대화](docs/screens/coach.webp) |
+| 이 서비스의 출발점입니다. 거래를 넣고 고치고 지우면 보유 종목의 수량과 평균단가가 `Holding.buy()`를 다시 거쳐 나옵니다. | 총자산, 소비, 목표, 리스크를 한 화면에 모았습니다. 다만 이 화면의 답변은 언어 모델이 아니라 규칙이 만듭니다. 바로 아래에 적었습니다. |
 
-이 밖에 계좌 수동 등록과 월 예산, 종목별 기업 상세(OpenDART 재무, SEC EDGAR 공시), 재무 리포트, 알림, 검색이 있습니다. 거래 등록, 수정, 삭제는 "투자 → 자세히 보기" 안에 있습니다.
+이 밖에 계좌 수동 등록과 월 예산, 기업 상세, 리포트, 알림, 검색이 있습니다. 화면 19개 전부는 [화면 목록](docs/SCREENS.md)에 있습니다.
 
 ## 설계 결정
 
+### 기록이 없으면 0이다. 예시 숫자로 채우지 않는다
+
+2026-10 재설계 전에는 화면 곳곳이 API가 비거나 실패하면 데모 사용자의 숫자를 대신 그렸습니다. 프론트의 `myWaveData.ts`에 금액이 통째로 들어 있었고, 백엔드도 소비, 목표, 예산, 알림을 조회하는 순간 비어 있으면 예시 기록을 **실제 계정에** 저장하고 있었습니다. 새로 가입한 사람이 첫 화면에서 "카페 지출 32% 증가" 알림을 받는 식이었습니다.
+
+지금은 숫자가 전부 API에서만 옵니다. 예산을 정하지 않았으면 하루 예산은 0이고 화면은 "예산 정하기"를 띄웁니다. 대시보드 요청이 실패하면 0을 그리지 않고 "서버에서 숫자를 불러오지 못했어요" 띠를 띄웁니다. 예시 데이터는 데모 계정을 만들 때 `DataSeeder`가 한 번만 넣습니다. 기준은 하나입니다. 화면의 숫자를 보고 "이거 내 기록 맞아?"라고 물을 일이 없어야 합니다.
+
+### 하루 예산은 저장하지 않고 매번 계산한다
+
+하루 예산, 남은 생활비, 투자 가능 금액, 목표 달성률은 DB에 없습니다. 소비를 하나 지우면 같이 고쳐야 할 숫자가 넷이고, 저장해 두면 언젠가 하나를 빠뜨립니다. 그래서 요청마다 예산, 소비, 거래 기록에서 다시 셉니다. 홈의 퀵버튼을 누르면 화면이 숫자를 직접 빼지 않고 서버에 다시 묻습니다. 계산하는 곳이 한 곳뿐이라 홈과 소비 화면과 코치가 서로 다른 숫자를 말할 일이 없습니다. 투자의 보유 종목을 거래 기록에서 다시 만드는 것(아래)과 같은 생각입니다.
+
 ### "AI"라고 적힌 화면이 넷인데 모델을 부르는 곳은 하나
 
-AI 코치, AI 리포트, AI 요약, 테마 설명 넷 중 실제로 OpenAI를 호출하는 것은 테마 설명 하나뿐이고, 그마저 기본 설정이 `stockflow.ai.provider: local`이라 꺼져 있습니다. 나머지 셋은 전부 자바 규칙입니다. [`PortfolioReportService`](backend/src/main/java/com/stockflow/ai/service/PortfolioReportService.java)는 보유 비중과 손익 개수를 세어 문장을 조립하고, [`FinancialCoachService.answer()`](backend/src/main/java/com/stockflow/coach/service/FinancialCoachService.java#L70-L92)는 질문에 "투자, 소비, 목표"가 들어 있는지만 보는 4갈래 분기입니다.
+AI 코치, AI 리포트, AI 요약, 테마 설명 넷 중 실제로 OpenAI를 호출하는 것은 테마 설명 하나뿐이고, 그마저 기본 설정이 `stockflow.ai.provider: local`이라 꺼져 있습니다. 나머지 셋은 전부 자바 규칙입니다. [`PortfolioReportService`](backend/src/main/java/com/stockflow/ai/service/PortfolioReportService.java)는 보유 비중과 손익 개수를 세어 문장을 조립하고, [`FinancialCoachService.answer()`](backend/src/main/java/com/stockflow/coach/service/FinancialCoachService.java#L71-L91)는 질문에 "투자, 소비, 목표"가 들어 있는지만 보는 4갈래 분기입니다.
 
 이렇게 둔 이유는 하나입니다. 이 화면에서 모델이 종목 이름을 말하는 순간 투자 권유가 됩니다. 그래서 모델을 부르는 유일한 자리에는 지시문으로 매수/매도, 목표가, 상승 확률을 금지했고([`ThemeAiExplanationService#L50-L56`](backend/src/main/java/com/stockflow/theme/service/ThemeAiExplanationService.java#L50-L56)), 규칙으로 쓰는 리포트에는 마지막 필드에 면책 문장을 데이터로 넣어서 화면이 지울 수 없게 했습니다([`PortfolioReportService#L56`](backend/src/main/java/com/stockflow/ai/service/PortfolioReportService.java#L56)).
 
@@ -76,21 +101,16 @@ AI 코치, AI 리포트, AI 요약, 테마 설명 넷 중 실제로 OpenAI를 �
 
 ## 남은 과제
 
-한 달을 혼자 개발하면서 UI를 한 번 갈아엎었고, 그때 정리하지 못한 것이 그대로 남아 있습니다. 다음에 손댈 순서대로 적었습니다.
+2026-10 정리에서 옛 화면 11장, 3,800줄짜리 `MyWaveApp.tsx`, 홈의 하드코딩된 투자 의견과 목표가, 고정 보유 종목 표, 프론트의 조용한 폴백, 코치 답변의 `120883000.00원` 표기를 해결했습니다. 남은 것을 다음에 손댈 순서대로 적었습니다.
 
-- 옛 화면 열한 장이 코드에 남아 있는데 어디서도 안 열립니다. [`App.tsx`](frontend/src/App.tsx)는 다섯 줄이고 `<MyWaveApp />` 하나만 렌더합니다. MyWave로 갈아엎을 때 `src/pages/`의 StockFlow 화면 12장 중 `AuthPage`만 재사용했고, 나머지 11장(4,414줄, 그중 `FinancialAnalysisPage.tsx` 하나가 1,661줄)은 라우트에서 끊겼습니다. 지웠어야 했습니다.
-- `MyWaveApp.tsx`가 3,751줄 한 파일입니다. 라우팅, 레이아웃, 페이지 컴포넌트 열여덟 개가 전부 여기 있습니다.
-- 위에서 모델에 금지한 셋을 정작 화면이 정적 문구로 띄웁니다. 홈의 "관련 기업 분석 미리보기" 카드에 `투자 의견: 매수`, `목표가(12M) $210.00`, `상승 여력 +22.4%`가 하드코딩되어 있습니다([`MyWaveApp.tsx CompanyPreview`](frontend/src/mywave/MyWaveApp.tsx#L1999-L2001)). 디자인 시안을 그대로 남긴 자리이고, 이 저장소에서 제일 먼저 지워야 할 코드입니다.
-- 화면 위쪽 "보유 종목 현황" 표는 DB가 아니라 고정 데이터를 그립니다. 런타임 데이터를 채우는 `setData({...defaultRuntimeData, …})`가 `holdings`와 `activities`만 갈아끼우지 않아서([#L243-L254](frontend/src/mywave/MyWaveApp.tsx#L243-L254)), API가 정상으로 붙어도 `myWaveData.ts`의 `AAPL, NVDA, VOO, KO`가 그대로 남습니다. 실제 보유 종목은 삼성전자와 SK하이닉스인데도 그렇습니다. 위 캡처 오른쪽의 "API 보유 종목" 패널만 진짜 값이고, 같은 페이지 위쪽 표는 끝까지 `AAPL`을 띄웁니다.
-- 리포트 화면의 "삼성전자 재무 상태 요약" 본문과 다섯 개 지표 카드도 백엔드에서 오지 않습니다([`ReportsPage`](frontend/src/mywave/MyWaveApp.tsx#L665-L690)). 실제 OpenDART 수치가 화면에 닿는 곳은 기업 상세(`/company/:symbol`) 하나뿐입니다.
-- 외부에서 온 시세를 범위 검증 없이 그대로 씁니다. 갱신 뒤 SK하이닉스 현재가가 평균단가의 정확히 10배로 들어와 수익률이 `900.00%`로 찍혔습니다(위 캡처 오른쪽). 값이 들어오는 길에 자릿수나 변동폭을 확인하는 곳이 한 군데도 없습니다.
-- 프론트에도 조용한 폴백이 있습니다. `CompanyDetailPage`는 `fallbackCompanyAnalysis()`로 먼저 그리고 API 응답이 오면 갈아끼우며, 실패하면 그대로 둡니다([#L3293-L3316](frontend/src/mywave/MyWaveApp.tsx#L3293-L3316)). 백엔드가 죽어도 그럴듯한 숫자가 뜨고 화면에는 아무 표시가 없습니다. 백엔드가 출처 문자열까지 실어 보내는 것과 정반대입니다.
-- AI 코치 답변에 `BigDecimal.toPlainString()`이 그대로 나갑니다. 화면에 `120883000.00원`이라고 뜹니다([`FinancialCoachService#L87-L89`](backend/src/main/java/com/stockflow/coach/service/FinancialCoachService.java#L87-L89)).
-- 거래 CSV 가져오기(`POST /api/transactions/import/csv`)는 백엔드에만 있고 지금 UI에서 열 수 없습니다. 위의 끊긴 화면에 딸려 나갔습니다.
-- 테스트가 9개뿐이고 전부 `@SpringBootTest` 흐름 테스트입니다. 정작 숫자를 결정하는 `Holding.buy()`/`sell()` 같은 순수 계산에는 단위 테스트가 없습니다. "전량 매도 후 재매수"처럼 평균단가가 어긋나기 쉬운 경우를 잠가 두지 않았습니다.
+- `monthly_budget.budget_month`가 DB에 `varbinary`로 들어갑니다. `YearMonth`에 변환기를 달지 않아 Hibernate가 자바 객체를 직렬화해 넣고 있습니다. 앱은 동작하지만 DB에서 달로 조회할 수 없습니다([ERD](docs/ERD.md#주의-아직-고치지-않은-점)).
+- 백엔드에 MyWave가 쓰지 않는 엔드포인트가 56개, 테이블이 10개 남아 있습니다(모의 주문, 시장, 뉴스, 공시, 리서치 등). 프론트의 옛 화면은 지웠지만 백엔드는 아직입니다. 목록은 [API 명세](docs/API.md#mywave가-쓰지-않는-나머지) 맨 아래에 있습니다.
+- 자산, 알림, 프로필, 검색, 기업 상세, 시작하기 화면의 헤더 제목이 "홈"으로 뜹니다. 로그인 화면은 아직 옛 이름 StockFlow입니다([화면 목록](docs/SCREENS.md#캡처하면서-발견한-것)).
+- 외부에서 온 시세를 범위 검증 없이 그대로 씁니다. 예전에 갱신 뒤 SK하이닉스 현재가가 평균단가의 정확히 10배로 들어와 수익률이 `900.00%`로 찍힌 적이 있습니다. 시세 갱신은 지금 기본으로 꺼져 있지만, 켜면 같은 일이 생길 수 있습니다.
+- 테스트가 21개입니다. 하루 예산은 날짜를 고정한 단위 테스트로 잠갔지만, 평균단가(`Holding.buy()`/`sell()`)의 "전량 매도 후 재매수", 투자 가능 금액, 소비 비교 같은 나머지 계산에는 단위 테스트가 없습니다.
 - `application-mysql.yml`의 DB 비밀번호와 JWT 시크릿에 기본값이 박혀 있습니다. 환경변수로 덮이긴 하지만 값 자체가 저장소에 있으면 안 됩니다. 전부 `${ENV}`로만 받게 바꿔야 합니다.
 - `CurrentMemberProvider`는 인증이 없으면 회원 1번으로 떨어집니다. 지금은 `SecurityConfig`가 모든 요청에 인증을 걸어 막고 있지만, 한 사람만 쓰던 시절의 코드가 남은 것입니다.
-- 커밋이 14개이고 메시지가 "전체적인 기능 추가" 같은 뭉텅이입니다. 한 달을 혼자 빠르게 개발하던 흔적이고, 지금은 무엇을 왜 바꿨는지 적고 있습니다.
+- 거래 CSV 가져오기(`POST /api/transactions/import/csv`)는 백엔드에만 있고 UI에서 열 수 없습니다.
 
 ## 실행하기
 
@@ -108,7 +128,7 @@ SPRING_PROFILES_ACTIVE=default ./gradlew bootRun     # Windows: .\gradlew.bat bo
 
 MySQL로 붙일 때는 프로파일을 그대로 두고 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `STOCKFLOW_JWT_SECRET`을 환경변수로 줍니다. `docker compose up`이면 MySQL 8.4, 백엔드, 프론트가 한 번에 뜹니다(`docker-compose.yml`).
 
-부팅 때 `DataSeeder`가 종목 10개, 보유와 거래 기록, 목표, 소비, 계좌를 채워 넣고 데모 회원 하나를 만듭니다. 로그인 화면의 "데모 계정으로 로그인" 버튼이 그 계정으로 들어갑니다.
+부팅 때 `DataSeeder`가 종목 10개와 데모 회원 하나를 만들고, 그 회원에게 계좌, 이번 달과 지난달 예산, 지난달 1일부터 오늘까지의 소비, 목표 3개, 퀵버튼 3개, 거래 기록, 알림 3개를 채워 넣습니다. 로그인 화면의 "데모 계정으로 로그인" 버튼이 그 계정(`investor@stockflow.com` / `stockflow1234`)으로 들어갑니다. 새로 가입한 계정은 전부 비어 있는 상태로 시작합니다.
 
 **프론트.**
 
@@ -135,12 +155,16 @@ Windows OneDrive 경로에서 Gradle이 `.class` 동기화 때문에 실패하�
 
 ```text
 backend/src/main/java/com/stockflow/   도메인 패키지 27개 (각 controller, dto, entity, repository, service)
-  portfolio, transaction, trade        보유, 거래, 평균단가. 숫자가 정해지는 곳
-  marketdata, news, earnings/dart, disclosure   외부 연동 (Yahoo, Google News RSS, OpenDART, SEC EDGAR)
-  asset, expense, goal, coach, dashboard        MyWave 쪽 (계좌, 소비, 목표, 코치, 대시보드)
-  ai, research, theme, global, seed             정리형 리포트, 공통 설정, 시드 데이터
-frontend/src/   mywave/MyWaveApp.tsx(현재 앱 전체), pages/(옛 화면, AuthPage만 사용), api, components
+  dashboard, expense, goal, asset      MyWave의 중심 (홈, 소비, 목표, 계좌와 예산)
+  transaction, portfolio               투자 거래, 보유, 평균단가. 투자 숫자가 정해지는 곳
+  notification, coach, search, company 알림, 코치, 검색, 기업 상세
+  global, seed                         보안, Clock, 응답 형식, 숫자 표기, 시드 데이터
+  market, news, trade, research ...    예전 모의투자 기능. 지금 화면은 쓰지 않음
+frontend/src/mywave/                   MyWaveApp.tsx(라우트, 틀), TodayHome.tsx(홈), screens/(나머지 화면)
+docs/                                  ERD, API 명세, 계산 규칙, 시스템 구조, 화면 목록
 ```
+
+자세한 구조는 [시스템 구조](docs/ARCHITECTURE.md#폴더)에 있습니다.
 
 </details>
 
