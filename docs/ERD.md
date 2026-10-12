@@ -45,7 +45,7 @@ erDiagram
     MONTHLY_BUDGET {
         bigint id PK
         bigint member_id FK
-        varbinary budget_month "YearMonth, 아래 주의 참고"
+        varchar budget_month "2026-10 (7자)"
         decimal income_amount
         decimal living_budget_amount "하루 예산의 재료"
         decimal fixed_expense_amount
@@ -191,7 +191,13 @@ erDiagram
 
 ## 주의: 아직 고치지 않은 점
 
-- `monthly_budget.budget_month`가 `varbinary(255)`입니다. `YearMonth`에 변환기(`AttributeConverter`)를 달지 않아서 Hibernate가 자바 객체를 직렬화해 넣고 있습니다. 앱에서는 동작하지만 DB에서 `WHERE budget_month = '2026-10'`처럼 읽을 수 없습니다. `char(7)`로 저장하는 변환기를 다는 것이 맞습니다.
+> **MySQL을 이미 쓰고 있었다면.** `monthly_budget.budget_month`는 원래 자바 객체를 직렬화한 `varbinary`로 저장되고 있었고, [`YearMonthConverter`](../backend/src/main/java/com/stockflow/global/persistence/YearMonthConverter.java)를 단 뒤로는 `varchar(7)`에 `2026-10`처럼 들어갑니다. H2는 띄울 때마다 새로 만들어서 상관없지만, MySQL은 `ddl-auto: update`가 기존 컬럼 타입을 바꾸지 않습니다. 예전 값은 새 형식으로 읽을 수 없으므로, 예산을 다시 입력하기로 하고 아래처럼 비운 뒤 타입을 바꿔야 합니다.
+>
+> ```sql
+> DELETE FROM monthly_budget;
+> ALTER TABLE monthly_budget MODIFY budget_month VARCHAR(7);
+> ```
+
 - `monthly_budget`의 `(member_id, budget_month)`, `holding`의 `(portfolio_id, stock_id)`는 코드에서는 하나만 있다고 가정하는데 유니크 제약이 없습니다.
 - 자주 쓰는 조회 조건인 `expense(member_id, spent_date)`에 인덱스가 없습니다. 지금 데이터 크기에서는 문제가 없습니다.
 
