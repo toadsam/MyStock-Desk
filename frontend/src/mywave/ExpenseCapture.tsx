@@ -220,14 +220,16 @@ export function ExpenseImportCard({ onSaved }: { onSaved: () => void }) {
                 <span className="text-center">
                   <ImageUp className="mx-auto mb-2 h-7 w-7" />
                   <span className="block text-[15px] font-bold">결제 내역 화면 캡처 올리기</span>
-                  <span className="mt-1 block text-[13px] font-medium text-slate-400">하루치가 한 번에 등록돼요</span>
+                  <span className="mt-1 block text-[13px] font-medium text-slate-400">
+                    하루치가 한 번에 등록돼요{status?.imageParsingAvailable && ` · 오늘 ${status.remainingImageQuota}장 남음`}
+                  </span>
                 </span>
               )}
             </button>
             {status && (
               <BelugaSays mood={status.imageParsingAvailable ? 'hello' : 'concern'} size="xs" tone="quiet">
                 {status.imageParsingAvailable
-                  ? `카드사 앱의 이용내역 화면을 그대로 캡처해 주세요. 오늘 ${status.remainingImageQuota}장 남았고, 이미지는 읽고 나서 바로 지워요.`
+                  ? '카드사 앱의 이용내역 화면을 그대로 캡처해 주세요. 이미지는 읽고 나서 바로 지워요.'
                   : '캡처 읽기는 아직 준비되지 않았어요. 지금은 카드 문자 붙여넣기를 이용해 주세요.'}
               </BelugaSays>
             )}

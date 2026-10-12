@@ -2,7 +2,7 @@ import { LockKeyhole, LogIn, UserPlus } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { Logo } from '../layouts/Header'
+import belugaJump from '../assets/mywave/beluga-jump.png'
 
 export default function AuthPage() {
   const location = useLocation()
@@ -58,13 +58,15 @@ export default function AuthPage() {
   return (
     <main className="grid min-h-screen place-items-center bg-[var(--bg)] px-5 py-10 text-slate-900">
       <div className="w-full max-w-md space-y-5">
-        <Link to="/" className="flex justify-center">
-          <Logo />
+        <Link to="/" className="flex flex-col items-center text-center">
+          <img src={belugaJump} alt="" className="beluga-hop h-24 w-24 object-contain drop-shadow-[0_10px_16px_rgba(10,40,140,.22)]" />
+          <span className="mt-1 text-[32px] font-black leading-none tracking-[-0.02em] text-blue-700">MyWave</span>
+          <span className="mt-2 text-[13px] font-medium text-slate-500">나만의 투자 흐름을 만든다.</span>
         </Link>
         <div className="rounded-[20px] bg-white p-6 md:p-7">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <div className="text-[13px] font-semibold text-slate-400">StockFlow 계정</div>
+              <div className="text-[13px] font-semibold text-slate-400">MyWave 계정</div>
               <h1 className="mt-1.5 text-[26px] font-bold tracking-[-0.02em] text-slate-900">{title}</h1>
             </div>
             <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-blue-50 text-blue-700">
