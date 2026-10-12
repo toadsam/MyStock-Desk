@@ -271,5 +271,11 @@ function pageMeta(pathname: string) {
   if (pathname.startsWith('/portfolio')) return { title: '투자 포트폴리오', subtitle: '내 자산의 흐름을 한눈에 분석하고, 더 나은 결정을 내려세요.', search: '검색 (예: 투자 리포트)' }
   if (pathname.startsWith('/reports')) return { title: '리포트', subtitle: '기업 재무제표와 포트폴리오 리포트를 쉽게 이해하세요.', search: '검색 (예: 삼성전자)' }
   if (pathname.startsWith('/coach')) return { title: 'AI코치', subtitle: '데이터 기반 AI가 당신의 투자 여정을 함께 설계합니다.', search: '검색 (예: 투자 리포트)' }
+  if (pathname.startsWith('/assets')) return { title: '자산', subtitle: '계좌 잔액과 이번 달 예산을 직접 적어 관리하세요.', search: '검색 (예: 생활비 통장)' }
+  if (pathname.startsWith('/notifications')) return { title: '알림', subtitle: '목표, 소비, 투자에서 챙겨 볼 소식을 모았어요.', search: '검색 (예: 투자 리포트)' }
+  if (pathname.startsWith('/profile')) return { title: '내 정보', subtitle: '프로필, 멤버십, 비밀번호를 관리하세요.', search: '검색 (예: 투자 리포트)' }
+  if (pathname.startsWith('/search')) return { title: '검색', subtitle: '목표, 소비, 보유 종목을 한 번에 찾아요.', search: '검색 (예: 카페)' }
+  if (pathname.startsWith('/company')) return { title: '기업 상세', subtitle: '시세와 재무 지표를 한 화면에서 확인하세요.', search: '검색 (예: 삼성전자)' }
+  if (pathname.startsWith('/onboarding')) return { title: '시작하기', subtitle: 'MyWave를 어떻게 쓰면 되는지 알려 드릴게요.', search: '검색 (예: 투자 리포트)' }
   return { title: '홈', subtitle: '목표, 소비, 투자 흐름을 한눈에 확인하세요.', search: '검색 (예: 투자 리포트)' }
 }
