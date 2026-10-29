@@ -83,7 +83,8 @@ type RuntimeActivity = { id: number; title: string; detail: string; amount: numb
 
 export type RuntimeCoachMessage = { from: 'bot' | 'user'; text: string; stats?: Array<{ label: string; value: string }>; suggestions?: string[] }
 
-type RuntimeTrend = { month: string; amount: number; budget: number }
+/** amount/budget 가 null 인 달은 "기록이 시작되기 전"이다. 차트가 그 달에는 선을 긋지 않는다. */
+type RuntimeTrend = { month: string; amount: number | null; budget: number | null }
 
 type MyWaveRuntimeData = {
   financeSummary: FinanceSummary
@@ -289,12 +290,23 @@ function mapSpendingBlockers(dashboard: MyWaveDashboardResponse): RuntimeBlocker
   }))
 }
 
+/**
+ * 월별 추이. 기록이 시작되기 전 달은 0 이 아니라 "없음"이다.
+ * 0 으로 그리면 첫 기록 달에 절벽이 생겨서 소비가 갑자기 폭증한 것처럼 읽힌다.
+ * 그 달들은 null 로 두어 선을 긋지 않는다. 기록이 시작된 뒤의 0 은 진짜 0 이므로 그대로 그린다.
+ */
 function mapSpendingTrend(dashboard: MyWaveDashboardResponse): RuntimeTrend[] {
-  return dashboard.expenseSummary.trends.map((trend) => ({
+  const rows = dashboard.expenseSummary.trends.map((trend) => ({
     month: formatMonth(trend.month),
     amount: toNumber(trend.amount),
     budget: toNumber(trend.budget),
   }))
+  const firstRecorded = rows.findIndex((row) => row.amount > 0 || row.budget > 0)
+  return rows.map((row, index): RuntimeTrend => (
+    firstRecorded === -1 || index < firstRecorded
+      ? { month: row.month, amount: null, budget: null }
+      : row
+  ))
 }
 
 function mapPortfolioAllocation(dashboard: MyWaveDashboardResponse): RuntimeAllocation[] {

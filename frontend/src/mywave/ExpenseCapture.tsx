@@ -533,12 +533,12 @@ export function QuickExpenseButtons({ onLogged }: { onLogged: () => void }) {
 
         {/* 버튼을 사용자에게 만들라고 시키지 않는다. 반복이 쌓이면 앱이 먼저 묻는다. */}
         {suggestions.map((suggestion) => (
-          <div key={suggestion.merchant} className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] bg-emerald-50 px-4 py-3">
+          <div key={suggestion.merchant} className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] bg-blue-50 px-4 py-3">
             <span className="flex min-w-0 items-center gap-2.5">
               <Beluga mood="hello" size="xs" />
-              <span className="text-[14px] font-semibold text-emerald-900">{suggestion.message}</span>
+              <span className="text-[14px] font-semibold text-slate-900">{suggestion.message}</span>
             </span>
-            <button onClick={() => accept(suggestion)} className="pressable shrink-0 rounded-full bg-emerald-600 px-4 py-2 text-[13px] font-bold text-white">
+            <button onClick={() => accept(suggestion)} className="pressable shrink-0 rounded-full bg-blue-700 px-4 py-2 text-[13px] font-bold text-white">
               <Plus className="mr-1 inline h-3.5 w-3.5" />만들기
             </button>
           </div>

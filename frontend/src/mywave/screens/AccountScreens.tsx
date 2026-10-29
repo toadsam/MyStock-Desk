@@ -21,6 +21,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { won } from '../format'
 import { Card, Field } from '../uiKit'
+import { LivelinessPicker } from '../motion'
 import {
   createMyWaveAccount,
   deleteMyWaveAccount,
@@ -331,6 +332,9 @@ export function ProfilePage() {
           <MiniStat label="총 자산" value={won(financeSummary.totalAsset)} change="계좌 + 투자" />
           <MiniStat label="저축률" value={`${financeSummary.savingRate}%`} change="이번 달" />
         </div>
+      </Card>
+      <Card title="화면 활기">
+        <LivelinessPicker />
       </Card>
       <div className="grid gap-5 xl:grid-cols-2">
         <Card title="프로필 수정">

@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import belugaArms from '../assets/mywave/beluga-arms.png'
-import belugaAvatar from '../assets/mywave/beluga-avatar.png'
-import belugaJump from '../assets/mywave/beluga-jump.png'
-import belugaPhone from '../assets/mywave/beluga-phone.png'
+import { BelugaArt, type BelugaMood } from './BelugaArt'
+import { MouthBubbles } from './motion'
+import { useLiveliness } from './liveliness'
+import { useIdleAntics } from './useIdleAntics'
+import { useDrowsy, useWakeToken } from './useDrowsy'
+
+export type { BelugaMood } from './BelugaArt'
 
 /**
  * 벨루가 — MyWave 의 마스코트이자 코치의 얼굴.
  *
+ * 그림은 BelugaArt(원화 + 눈 깜빡임)가 그린다. 여기서는 벨루가가 화면에서 어떻게 행동하는지를 정한다.
  * 지켜야 할 규칙이 셋 있다. 이 파일 밖에서도 같다.
  *
  * 1. 숫자에는 벨루가 말투를 섞지 않는다. 벨루가는 안내만 하고 금액은 화면이 보여준다.
@@ -17,31 +21,22 @@ import belugaPhone from '../assets/mywave/beluga-phone.png'
  * 3. 투자 판단은 하지 않는다. "사세요" 가 아니라 "확인해볼 점을 모아봤어요" 다.
  */
 
-export type BelugaMood = 'hello' | 'calm' | 'cheer' | 'concern'
+/** 혼자 놀 때 하는 말. 금액은 없다 (규칙 1). */
+const IDLE_LINES = [
+  '오늘 기록 잊지 않았죠?',
+  '물이 참 좋네요.',
+  '간식 사기 전에 잔 한번 보기!',
+  '저 여기 있어요~',
+  '잔이 차면 저도 기뻐요.',
+  '천천히, 꾸준히.',
+]
 
-/**
- * 무드마다 다른 그림. 전부 배경이 투명한 원화라 어떤 바탕 위에 올려도 사각형이 보이지 않는다.
- * (예전 hello 원화에는 투명 체크무늬가 그림으로 박혀 있었다.)
- *
- * - hello   손을 흔들며 뛰어오르는 벨루가 — 인사, 기록 완료
- * - cheer   휴대폰을 들고 물보라를 일으키는 벨루가 — 좋은 소식
- * - calm    동그란 프로필 — 대화, 안내
- * - concern 팔짱 끼고 윙크하는 벨루가 — 예산 초과 같은 소식. 작게 물러서고 문장이 말한다.
- */
-const FACE: Record<BelugaMood, string> = {
-  hello: belugaJump,
-  cheer: belugaPhone,
-  calm: belugaAvatar,
-  concern: belugaArms,
-}
-
-/** calm 은 동그란 프로필 원화라 원으로 잘라 쓴다. 나머지는 몸 전체가 보여야 한다. */
-const CIRCULAR: Record<BelugaMood, boolean> = {
-  hello: false,
-  calm: true,
-  cheer: false,
-  concern: false,
-}
+// 혼자 노는 동작. 나쁜 소식(concern) 앞에서는 기포만 뱉는다. 신난 몸짓은 조롱처럼 읽힌다.
+const IDLE_ANTICS = ['hop', 'say', 'bubbles', 'pose'] as const
+/** 깨어날 때 하는 말. */
+const WAKE_LINES = ['으앗! 안 잤어요.', '…네? 저 깨 있었어요.', '하암. 다시 왔군요!']
+const CALM_ANTICS = ['bubbles'] as const
+const STILL_ANTICS = ['hop', 'wiggle', 'bubbles'] as const
 
 const SIZE = {
   xs: 'h-9 w-9',
@@ -51,25 +46,48 @@ const SIZE = {
   xl: 'h-44 w-44',
 } as const
 
+/**
+ * 가만히 있는 벨루가. 말풍선 옆, 빈 화면, 안내 카드에 선다.
+ * 신나게 단계에서는 혼자서 가끔 뛰거나 몸을 흔들거나 기포를 뱉는다.
+ * framed 는 동그란 프로필 자리다. 얼굴만 크게 보인다.
+ */
 export function Beluga({
   mood = 'hello',
   size = 'md',
   float = true,
+  framed = false,
   className = '',
 }: {
   mood?: BelugaMood
   size?: keyof typeof SIZE
   float?: boolean
+  framed?: boolean
   className?: string
 }) {
+  const { lively } = useLiveliness()
+  const [antic, setAntic] = useState<{ kind: 'hop' | 'wiggle'; token: number }>({ kind: 'hop', token: 0 })
+  const [mouth, setMouth] = useState(0)
+  useIdleAntics(lively && mood !== 'concern', STILL_ANTICS, (kind) => {
+    if (kind === 'bubbles') setMouth((value) => value + 1)
+    else setAntic((value) => ({ kind, token: value.token + 1 }))
+  }, { min: 9000, max: 16000 })
+  const play = antic.token > 0 ? (antic.kind === 'wiggle' ? 'beluga-wiggle' : 'beluga-hop') : ''
+
+  if (framed) {
+    return (
+      <span className={`relative inline-block shrink-0 overflow-hidden rounded-full ring-[3px] ring-[#eef4ff] ${SIZE[size]} ${className}`}>
+        <BelugaArt mood="calm" className="h-full w-full" />
+      </span>
+    )
+  }
+
   return (
-    <img
-      src={FACE[mood]}
-      alt=""
-      aria-hidden="true"
-      draggable={false}
-      className={`${SIZE[size]} shrink-0 select-none object-contain ${CIRCULAR[mood] ? 'rounded-full object-cover' : ''} ${float ? 'beluga-float' : ''} ${mood === 'concern' ? 'opacity-90 saturate-[.85]' : ''} ${className}`}
-    />
+    <span key={antic.token} className={`relative inline-block shrink-0 select-none ${SIZE[size]} ${play} ${mood === 'concern' ? 'opacity-90 saturate-[.85]' : ''} ${className}`}>
+      <span className={`block h-full w-full ${float && mood !== 'concern' ? 'beluga-float' : ''}`}>
+        <BelugaArt mood={mood} blink={size !== 'xs'} className={`h-full w-full ${mood === 'calm' ? 'rounded-full' : 'drop-shadow-[0_8px_12px_rgba(10,40,140,.18)]'}`} />
+      </span>
+      <MouthBubbles token={mouth} className="left-[24%] top-[40%]" />
+    </span>
   )
 }
 
@@ -78,6 +96,7 @@ export function Beluga({
  *
  * 말은 lines 에서 차례대로 고른다. 금액은 넣지 않는다 (규칙 1).
  * 화면을 쓰는 데 꼭 필요한 기능은 아니다. 앱이 살아 있다는 느낌을 주는 자리다.
+ * 신나게 단계에서는 혼자서도 뛰고, 혼잣말하고, 기포를 뱉고, 표정을 바꾼다.
  */
 export function BelugaTap({
   mood = 'hello',
@@ -91,9 +110,9 @@ export function BelugaTap({
   mood?: BelugaMood
   lines: string[]
   imgClassName?: string
-  bubbleSide?: 'left' | 'right'
-  /** 값이 바뀔 때마다 밖에서 깡충 뛰게 한다. 기록이 저장된 순간처럼. */
-  bump?: number
+  bubbleSide?: 'left' | 'right' | 'top'
+  /** 값이 바뀔 때마다 밖에서 깡충 뛰게 한다. 기록이 저장된 순간, 화면이 바뀐 순간처럼. */
+  bump?: number | string
   bumpLine?: string
   alt?: string
 }) {
@@ -101,8 +120,19 @@ export function BelugaTap({
   const [line, setLine] = useState<string | null>(null)
   const timer = useRef<number | undefined>(undefined)
   const lastBump = useRef(bump)
+  // 혼자 놀기: 잠깐 바꾼 표정, 입에서 나온 기포
+  const { lively } = useLiveliness()
+  const [pose, setPose] = useState<BelugaMood | null>(null)
+  const [mouth, setMouth] = useState(0)
+  const poseTimer = useRef<number | undefined>(undefined)
+  // 1분 동안 아무 일도 없으면 존다. 깨어나면 움찔하고 한마디.
+  const asleep = useDrowsy()
+  const wake = useWakeToken(asleep)
 
-  useEffect(() => () => window.clearTimeout(timer.current), [])
+  useEffect(() => () => {
+    window.clearTimeout(timer.current)
+    window.clearTimeout(poseTimer.current)
+  }, [])
 
   function say(text: string | null) {
     setHop((value) => value + 1)
@@ -118,25 +148,49 @@ export function BelugaTap({
     return () => window.clearTimeout(id)
   }, [bump, bumpLine])
 
+  useEffect(() => {
+    if (wake === 0) return
+    const id = window.setTimeout(() => {
+      // 깨면 눈이 동그래진 얼굴로 움찔하고, 한마디 하고, 원래 얼굴로 돌아온다.
+      setPose('surprise')
+      window.clearTimeout(poseTimer.current)
+      poseTimer.current = window.setTimeout(() => setPose(null), 1400)
+      setLine(WAKE_LINES[wake % WAKE_LINES.length])
+      window.clearTimeout(timer.current)
+      timer.current = window.setTimeout(() => setLine(null), 2600)
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [wake])
+
+  useIdleAntics(lively && !asleep, mood === 'concern' ? CALM_ANTICS : IDLE_ANTICS, (antic) => {
+    if (antic === 'hop') say(null)
+    else if (antic === 'say') say(IDLE_LINES[Math.floor(Math.random() * IDLE_LINES.length)])
+    else if (antic === 'bubbles') setMouth((value) => value + 1)
+    else {
+      setPose(mood === 'hello' ? 'cheer' : 'hello')
+      window.clearTimeout(poseTimer.current)
+      poseTimer.current = window.setTimeout(() => setPose(null), 2600)
+    }
+  })
+
   function poke() {
     say(lines[hop % lines.length])
   }
 
+  const bubblePlace = bubbleSide === 'left' ? 'right-full top-1 mr-2' : bubbleSide === 'right' ? 'left-full top-1 ml-2' : 'bottom-full right-0 mb-1'
+
   return (
     <div className="relative">
-      <button type="button" onClick={poke} aria-label="벨루가에게 말 걸기" className="block cursor-pointer select-none">
-        <img
-          key={hop}
-          src={FACE[mood]}
-          alt={alt}
-          draggable={false}
-          className={`${imgClassName} object-contain drop-shadow-[0_10px_14px_rgba(10,40,140,.3)] ${hop > 0 ? 'beluga-hop' : ''} ${CIRCULAR[mood] ? 'rounded-full object-cover' : ''}`}
-        />
+      <button type="button" onClick={poke} aria-label={alt === '벨루가' ? '벨루가에게 말 걸기' : `${alt}에게 말 걸기`} className="relative block cursor-pointer select-none">
+        <span key={`${hop}-${pose ?? ''}`} className={`block ${imgClassName} ${pose === 'surprise' ? 'beluga-startle' : pose ? 'wave-pop' : hop > 0 ? 'beluga-hop' : ''}`}>
+          <BelugaArt mood={pose ?? mood} asleep={asleep} className="h-full w-full drop-shadow-[0_10px_14px_rgba(10,40,140,.3)]" />
+        </span>
+        <MouthBubbles token={mouth} className="left-[22%] top-[38%]" />
       </button>
       {line && (
         <div
           role="status"
-          className={`bubble-pop absolute top-1 z-20 w-max max-w-[220px] rounded-[16px] bg-white px-3.5 py-2.5 text-[13px] font-bold leading-5 text-slate-900 shadow-[0_8px_24px_rgba(25,31,40,.18)] ${bubbleSide === 'left' ? 'right-full mr-2' : 'left-full ml-2'}`}
+          className={`bubble-pop absolute z-20 w-max max-w-[220px] rounded-[16px] bg-white px-3.5 py-2.5 text-[13px] font-bold leading-5 text-slate-900 shadow-[0_8px_24px_rgba(25,31,40,.18)] ${bubblePlace}`}
         >
           {line}
         </div>

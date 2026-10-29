@@ -1,10 +1,11 @@
-import { ChevronDown, ChevronRight, Save, Trash2, WalletCards } from 'lucide-react'
+import { ChevronDown, ChevronRight, Save, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { won } from '../format'
+import { Notice } from '../motion'
+import { callBeluga } from '../roaming'
 import { Card, Field, ListRow } from '../uiKit'
 import { BelugaSays } from '../Beluga'
-import belugaPhoneArt from '../../assets/mywave/beluga-phone.png'
 import {
   createMyWaveTransaction,
   deleteMyWaveTransaction,
@@ -18,41 +19,33 @@ import {
   type MyWavePortfolioResponse,
 } from '../myWaveApi'
 import {
-  BarIcon,
   BlueCard,
   BlueMetric,
-  BriefcaseIcon,
   Donut,
+  HeroAmount,
   InlineAction,
   Legend,
-  MetricCard,
   MiniStat,
   MobileBlueSummary,
   MobileCard,
   MobileCssDonut,
   MobileTitle,
   Progress,
+  RiskGauge,
   SummaryLine,
 } from '../components'
 import { gainClass, portfolioInsightLine, signed, signedWon, useMyWaveData } from '../runtime'
 import { todayDateString } from '../format'
 
 export function PortfolioPage() {
-  const { financeSummary } = useMyWaveData()
-
   return (
     <>
       <div className="lg:hidden">
         <MobilePortfolioPage />
       </div>
-      <div className="hidden space-y-5 lg:block">
+      <div className="reveal-stack hidden space-y-5 lg:block">
         <PortfolioHero />
-        <div className="grid gap-4 lg:grid-cols-4">
-          <MetricCard icon={<BriefcaseIcon />} label="투자 원금" value={won(financeSummary.investmentPrincipal)} tone="blue" />
-          <MetricCard icon={<WalletCards />} label="총 평가금액" value={won(financeSummary.investmentValue)} tone="blue" />
-          <MetricCard icon={<BarIcon />} label="총 수익" value={signedWon(financeSummary.investmentProfit)} detail={signed(financeSummary.investmentReturn)} tone="green" />
-          <MetricCard icon={<BarIcon />} label="총 수익률" value={signed(financeSummary.investmentReturn)} tone="violet" />
-        </div>
+        {/* 원금·평가금액·수익·수익률 카드 넷은 히어로가 이미 말하는 숫자라 뺐다. 화면이 숨을 쉰다. */}
         <div className="grid gap-5 xl:grid-cols-[1.1fr_.95fr_.95fr]">
           <PortfolioAllocationCard />
           <TopHoldingsCard />
@@ -76,7 +69,7 @@ function MobilePortfolioPage() {
   return (
     <div className="mobile-page reveal-stack space-y-4">
       <MobileTitle title="투자 포트폴리오" />
-      <MobileBlueSummary title="총 평가금액" value={won(financeSummary.investmentValue)} detail={`평가손익 ${signedWon(financeSummary.investmentProfit)} · 수익률 ${signed(financeSummary.investmentReturn)}`} />
+      <MobileBlueSummary tone="navy" title="총 평가금액" value={won(financeSummary.investmentValue)} detail={`평가손익 ${signedWon(financeSummary.investmentProfit)} · 수익률 ${signed(financeSummary.investmentReturn)}`} />
       <MobilePortfolioCard compact />
       <MobileHoldingsList />
       <MobileInsightBox />
@@ -146,16 +139,17 @@ function MobileInsightBox() {
   )
 }
 
-function PortfolioHero() {
+function PortfolioHero({ artBump = 0 }: { artBump?: number }) {
   const { financeSummary, holdings } = useMyWaveData()
 
   return (
-    <BlueCard className="min-h-[220px]">
-      <div className="relative z-10 grid gap-7 lg:grid-cols-[1fr_1.3fr]">
+    <BlueCard className="min-h-[220px]" art="cheer" artBump={artBump} targetId="portfolio-hero" tone="navy">
+      {/* 큰 숫자와 작은 숫자 셋은 폭이 넉넉할 때만 나란히 선다. 그 전에는 위아래로. */}
+      <div className="grid gap-7 2xl:grid-cols-[auto_1fr] 2xl:gap-12">
         <div>
           <div className="text-lg font-black">전체 투자 자산</div>
-          <div className="mt-4 text-5xl font-black lg:text-6xl">{won(financeSummary.investmentValue)}</div>
-          <div className="mt-6 text-lg font-black text-white/90">전일 대비 {signedWon(financeSummary.dailyProfit)} ({signed(financeSummary.dailyReturn)})</div>
+          <div className="mt-4 text-5xl lg:text-6xl"><HeroAmount value={financeSummary.investmentValue} prefix="₩" /></div>
+          <div className="tnum mt-6 text-lg font-black text-white/90">전일 대비 {signedWon(financeSummary.dailyProfit)} ({signed(financeSummary.dailyReturn)})</div>
         </div>
         <div className="grid grid-cols-3 gap-5 self-center">
           <BlueMetric label="총 투자 수익" value={signedWon(financeSummary.investmentProfit)} />
@@ -163,7 +157,6 @@ function PortfolioHero() {
           <BlueMetric label="보유 종목" value={`${holdings.length}개`} />
         </div>
       </div>
-      <img src={belugaPhoneArt} alt="" className="wave-bob absolute bottom-4 right-6 hidden h-40 w-40 object-contain drop-shadow-[0_14px_20px_rgba(10,40,140,.35)] lg:block" />
     </BlueCard>
   )
 }
@@ -304,7 +297,15 @@ function transactionLabel(type: string) {
   return labels[type] ?? type
 }
 
-function InvestmentTransactionManager() {
+/**
+ * 거래 기록을 넣고 고치고 지우는 자리.
+ *
+ * 저장이 끝나면 이 카드의 표만이 아니라 화면 전체의 숫자(히어로, 보유 종목)를 다시 불러온다.
+ * 전에는 이 카드만 새로고침해서, 거래를 넣어도 바로 위 히어로의 총자산이 그대로였다.
+ * onSaved 는 화면이 "방금 저장됐다"를 보여 주는 데 쓴다 (벨루가가 뛴다).
+ */
+function InvestmentTransactionManager({ onSaved }: { onSaved?: () => void } = {}) {
+  const { reload } = useMyWaveData()
   const [portfolio, setPortfolio] = useState<MyWavePortfolioResponse | null>(null)
   const [holdings, setHoldings] = useState<MyWaveHoldingResponse[]>([])
   const [transactions, setTransactions] = useState<MyWaveInvestmentTransactionResponse[]>([])
@@ -400,6 +401,9 @@ function InvestmentTransactionManager() {
       }
       resetTransactionForm()
       await refreshPortfolioRecords()
+      reload()
+      onSaved?.()
+      callBeluga({ kind: 'hop', element: document.querySelector<HTMLElement>('[data-beluga-target="portfolio-hero"]'), line: '거래를 적었어요!' })
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '거래 기록 저장에 실패했습니다.')
     }
@@ -411,6 +415,7 @@ function InvestmentTransactionManager() {
       if (editingId === id) resetTransactionForm()
       setMessage('거래 기록이 삭제되었습니다.')
       await refreshPortfolioRecords()
+      reload()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '거래 기록 삭제에 실패했습니다.')
     }
@@ -429,7 +434,7 @@ function InvestmentTransactionManager() {
             <MiniStat label="총 수익률" value={`${Number(portfolio.totalReturnRate).toFixed(2)}%`} />
           </div>
         )}
-        {message && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{message}</div>}
+        {message && <Notice text={message} className="mb-4" />}
         <div className="space-y-3">
           {transactions.map((transaction) => (
             <div key={transaction.id} className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
@@ -552,9 +557,7 @@ export function RiskPanel() {
 
   return (
     <Card title="포트폴리오 쏠림" action="자세히 보기" actionTo="/portfolio/risk">
-      <div className="mx-auto h-28 w-40 rounded-t-full border-[18px] border-b-0 border-emerald-400 border-r-red-400 border-t-amber-400 text-center">
-        <div className="mt-10 text-lg font-black">{level}</div>
-      </div>
+      <RiskGauge value={topWeight} level={level} />
       <div className="mt-5 space-y-2 text-sm font-bold">
         <SummaryLine label="가장 큰 종목" value={top ? `${top.name} ${Math.round(topWeight)}%` : '-'} />
         <SummaryLine label="보유 종목 수" value={`${holdings.length}개`} />
@@ -566,12 +569,14 @@ export function RiskPanel() {
 }
 
 export function PortfolioDetailPage() {
+  // 거래를 저장하면 히어로의 벨루가가 한 번 뛴다. 숫자도 함께 새로 계산된다.
+  const [bump, setBump] = useState(0)
   return (
-    <div className="space-y-5">
+    <div className="reveal-stack space-y-5">
       <MobileTitle title="보유 자산" />
-      <PortfolioHero />
+      <PortfolioHero artBump={bump} />
       <HoldingsTable />
-      <InvestmentTransactionManager />
+      <InvestmentTransactionManager onSaved={() => setBump((value) => value + 1)} />
     </div>
   )
 }
@@ -579,7 +584,7 @@ export function PortfolioDetailPage() {
 export function PortfolioAllocationDetailPage() {
   const { portfolioAllocation } = useMyWaveData()
   return (
-    <div className="space-y-5">
+    <div className="reveal-stack space-y-5">
       <MobileTitle title="자산 배분" />
       <Card title="포트폴리오 구성">
         <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
@@ -608,7 +613,7 @@ export function RiskDetailPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="reveal-stack space-y-5">
       <MobileTitle title="포트폴리오 리스크" />
       <RiskPanel />
       <Card title="리스크 조정 액션">

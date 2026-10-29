@@ -1,9 +1,10 @@
 import { ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { won } from '../format'
+import { LiveDot } from '../motion'
 import { Card } from '../uiKit'
 import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { MiniStat, MobileTitle } from '../components'
+import { BlueCard, BlueMetric, HeroAmount, MobileTitle } from '../components'
 import { signed, useMyWaveData } from '../runtime'
 
 /**
@@ -17,29 +18,27 @@ export function ReportsPage() {
   const topCategory = [...spendingCategories].sort((a, b) => b.amount - a.amount)[0]
 
   return (
-    <div className="space-y-5">
+    <div className="reveal-stack space-y-5">
       <MobileTitle title="리포트" />
-      <Card>
-        <div className="text-sm font-black text-blue-700">{financeSummary.month || '이번 달'} 돈 리포트</div>
-        <h2 className="mt-3 text-3xl font-black">이번 달 {won(financeSummary.totalSpending)}을 썼어요</h2>
-        <div className="mt-5 grid gap-5 sm:grid-cols-3">
-          <MiniStat
-            label="지난 달과 비교"
-            value={financeSummary.previousSpending > 0 ? signed(financeSummary.spendingChangeRate) : '-'}
-            change={financeSummary.previousSpending > 0 ? `지난 달 같은 기간 ${won(financeSummary.previousSpending)}` : '지난 달 기록 없음'}
+      <BlueCard className="min-h-[230px]" art="point" tone="cyan">
+        <div className="text-sm font-black text-white/85">{financeSummary.month || '이번 달'} 돈 리포트</div>
+        <div className="mt-4 text-5xl lg:text-6xl"><HeroAmount value={financeSummary.totalSpending} prefix="₩" /></div>
+        <div className="mt-2 text-lg font-black">이번 달에 쓴 돈</div>
+        <div className="mt-8 flex flex-wrap gap-x-9 gap-y-5">
+          <BlueMetric
+            label="지난 달 같은 기간과 비교"
+            value={financeSummary.previousSpending > 0 ? `${signed(financeSummary.spendingChangeRate)} (${won(financeSummary.previousSpending)})` : '지난 달 기록 없음'}
           />
-          <MiniStat
+          <BlueMetric
             label="생활비 예산 대비"
-            value={financeSummary.budgetRate === null ? '예산 없음' : `${financeSummary.budgetRate}%`}
-            change={financeSummary.livingBudget > 0 ? `예산 ${won(financeSummary.livingBudget)}` : undefined}
+            value={financeSummary.budgetRate === null ? '예산 없음' : `${financeSummary.budgetRate}% (예산 ${won(financeSummary.livingBudget)})`}
           />
-          <MiniStat
+          <BlueMetric
             label="가장 많이 쓴 곳"
-            value={topCategory ? topCategory.name : '-'}
-            change={topCategory ? `${won(topCategory.amount)} · ${topCategory.count}건` : undefined}
+            value={topCategory ? `${topCategory.name} ${won(topCategory.amount)} · ${topCategory.count}건` : '-'}
           />
         </div>
-      </Card>
+      </BlueCard>
       <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
         <Card title="월별 소비와 생활비 예산">
           <div className="h-80">
@@ -55,8 +54,9 @@ export function ReportsPage() {
                 <XAxis dataKey="month" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${Number(value) / 10000}만`} />
                 <Tooltip formatter={(value) => won(Number(value))} />
-                <Line dataKey="budget" name="생활비 예산" stroke="#aeb9c9" strokeDasharray="4 4" strokeWidth={2} dot={false} />
-                <Area dataKey="amount" name="소비" stroke="#2563eb" strokeWidth={3} fill="url(#reportLine)" />
+                <Line dataKey="budget" name="생활비 예산" stroke="#aeb9c9" strokeDasharray="4 4" strokeWidth={2} dot={false} animationDuration={1100} animationEasing="ease-out" />
+                <Area dataKey="amount" name="소비" stroke="#2563eb" strokeWidth={3} fill="url(#reportLine)" dot={(props) => <LiveDot {...props} />} activeDot={{ r: 7, strokeWidth: 3 }} animationDuration={1100} animationEasing="ease-out" />
+                <Area dataKey="amount" className="chart-pulse" fill="none" stroke="#bfe0ff" strokeWidth={4} strokeLinecap="round" dot={false} activeDot={false} isAnimationActive={false} tooltipType="none" legendType="none" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

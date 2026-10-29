@@ -29,10 +29,10 @@ export function Card({ children, title, action, actionTo, className }: { childre
   const navigate = useNavigate()
 
   return (
-    <section className={`rounded-[20px] bg-white p-5 lg:p-6 ${className ?? ''}`}>
+    <section className={`card-lift rounded-[24px] bg-white p-5 lg:p-6 ${className ?? ''}`}>
       {(title || action) && (
         <div className="mb-4 flex items-center justify-between gap-4">
-          {title && <h2 className="text-[17px] font-bold tracking-[-0.02em] text-slate-900">{title}</h2>}
+          {title && <h2 className="wave-jua text-[19px] text-slate-900">{title}</h2>}
           {typeof action === 'string'
             ? (
                 <button onClick={() => actionTo && navigate(actionTo)} className="pressable shrink-0 text-[13px] font-semibold text-slate-400">

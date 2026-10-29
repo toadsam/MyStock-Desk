@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { won } from '../format'
 import { Card, Field } from '../uiKit'
 import { CashFlowCard, ExpenseImportCard, MerchantAutocomplete, QuickExpenseButtons } from '../ExpenseCapture'
-import belugaPhoneArt from '../../assets/mywave/beluga-phone.png'
 import {
   createMyWaveExpense,
   deleteMyWaveExpense,
@@ -19,6 +18,7 @@ import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAx
 import {
   BlueCard,
   BlueMetric,
+  HeroAmount,
   Donut,
   InlineAction,
   Legend,
@@ -32,6 +32,7 @@ import {
   Progress,
 } from '../components'
 import { signed, signedWon, useMyWaveData } from '../runtime'
+import { LiveDot, Notice } from '../motion'
 import { ActionPanel } from './GoalsScreens'
 import { todayDateString } from '../format'
 
@@ -41,7 +42,7 @@ export function SpendingPage() {
       <div className="lg:hidden">
         <MobileSpendingPage />
       </div>
-      <div className="hidden space-y-5 lg:block">
+      <div className="reveal-stack hidden space-y-5 lg:block">
         <div className="flex justify-end">
           <MonthPicker />
         </div>
@@ -72,7 +73,7 @@ function MobileSpendingPage() {
         <MobileTitle title="소비 분석" />
         <MonthPicker />
       </div>
-      <MobileBlueSummary title="이번 달 총 소비" value={won(financeSummary.totalSpending)} detail={financeSummary.previousSpending > 0 ? `지난 달 같은 기간 대비 ${signed(financeSummary.spendingChangeRate)}` : '지난 달 기록이 없어요'} />
+      <MobileBlueSummary tone="violet" title="이번 달 총 소비" value={won(financeSummary.totalSpending)} detail={financeSummary.previousSpending > 0 ? `지난 달 같은 기간 대비 ${signed(financeSummary.spendingChangeRate)}` : '지난 달 기록이 없어요'} />
       <ExpenseQuickEntry />
       <MobileSpendingCategories />
       <MobileTopSpending />
@@ -170,22 +171,20 @@ function SpendingHero() {
   const { financeSummary } = useMyWaveData()
 
   return (
-    <BlueCard className="min-h-[245px]">
-      <div className="relative z-10">
-        <div className="flex items-center gap-2 text-lg font-black">총 소비 금액 <Pill>{financeSummary.month}</Pill></div>
-        <div className="mt-6 text-5xl font-black lg:text-6xl">{won(financeSummary.totalSpending)}</div>
-        <div className="mt-5 text-lg font-black">
-          {financeSummary.previousSpending > 0
-            ? `지난 달 같은 기간 대비 ${signed(financeSummary.spendingChangeRate)} (${signedWon(financeSummary.totalSpending - financeSummary.previousSpending)})`
-            : '지난 달 기록이 없어 비교할 수 없어요'}
-        </div>
-        <div className="mt-12 grid grid-cols-3 gap-6">
-          <BlueMetric label="일평균 소비" value={won(financeSummary.dailySpending)} />
-          <BlueMetric label="예산 대비" value={financeSummary.budgetRate === null ? '예산 없음' : `${financeSummary.budgetRate}%`} />
-          <BlueMetric label="지난 달 같은 기간" value={won(financeSummary.previousSpending)} />
-        </div>
+    <BlueCard className="min-h-[245px]" art="point" tone="violet">
+      <div className="flex items-center gap-2 text-lg font-black">총 소비 금액 <Pill>{financeSummary.month}</Pill></div>
+      <div className="mt-6 text-5xl lg:text-6xl"><HeroAmount value={financeSummary.totalSpending} prefix="₩" /></div>
+      <div className="tnum mt-5 text-lg font-black">
+        {financeSummary.previousSpending > 0
+          ? `지난 달 같은 기간 대비 ${signed(financeSummary.spendingChangeRate)} (${signedWon(financeSummary.totalSpending - financeSummary.previousSpending)})`
+          : '지난 달 기록이 없어 비교할 수 없어요'}
       </div>
-      <img src={belugaPhoneArt} alt="" className="wave-bob absolute right-6 top-6 h-32 w-32 object-contain drop-shadow-[0_14px_20px_rgba(10,40,140,.35)] lg:h-44 lg:w-44" />
+      {/* 두 열 화면에서는 벨루가 열을 빼면 셋을 한 줄에 못 세운다. 각자 제 폭만큼 차지하고 모자라면 다음 줄로 넘어간다. */}
+      <div className="mt-10 flex flex-wrap gap-x-9 gap-y-5">
+        <BlueMetric label="일평균 소비" value={won(financeSummary.dailySpending)} />
+        <BlueMetric label="예산 대비" value={financeSummary.budgetRate === null ? '예산 없음' : `${financeSummary.budgetRate}%`} />
+        <BlueMetric label="지난 달 같은 기간" value={won(financeSummary.previousSpending)} />
+      </div>
     </BlueCard>
   )
 }
@@ -202,8 +201,10 @@ function TrendCard() {
             <XAxis dataKey="month" axisLine={false} tickLine={false} />
             <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${Number(value) / 10000}만`} />
             <Tooltip formatter={(value) => won(Number(value))} />
-            <Line dataKey="budget" name="생활비 예산" stroke="#aeb9c9" strokeDasharray="4 4" strokeWidth={2} dot={false} />
-            <Area dataKey="amount" name="소비" stroke="#2563eb" strokeWidth={3} fill="#2563eb1a" dot={{ r: 4 }} />
+            <Line dataKey="budget" name="생활비 예산" stroke="#aeb9c9" strokeDasharray="4 4" strokeWidth={2} dot={false} animationDuration={1100} animationEasing="ease-out" />
+            <Area dataKey="amount" name="소비" stroke="#2563eb" strokeWidth={3} fill="#2563eb1a" dot={(props) => <LiveDot {...props} />} activeDot={{ r: 7, strokeWidth: 3 }} animationDuration={1100} animationEasing="ease-out" />
+            {/* 신나게 단계에서 선 위를 흐르는 빛 */}
+            <Area dataKey="amount" className="chart-pulse" fill="none" stroke="#bfe0ff" strokeWidth={4} strokeLinecap="round" dot={false} activeDot={false} isAnimationActive={false} tooltipType="none" legendType="none" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -558,7 +559,7 @@ function ExpenseRecordsManager() {
             <MiniStat label="일평균" value={won(Number(summary.dailyAverageAmount))} />
           </div>
         )}
-        {message && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{message}</div>}
+        {message && <Notice text={message} className="mb-4" />}
         <div className="space-y-3">
           {expenses.map((expense) => (
             <div key={expense.id} className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">

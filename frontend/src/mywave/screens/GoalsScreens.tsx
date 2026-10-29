@@ -4,8 +4,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { won } from '../format'
 import { Card, Field } from '../uiKit'
 import { BelugaSays } from '../Beluga'
-import belugaJumpArt from '../../assets/mywave/beluga-jump.png'
 import { Celebration } from '../Celebration'
+import { BubbleBurst, Notice } from '../motion'
+import { callBeluga } from '../roaming'
 import {
   createMyWaveGoal,
   deleteMyWaveGoal,
@@ -17,6 +18,7 @@ import {
   BlueCard,
   BlueMetric,
   FlagIcon,
+  HeroAmount,
   MiniStat,
   MobileCard,
   MobileGoalLine,
@@ -36,14 +38,13 @@ export function GoalsPage() {
         <MobileGoalsPage />
       </div>
       <div className="hidden gap-6 lg:grid xl:grid-cols-[1fr_440px]">
-        <div className="space-y-5">
+        <div className="reveal-stack space-y-5">
           <MainGoalCard />
           <ActionPanel />
           <GoalsList />
           <GoalManagementPanel />
         </div>
-        <div className="space-y-5">
-          <GoalPrediction />
+        <div className="reveal-stack space-y-5">
           <GoalSummary />
         </div>
       </div>
@@ -184,28 +185,82 @@ function EmptyGoalCard() {
 function MainGoalCard() {
   const { financeSummary, goals } = useMyWaveData()
   const mainGoal = goals[0]
+  const rate = financeSummary.goalRate
+  const { milestone, burst, bump } = useMilestone(mainGoal?.id ?? 0, rate)
 
   if (!mainGoal) return <EmptyGoalCard />
 
+  // 벨루가 표정은 진행률을 따른다. 절반을 넘으면 물보라, 시작했으면 인사, 아직 0이면 팔짱.
+  // 나쁜 소식 앞에서 신난 마스코트는 조롱처럼 읽히므로 0% 에서는 작게 물러선다.
+  const art = rate >= 100 ? 'trophy' : rate >= 50 ? 'cheer' : rate > 0 ? 'hello' : 'concern'
+  const artClassName = rate > 0 ? 'h-40 w-40' : 'h-32 w-32 opacity-90 saturate-[.85]'
+
   return (
-    <BlueCard className="min-h-[300px]">
-      <div className="relative z-10">
-        <span className="rounded-xl bg-[#67d8aa] px-3 py-1.5 text-sm font-black text-blue-950">{mainGoal.status}</span>
-        <div className="mt-5 flex items-center gap-3 text-3xl font-black lg:text-4xl">
-          {mainGoal.title} <Edit3 className="h-6 w-6" />
-        </div>
-        <div className="mt-7 text-7xl font-black leading-none">{financeSummary.goalRate}%</div>
-        <Progress value={financeSummary.goalRate} className="mt-5 bg-white/25" barClassName="bg-[#62d8bd]" />
-        <div className="mt-7 grid grid-cols-2 gap-5 lg:grid-cols-4">
-          <BlueMetric label="현재 모은 금액" value={won(financeSummary.savedAmount)} />
-          <BlueMetric label="남은 금액" value={won(financeSummary.remainingAmount)} />
-          <BlueMetric label="남은 기간" value={`${financeSummary.daysLeft}일`} />
-          <BlueMetric label="하루 목표 금액" value={won(financeSummary.dailyTarget)} />
-        </div>
+    <BlueCard className="min-h-[300px]" art={art} artClassName={artClassName} artBump={bump} handoffId="goal-hero" targetId="goal-hero" tone="mint" overlay={<BubbleBurst token={burst} />}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold">{mainGoal.status}</span>
+        {burst > 0 && (
+          <span key={burst} className="bubble-pop rounded-full bg-white px-3 py-1.5 text-[13px] font-bold text-blue-700">
+            {milestone === 100 ? '목표 금액을 다 모았어요!' : milestone === 50 ? '절반을 넘었어요!' : `${milestone}%를 넘었어요!`}
+          </span>
+        )}
       </div>
-      <img src={belugaJumpArt} alt="" className="wave-bob absolute bottom-4 right-6 hidden h-40 w-40 object-contain drop-shadow-[0_14px_20px_rgba(10,40,140,.35)] md:block lg:h-52 lg:w-52" />
+      <div className="mt-5 flex items-center gap-3 text-3xl font-black lg:text-4xl">
+        <span className="min-w-0 break-keep">{mainGoal.title}</span> <Edit3 className="h-6 w-6 shrink-0" />
+      </div>
+      <div className="mt-7 text-7xl leading-none"><HeroAmount value={rate} suffix="%" decimals={1} /></div>
+      <Progress value={financeSummary.goalRate} className="mt-5 bg-white/25" barClassName="bg-white" />
+      {/* 벨루가 열을 빼면 남는 폭이 좁아서 넷을 한 줄에 못 세운다. 두 줄로 고정한다. */}
+      <div className="mt-7 grid grid-cols-2 gap-x-5 gap-y-5">
+        <BlueMetric label="현재 모은 금액" value={won(financeSummary.savedAmount)} />
+        <BlueMetric label="남은 금액" value={won(financeSummary.remainingAmount)} />
+        <BlueMetric label="남은 기간" value={`${financeSummary.daysLeft}일`} />
+        <BlueMetric label="하루 목표 금액" value={won(financeSummary.dailyTarget)} />
+      </div>
     </BlueCard>
   )
+}
+
+/**
+ * 25·50·75·100% 를 처음 넘은 순간에만 기포가 터지고 벨루가가 뛴다.
+ * 어디까지 축하했는지는 브라우저에 남긴다. 들어올 때마다 터지면 아무 의미가 없다.
+ */
+function useMilestone(goalId: number, rate: number) {
+  const milestone = rate >= 100 ? 100 : rate >= 75 ? 75 : rate >= 50 ? 50 : rate >= 25 ? 25 : 0
+  const [burst, setBurst] = useState(0)
+  const [bump, setBump] = useState(0)
+
+  useEffect(() => {
+    if (goalId === 0 || milestone === 0) return
+    const key = `mywave:milestone:${goalId}`
+    if (readMilestone(key) >= milestone) return
+    // 화면이 다 들어온 뒤에 터져야 보인다. 기록은 터질 때 남긴다 (개발 모드의 이중 실행에 대비).
+    const id = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(key, String(milestone))
+      } catch {
+        /* 비공개 창에서는 저장이 막힐 수 있다. 그래도 축하는 한다. */
+      }
+      setBurst((value) => value + 1)
+      setBump((value) => value + 1)
+      callBeluga({
+        kind: 'cheer',
+        element: document.querySelector<HTMLElement>('[data-beluga-target="goal-hero"]'),
+        line: milestone === 100 ? '다 모았어요!' : milestone === 50 ? '절반을 넘었어요!' : `${milestone}%를 넘었어요!`,
+      })
+    }, 700)
+    return () => window.clearTimeout(id)
+  }, [goalId, milestone])
+
+  return { milestone, burst, bump }
+}
+
+function readMilestone(key: string) {
+  try {
+    return Number(window.localStorage.getItem(key) ?? 0)
+  } catch {
+    return 0
+  }
 }
 
 export function ActionPanel() {
@@ -334,7 +389,7 @@ function GoalManagementPanel() {
           onClose={() => setCelebrating(null)}
         />
       )}
-      {message && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{message}</div>}
+      {message && <Notice text={message} className="mb-4" />}
       <div className="space-y-3">
         {goals.map((goal) => (
           <div key={goal.id} className="rounded-2xl bg-slate-50 p-4">
@@ -369,25 +424,6 @@ function GoalManagementPanel() {
  * 저축 이력이 없어서 "달성 확률"이나 "예상 완료일"은 계산할 수 없다. 지어내지 않고,
  * 목표일과 남은 금액으로 셈할 수 있는 것만 보여준다.
  */
-function GoalPrediction() {
-  const { financeSummary, goals } = useMyWaveData()
-  if (!goals[0]) return null
-
-  return (
-    <Card title="목표까지 남은 길">
-      <div className="grid grid-cols-2 divide-x divide-slate-100 text-center">
-        <MiniStat label="목표일" value={financeSummary.mainGoalTargetDate} change={`D-${financeSummary.daysLeft}`} />
-        <MiniStat label="남은 금액" value={won(financeSummary.remainingAmount)} />
-      </div>
-      <p className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-bold leading-6 text-slate-600">
-        {financeSummary.remainingAmount > 0
-          ? `목표일까지 하루 ${won(financeSummary.dailyTarget)}씩 모으면 닿아요.`
-          : '목표 금액을 다 모았어요.'}
-      </p>
-    </Card>
-  )
-}
-
 function GoalSummary() {
   const { financeSummary, goals } = useMyWaveData()
 
@@ -395,6 +431,7 @@ function GoalSummary() {
     <Card title="목표 요약">
       <div className="space-y-4">
         <SummaryLine label="진행 중인 목표" value={`${goals.filter((goal) => goal.status === '진행 중').length}개`} />
+        <SummaryLine label="메인 목표일" value={`${financeSummary.mainGoalTargetDate} (D-${financeSummary.daysLeft})`} />
         <SummaryLine label="평균 달성률" value={`${financeSummary.averageGoalRate}%`} />
         <SummaryLine label="이번 달 저축 계획" value={financeSummary.plannedSaving > 0 ? won(financeSummary.plannedSaving) : '예산에서 정해 주세요'} muted />
         <Progress value={financeSummary.averageGoalRate} className="mt-3" />

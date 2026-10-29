@@ -1,10 +1,15 @@
 import { ChevronRight, Plus, RotateCcw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import belugaAvatar from '../assets/mywave/beluga-avatar.png'
-import belugaPhone from '../assets/mywave/beluga-phone.png'
-import { BelugaTap, type BelugaMood } from './Beluga'
-import { useCountUp } from './useCountUp'
+import { motion } from 'motion/react'
+import { Beluga, BelugaTap, type BelugaMood } from './Beluga'
+import { BelugaArt } from './BelugaArt'
+import { HeroSwimmer } from './HeroSwimmer'
+import { Bubbles, CheckDraw, Odometer } from './motion'
+import { useLiveliness } from './liveliness'
+import { useCursorTilt } from './useCursorTilt'
+import { rememberHandoff } from './handoff'
+import { callBeluga } from './roaming'
 import {
   deleteMyWaveExpense,
   getMyWaveExpenseTemplates,
@@ -93,6 +98,7 @@ export function TodayHome() {
       const saved = await logMyWaveExpenseTemplate(template.id)
       setNotice('')
       setSplash((value) => value + 1)
+      callBeluga({ kind: 'splash', element: document.querySelector<HTMLElement>('[data-beluga-target="glass"]'), line: '기록했어요!' })
       showToast({ id: saved.id, text: `${template.name} ${fmt(Number(template.amount))}원 기록했어요` })
       const home = await fetchHome()
       apply(home)
@@ -119,8 +125,8 @@ export function TodayHome() {
 
   if (failed) {
     return (
-      <section className="mx-auto max-w-[560px] rounded-[28px] bg-white p-8 text-center">
-        <img src={belugaAvatar} alt="" className="mx-auto h-20 w-20 rounded-full object-cover" />
+      <section className="mx-auto max-w-[560px] rounded-[24px] bg-white p-8 text-center">
+        <div className="flex justify-center"><Beluga mood="calm" size="md" framed /></div>
         <h2 className="wave-jua mt-4 text-[20px] text-slate-900">오늘 정보를 불러오지 못했어요</h2>
         <p className="mt-2 text-[14px] text-slate-500">서버에 연결되지 않았어요. 연결을 확인한 뒤 다시 불러와 주세요.</p>
         <button onClick={load} className="pressable mt-5 h-11 rounded-full bg-blue-700 px-5 text-[14px] font-bold text-white">다시 불러오기</button>
@@ -131,7 +137,7 @@ export function TodayHome() {
   if (!today) {
     return (
       <div className="mx-auto flex min-h-[420px] max-w-[1120px] flex-col items-center justify-center gap-3" aria-busy="true">
-        <img src={belugaPhone} alt="" className="wave-bob h-32 w-32 object-contain" />
+        <BelugaArt mood="cheer" className="wave-bob h-32 w-32" />
         <p className="wave-jua text-[18px] text-slate-500">오늘의 잔을 채우는 중…</p>
       </div>
     )
@@ -150,7 +156,12 @@ export function TodayHome() {
         <InvestGlance today={today} onOpen={() => navigate('/portfolio')} />
       </div>
       {toast && (
-        <div role="status" className="toast-in fixed bottom-24 left-1/2 z-50 flex items-center gap-3 rounded-full bg-slate-900 py-2.5 pl-5 pr-2.5 text-[14px] font-semibold text-white shadow-[0_12px_30px_rgba(25,31,40,.3)] lg:bottom-8">
+        <div role="status" className="toast-in fixed bottom-24 left-1/2 z-50 flex items-center gap-3 rounded-full bg-slate-900 py-2.5 pl-4 pr-2.5 text-[14px] font-semibold text-white shadow-[0_12px_30px_rgba(25,31,40,.3)] lg:bottom-8">
+          {toast.id !== null && (
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#4fcfb0] text-slate-900">
+              <CheckDraw className="h-3.5 w-3.5" />
+            </span>
+          )}
           <span className="whitespace-nowrap">{toast.text}</span>
           {toast.id !== null && (
             <button onClick={() => undo(toast.id as number)} className="flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-white/15 px-3 text-[13px] font-bold">
@@ -180,10 +191,9 @@ function belugaLines(date: Date) {
   ]
 }
 
-/** 큰 숫자는 이전 값에서 새 값으로 흘러간다. 잔이 줄어드는 것과 같은 속도다. */
+/** 큰 숫자는 자릿수마다 굴러서 새 값에 맞춰진다. 잔이 줄어드는 것과 비슷한 박자다. */
 function FlowingNumber({ value }: { value: number }) {
-  const animated = useCountUp(value, 900)
-  return <>{fmt(animated)}</>
+  return <Odometer value={fmt(value)} />
 }
 
 /** 잔에 남은 비율. 하루 예산이 0 이면(예산 미설정 포함) 잔은 비어 있다. */
@@ -224,6 +234,9 @@ function SodaHero({
   const mood: BelugaMood = !today.budgetSet || over || level === 0 ? 'concern' : level >= 0.5 ? 'hello' : 'cheer'
   const faceAlt = mood === 'hello' ? '손을 흔드는 벨루가' : mood === 'cheer' ? '휴대폰을 보는 벨루가' : '팔짱 낀 벨루가'
   const [lines] = useState(() => belugaLines(new Date()))
+  const { lively } = useLiveliness()
+  const hero = useRef<HTMLElement>(null)
+  const tilt = useCursorTilt(6, 8, lively, hero)
   const bumpLine = over
     ? '오늘은 여기까지만 해요. 내일 다시 채워져요.'
     : level < 0.25
@@ -231,25 +244,30 @@ function SodaHero({
       : '기록했어요! 잔이 정확해졌어요.'
 
   return (
-    <section className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#194fe5_0%,#1d67f2_48%,#51b9ff_100%)] px-6 pb-6 pt-6 text-white lg:px-8 lg:pt-8">
+    <motion.section ref={hero} {...tilt.handlers} className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#194fe5_0%,#1d67f2_48%,#51b9ff_100%)] px-6 pb-6 pt-6 text-white lg:px-8 lg:pt-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_8%,rgba(255,255,255,.28),transparent_32%)]" />
+      <div aria-hidden="true" className="hero-glow pointer-events-none absolute inset-0" />
+      <Bubbles rise={420} />
+      <div aria-hidden="true" className="hero-sheen" />
 
-      <div className="relative flex flex-wrap items-center gap-2 pr-[76px] sm:pr-[92px]">
+      <div className={`relative flex flex-wrap items-center gap-2 ${today.budgetSet ? 'lg:pr-[92px]' : 'pr-[76px] sm:pr-[92px]'}`}>
         <span className="rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold">{dateLabel(today.date)}</span>
         <span className="rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold">이번 달 {today.daysLeftInMonth}일 남음</span>
       </div>
 
       {/* 벨루가는 날짜와 제목 줄 높이 안에서만 앉는다. 큰 숫자 줄은 가리지 않는다. 누르면 말을 건다. */}
-      <div key={mood} className={`wave-pop absolute right-3 top-2 z-20 sm:right-5 ${mood === 'concern' ? '' : 'wave-bob'}`}>
-        <BelugaTap
-          mood={mood}
-          alt={faceAlt}
-          lines={lines}
-          bump={splash}
-          bumpLine={bumpLine}
-          imgClassName={mood === 'concern' ? 'h-[80px] w-[72px] sm:h-[92px] sm:w-[84px]' : 'h-[92px] w-[86px] sm:h-[104px] sm:w-[96px]'}
-        />
-      </div>
+      <motion.div style={tilt.style} className={`absolute right-3 top-2 z-20 sm:right-5 ${today.budgetSet ? 'hidden lg:block' : ''}`}>
+        <div key={mood} className={`wave-pop ${mood === 'concern' ? '' : 'beluga-breathe'}`}>
+          <BelugaTap
+            mood={mood}
+            alt={faceAlt}
+            lines={lines}
+            bump={splash}
+            bumpLine={bumpLine}
+            imgClassName={mood === 'concern' ? 'h-[80px] w-[72px] sm:h-[92px] sm:w-[84px]' : 'h-[92px] w-[86px] sm:h-[104px] sm:w-[96px]'}
+          />
+        </div>
+      </motion.div>
 
       <div className="relative mt-6">
         <span className="wave-jua text-[20px]">오늘 더 써도 되는 돈</span>
@@ -293,9 +311,28 @@ function SodaHero({
           {notice || (templates.length === 0 ? '같은 가게를 몇 번 기록하면 여기에 버튼이 생겨요.' : '')}
         </p>
       </div>
-    </section>
+    </motion.section>
   )
 }
+
+// 잔 속 탄산 기포. 신나게 단계에서는 두 배로 많다.
+const FIZZ = [
+  { left: 12, bottom: 6, size: 5, delay: 0 },
+  { left: 28, bottom: 14, size: 7, delay: 1.2 },
+  { left: 47, bottom: 22, size: 9, delay: 0.5 },
+  { left: 63, bottom: 6, size: 5, delay: 2.1 },
+  { left: 78, bottom: 14, size: 7, delay: 0.9 },
+  { left: 88, bottom: 22, size: 9, delay: 1.7 },
+]
+const FIZZ_MORE = [
+  ...FIZZ,
+  { left: 6, bottom: 10, size: 4, delay: 2.6 },
+  { left: 20, bottom: 26, size: 6, delay: 0.3 },
+  { left: 38, bottom: 4, size: 5, delay: 1.9 },
+  { left: 55, bottom: 18, size: 4, delay: 2.9 },
+  { left: 70, bottom: 28, size: 6, delay: 1.4 },
+  { left: 94, bottom: 8, size: 4, delay: 0.7 },
+]
 
 // 물방울이 흩어지는 방향. 매번 같은 모양으로 튀어야 "같은 동작"으로 읽힌다.
 const DROPS = [
@@ -310,10 +347,33 @@ const DROPS = [
 ]
 
 function SodaGlass({ today, level, over, splash, shake }: { today: MyWaveTodayResponse; level: number; over: boolean; splash: number; shake: number }) {
+  const liquid = useRef<HTMLDivElement>(null)
+  const { lively } = useLiveliness()
+  const fizz = lively ? FIZZ_MORE : FIZZ
+  // 잔 높이 220px 가운데 글자는 위에서 56px 안에 있다. 물이 그 위까지 올라오면 글자가 물 위에 놓인다.
+  const onLiquid = level >= 0.74
+
+  // 기록이 저장되면 액체가 한 번 출렁한다. 높이 전환(wave-liquid)과 겹쳐야 하므로 다시 그리지 않고 WAAPI 로 얹는다.
+  useEffect(() => {
+    if (splash === 0 || !liquid.current) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const animation = liquid.current.animate(
+      [
+        { transform: 'scaleY(1)' },
+        { transform: 'scaleY(1.07)', offset: 0.3 },
+        { transform: 'scaleY(0.97)', offset: 0.6 },
+        { transform: 'scaleY(1)' },
+      ],
+      { duration: 720, easing: 'cubic-bezier(0.3, 1.4, 0.5, 1)' },
+    )
+    return () => animation.cancel()
+  }, [splash])
+
   return (
     <div
       key={`shake-${shake}`}
       role="img"
+      data-beluga-target="glass"
       aria-label={`하루 예산 ${fmt(today.dailyBudget)}원 중 ${fmt(today.spentToday)}원 사용, ${fmt(today.remainingToday)}원 남음`}
       className={`relative mt-4 h-[220px] overflow-hidden rounded-[34px] border-4 border-white/95 bg-[#eef4ff] shadow-[inset_0_-6px_0_rgba(25,31,40,.06),0_14px_30px_rgba(25,79,229,.35)] ${shake > 0 ? 'wave-shake' : ''}`}
     >
@@ -328,38 +388,43 @@ function SodaGlass({ today, level, over, splash, shake }: { today: MyWaveTodayRe
           ))}
         </div>
       )}
-      <div className="absolute left-5 top-4 z-10 text-slate-900">
+      {/* 글자 자리(위쪽 56px)까지 물이 차면 흰 글씨, 아니면 파란 글씨. 검정은 물 위에서 탁해 보인다. */}
+      <div className={`absolute left-5 top-4 z-10 transition-colors duration-500 ${onLiquid ? 'text-white [text-shadow:0_1px_3px_rgba(16,54,140,.45)]' : 'text-blue-800'}`}>
         <div className="wave-jua text-[15px]">하루 예산 한 잔</div>
-        <div className="text-[13px] font-medium text-slate-500">
-          <span className="wave-num font-semibold text-slate-900">{fmt(today.dailyBudget)}원</span> 중{' '}
-          <span className="wave-num font-semibold text-slate-900">{fmt(today.spentToday)}원</span> 썼어요
+        <div className={`text-[13px] font-medium ${onLiquid ? 'text-white/80' : 'text-blue-800/60'}`}>
+          <span className={`wave-num font-semibold ${onLiquid ? 'text-white' : 'text-blue-800'}`}>{fmt(today.dailyBudget)}원</span> 중{' '}
+          <span className={`wave-num font-semibold ${onLiquid ? 'text-white' : 'text-blue-800'}`}>{fmt(today.spentToday)}원</span> 썼어요
         </div>
       </div>
       <div className="absolute bottom-3.5 right-4 top-3.5 z-10 flex w-2.5 flex-col justify-between" aria-hidden="true">
         {[0, 1, 2, 3].map((tick) => <span key={tick} className="h-0.5 rounded bg-slate-900/15" />)}
       </div>
 
-      <div className="wave-liquid absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,#6cb4ff_0%,#51b9ff_40%,#1d67f2_100%)]" style={{ height: `${level * 100}%` }}>
+      <div ref={liquid} className="wave-liquid absolute inset-x-0 bottom-0 origin-bottom bg-[linear-gradient(180deg,#6cb4ff_0%,#51b9ff_40%,#1d67f2_100%)]" style={{ height: `${level * 100}%` }}>
         {level > 0 && (
-          <div className="absolute inset-x-0 -top-[15px] h-4 overflow-hidden" aria-hidden="true">
-            <div className="wave-slosh-slow absolute left-0 top-0 h-4 w-[200%]">
+          <div className="wave-surface absolute inset-x-0 -top-[15px] h-4 overflow-hidden" aria-hidden="true">
+            <div className="wave-surface-layer wave-slosh-slow absolute left-0 top-0 h-4 w-[200%]">
               <svg width="100%" height="16" viewBox="0 0 800 16" preserveAspectRatio="none"><path d="M0 9 Q25 2 50 9 T100 9 T150 9 T200 9 T250 9 T300 9 T350 9 T400 9 T450 9 T500 9 T550 9 T600 9 T650 9 T700 9 T750 9 T800 9 V16 H0Z" fill="#a9d6ff" /></svg>
             </div>
-            <div className="wave-slosh absolute left-0 top-0 h-4 w-[200%]">
+            <div className="wave-surface-layer wave-slosh absolute left-0 top-0 h-4 w-[200%]">
               <svg width="100%" height="16" viewBox="0 0 800 16" preserveAspectRatio="none"><path d="M0 11 Q50 4 100 11 T200 11 T300 11 T400 11 T500 11 T600 11 T700 11 T800 11 V16 H0Z" fill="#6cb4ff" /></svg>
             </div>
           </div>
         )}
-        {level > 0.08 && [12, 28, 47, 63, 78, 88].map((left, index) => (
+        {level > 0.08 && fizz.map((bubble) => (
           <span
-            key={left}
+            key={bubble.left}
             aria-hidden="true"
             className="wave-fizz absolute rounded-full bg-white/70"
-            style={{ left: `${left}%`, bottom: 6 + (index % 3) * 8, width: 5 + (index % 3) * 2, height: 5 + (index % 3) * 2, animationDelay: `${[0, 1.2, 0.5, 2.1, 0.9, 1.7][index]}s` }}
+            style={{ left: `${bubble.left}%`, bottom: bubble.bottom, width: bubble.size, height: bubble.size, animationDelay: `${bubble.delay}s` }}
           />
         ))}
       </div>
 
+      {/* 좁은 화면에서는 벨루가가 잔 속 물에서 헤엄친다. 글자(위 70px)는 피하고 물이 있을 때만. */}
+      {level > 0 && (
+        <HeroSwimmer className="inset-x-3 bottom-3 lg:hidden" size={60} bump={splash} bumpLine={over ? '오늘은 여기까지만 해요.' : '기록했어요!'} />
+      )}
       {level === 0 && (
         <div className="absolute inset-x-0 bottom-5 z-10 text-center">
           <span className="wave-jua text-[16px] text-[#d32f3d]">
@@ -388,7 +453,7 @@ function WeekCups({ today }: { today: MyWaveTodayResponse }) {
   const selected = cups.find((cup) => cup.key === picked) ?? cups.find((cup) => cup.today)
 
   return (
-    <section className="rounded-[26px] bg-white p-5 lg:p-6">
+    <section className="rounded-[24px] bg-white p-5 lg:p-6">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="wave-jua text-[18px] text-slate-900">이번 주 일곱 잔</h2>
         {overDays.length > 0 && (
@@ -449,8 +514,8 @@ function belugaLine(today: MyWaveTodayResponse) {
 
 function BelugaTip({ today }: { today: MyWaveTodayResponse }) {
   return (
-    <section className="flex items-center gap-3 rounded-[26px] bg-white p-4">
-      <img src={belugaAvatar} alt="벨루가" className="h-16 w-16 shrink-0 rounded-full object-cover ring-[3px] ring-[#eef4ff]" />
+    <section className="flex items-center gap-3 rounded-[24px] bg-white p-4">
+      <Beluga mood="calm" size="md" framed />
       <p className="text-[15px] font-medium leading-6 text-slate-900">{belugaLine(today)}</p>
     </section>
   )
@@ -458,7 +523,7 @@ function BelugaTip({ today }: { today: MyWaveTodayResponse }) {
 
 function TodayRecords({ today, onMore }: { today: MyWaveTodayResponse; onMore: () => void }) {
   return (
-    <section className="rounded-[26px] bg-white px-5 pb-3 pt-5">
+    <section className="rounded-[24px] bg-white px-5 pb-3 pt-5">
       <div className="mb-1.5 flex items-baseline justify-between">
         <h2 className="wave-jua text-[19px] text-slate-900">
           오늘 나간 돈 <span className="wave-num text-[16px] font-semibold text-slate-500">{fmt(today.spentToday)}</span>
@@ -502,7 +567,7 @@ function GoalGlance({ today, onCreate, onOpen }: { today: MyWaveTodayResponse; o
   const goal = today.mainGoal
   if (!goal) {
     return (
-      <section className="rounded-[26px] bg-white p-5">
+      <section className="rounded-[24px] bg-white p-5">
         <h2 className="wave-jua text-[18px] text-slate-900">모으고 싶은 돈이 있나요?</h2>
         <p className="mt-1 text-[14px] text-slate-500">목표를 하나 정하면 하루에 얼마씩 모으면 되는지 알려 드려요.</p>
         <button onClick={onCreate} className="pressable mt-4 h-11 rounded-full bg-blue-700 px-5 text-[14px] font-bold text-white">목표 만들기</button>
@@ -511,15 +576,24 @@ function GoalGlance({ today, onCreate, onOpen }: { today: MyWaveTodayResponse; o
   }
   const rate = Math.max(0, Math.min(100, Number(goal.progressRate)))
   return (
-    <button onClick={onOpen} className="pressable block w-full rounded-[26px] bg-white p-5 text-left">
+    <button
+      onClick={(event) => {
+        // 이 카드가 있던 자리를 기억해 두면 목표 화면의 히어로가 여기서 출발한다.
+        rememberHandoff('goal-hero', event.currentTarget)
+        onOpen()
+      }}
+      className="pressable card-lift block w-full rounded-[24px] bg-white p-5 text-left"
+    >
       <div className="flex items-center justify-between gap-2">
         <h2 className="wave-jua truncate text-[18px] text-slate-900">{goal.title}</h2>
         <span className="wave-num shrink-0 rounded-xl bg-[#4fcfb0] px-2.5 py-1 text-[13px] font-semibold text-slate-900">D-{goal.remainingDays}</span>
       </div>
       <div className="relative mt-4 h-[22px]">
         <div className="absolute inset-x-0 top-0.5 h-[18px] rounded-full bg-[#dce8ff]" />
-        <div className="absolute left-0 top-0.5 h-[18px] rounded-full bg-[linear-gradient(90deg,#51b9ff,#1d67f2)]" style={{ width: `${rate}%` }} />
-        <div className="absolute -top-0.5 h-[26px] w-[26px] rounded-full border-4 border-white bg-[#4fcfb0] shadow-[0_3px_8px_rgba(25,31,40,.25)]" style={{ left: `calc(${rate}% - 13px)` }} />
+        <div className="absolute left-0 top-0.5 h-[18px] overflow-hidden rounded-full bg-[linear-gradient(90deg,#51b9ff,#1d67f2)]" style={{ width: `${rate}%` }}>
+          <span aria-hidden="true" className="stripes" />
+        </div>
+        <div className="goal-dot absolute -top-0.5 h-[26px] w-[26px] rounded-full border-4 border-white bg-[#4fcfb0] shadow-[0_3px_8px_rgba(25,31,40,.25)]" style={{ left: `calc(${rate}% - 13px)` }} />
       </div>
       <div className="mt-3 flex justify-between text-[13px] font-medium text-slate-500">
         <span><b className="wave-num font-semibold text-slate-900">{fmt(Number(goal.currentAmount))}</b> / {fmt(Number(goal.targetAmount))}원</span>
@@ -540,7 +614,7 @@ function InvestGlance({ today, onOpen }: { today: MyWaveTodayResponse; onOpen: (
   if (!investment || (Number(investment.evaluationAmount) === 0 && Number(investment.plannedThisMonth) === 0)) return null
   const rate = Number(investment.returnRate)
   return (
-    <button onClick={onOpen} className="pressable flex w-full items-center gap-3 rounded-[26px] bg-[#1d67f2] px-5 py-4 text-left text-white">
+    <button onClick={onOpen} className="pressable card-lift flex w-full items-center gap-3 rounded-[24px] bg-[#1d67f2] px-5 py-4 text-left text-white">
       <div className="min-w-0 flex-1">
         <div className="wave-jua text-[16px]">투자</div>
         <div className="mt-0.5 flex flex-wrap items-center gap-2">
