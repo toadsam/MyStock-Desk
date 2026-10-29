@@ -1457,20 +1457,27 @@ html[data-liveliness="quiet"] .art-zz text {
    히어로 안을 헤엄치는 벨루가 (HeroSwimmer.tsx) — 좁은 화면
    띠의 양 끝을 왕복한다. 끝에서 scaleX 가 1 → -1 로 넘어가며 납작해졌다 돌아선다.
    =========================================================================== */
+/* 자리 옮김(path)과 뒤집기(face)를 따로 건다. 같은 길이·같은 박자라 함께 시작하면 맞물린다. 말풍선은 path 에만 붙어 뒤집히지 않는다. */
 .hero-swim-path {
   animation: hero-swim var(--swim-duration, 16s) ease-in-out infinite;
   will-change: transform;
 }
 
-@keyframes hero-swim {
-  0% { transform: translateX(0) scaleX(1); }
-  45% { transform: translateX(var(--swim-span, 0px)) scaleX(1); }
-  50% { transform: translateX(var(--swim-span, 0px)) scaleX(-1); }
-  95% { transform: translateX(0) scaleX(-1); }
-  100% { transform: translateX(0) scaleX(1); }
+.hero-swim-face {
+  animation: hero-swim-face var(--swim-duration, 16s) ease-in-out infinite;
 }
 
-/* 말풍선은 몸이 뒤집혀도 글이 뒤집히지 않게 바깥에서 한 번 더 뒤집지 않고, 가운데 정렬만 한다. */
+@keyframes hero-swim {
+  0%, 100% { transform: translateX(0); }
+  45%, 50% { transform: translateX(var(--swim-span, 0px)); }
+}
+
+@keyframes hero-swim-face {
+  0%, 45% { transform: scaleX(1); }
+  50%, 95% { transform: scaleX(-1); }
+  100% { transform: scaleX(1); }
+}
+
 .hero-swim-line {
   transform: translateX(-50%);
 }
@@ -1480,7 +1487,8 @@ html[data-liveliness="quiet"] .hero-swimmer {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-swim-path {
+  .hero-swim-path,
+  .hero-swim-face {
     animation: none;
   }
 }

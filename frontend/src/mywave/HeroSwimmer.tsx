@@ -80,11 +80,14 @@ export function HeroSwimmer({
           type="button"
           onClick={() => say(lines[hop % lines.length])}
           aria-label="벨루가에게 말 걸기"
-          className="pointer-events-auto block h-full w-full cursor-pointer select-none"
+          className="pointer-events-auto block h-full w-full cursor-pointer select-none rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
-          <span key={hop} className={`block h-full w-full ${hop > 0 ? 'beluga-hop' : ''}`}>
-            <span className="swim-bob block h-full w-full">
-              <BelugaArt mood="swim" swimming className="h-full w-full drop-shadow-[0_6px_10px_rgba(10,40,140,.28)]" />
+          {/* 뒤집기(hero-swim-face)는 그림에만 건다. 말풍선까지 뒤집히면 글이 거울로 보인다. */}
+          <span className="hero-swim-face block h-full w-full">
+            <span key={hop} className={`block h-full w-full ${hop > 0 ? 'beluga-hop' : ''}`}>
+              <span className="swim-bob block h-full w-full">
+                <BelugaArt mood="swim" swimming className="h-full w-full drop-shadow-[0_6px_10px_rgba(10,40,140,.28)]" />
+              </span>
             </span>
           </span>
         </button>
