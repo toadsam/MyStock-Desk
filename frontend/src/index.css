@@ -1513,6 +1513,18 @@ html[data-liveliness="quiet"] .art-zz text {
   50% { transform: translateY(calc(-1 * var(--swim-rise, 0px))); }
 }
 
+/* 물이 얕아 바닥에 엎드린 벨루가. 떠오르지 않고 바닥에 붙은 채 숨 쉬며 가끔 몸을 뒤척인다. */
+.hero-stranded {
+  transform-origin: 50% 100%;
+  animation: hero-stranded 5.2s ease-in-out infinite;
+}
+
+@keyframes hero-stranded {
+  0%, 100% { transform: rotate(-1deg) scaleY(1); }
+  40% { transform: rotate(1.5deg) scaleY(0.97); }
+  70% { transform: rotate(0.5deg) scaleY(1.01); }
+}
+
 /* 포즈를 보여주는 동안은 그 자리에 멈춘다. 뒤집기와 오르내림도 같이 멈춰 자리가 그대로다. */
 .hero-swim-paused,
 .hero-swim-paused .hero-swim-face,
@@ -1528,7 +1540,8 @@ html[data-liveliness="quiet"] .hero-swimmer {
   .hero-swim-path,
   .hero-swim-face,
   .hero-swim-wave,
-  .hero-swim-dive {
+  .hero-swim-dive,
+  .hero-stranded {
     animation: none;
   }
 }

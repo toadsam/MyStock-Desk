@@ -421,9 +421,10 @@ function SodaGlass({ today, level, over, splash, shake }: { today: MyWaveTodayRe
         ))}
       </div>
 
-      {/* 좁은 화면에서는 벨루가가 잔 속 물에서 헤엄친다. 글자(위 70px)는 피하고 물이 있을 때만. */}
+      {/* 좁은 화면에서는 벨루가가 잔 속 물에서 헤엄친다. 물 밖으로는 안 나간다: 안쪽 높이 212px 중 물 높이에서 띠 바닥(12px)을 뺀 만큼이 깊이.
+          물이 몸보다 얕으면(약 36% 아래) 헤엄을 멈추고 바닥에 엎드린다. 물이 없으면 벨루가 대신 빨간 글씨. */}
       {level > 0 && (
-        <HeroSwimmer className="inset-x-3 bottom-3 lg:hidden" size={60} rise={64} bump={splash} bumpLine={over ? '오늘은 여기까지만 해요.' : '기록했어요!'} />
+        <HeroSwimmer className="inset-x-3 bottom-3 lg:hidden" size={60} rise={64} depth={level * 212 - 12} bump={splash} bumpLine={over ? '오늘은 여기까지만 해요.' : '기록했어요!'} />
       )}
       {level === 0 && (
         <div className="absolute inset-x-0 bottom-5 z-10 text-center">
