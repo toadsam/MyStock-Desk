@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { BelugaArt } from './BelugaArt'
+import { BelugaArt, type BelugaMood } from './BelugaArt'
 import { useLiveliness } from './liveliness'
 
 /**
@@ -13,6 +13,8 @@ import { useLiveliness } from './liveliness'
  * 조용히 단계에서는 안 보인다. 동작 줄이기를 켠 사람에게는 제자리에 떠 있다.
  */
 const LINES = ['물이 참 좋네요.', '여기가 제 수영장이에요.', '간식 사기 전에 잔 한번 보기!', '천천히, 꾸준히.', '저 여기 있어요~']
+// 가끔 멈춰 서서 보여주는 포즈. 헤엄 그림 말고 다른 얼굴도 보여야 살아 있어 보인다.
+const REST_POSES: BelugaMood[] = ['hello', 'think', 'point', 'cheer']
 
 export function HeroSwimmer({
   size = 60,
@@ -39,6 +41,26 @@ export function HeroSwimmer({
   const [line, setLine] = useState<string | null>(null)
   const timer = useRef<number | undefined>(undefined)
   const lastBump = useRef(bump)
+  // 14~26초마다 2.8초 동안 멈춰 다른 포즈를 보여준다.
+  const [pose, setPose] = useState<BelugaMood | null>(null)
+  useEffect(() => {
+    let show = 0
+    let hide = 0
+    const schedule = () => {
+      show = window.setTimeout(() => {
+        if (document.visibilityState === 'visible') setPose(REST_POSES[Math.floor(Math.random() * REST_POSES.length)])
+        hide = window.setTimeout(() => {
+          setPose(null)
+          schedule()
+        }, 2800)
+      }, 14000 + Math.random() * 12000)
+    }
+    schedule()
+    return () => {
+      window.clearTimeout(show)
+      window.clearTimeout(hide)
+    }
+  }, [])
 
   // 띠 너비를 재서 왕복 거리(--swim-span)를 정한다. 카드가 늘거나 줄면 다시 잰다.
   useEffect(() => {
@@ -73,7 +95,7 @@ export function HeroSwimmer({
   return (
     <div ref={lane} className={`hero-swimmer pointer-events-none absolute ${className}`} style={{ height: size }}>
       <div
-        className="hero-swim-path absolute left-0 top-0"
+        className={`hero-swim-path absolute left-0 top-0 ${pose ? 'hero-swim-paused' : ''}`}
         style={{ width: size, height: size, ['--swim-span' as string]: `${span}px`, ['--swim-duration' as string]: `${duration}s` }}
       >
         <button
@@ -84,9 +106,9 @@ export function HeroSwimmer({
         >
           {/* 뒤집기(hero-swim-face)는 그림에만 건다. 말풍선까지 뒤집히면 글이 거울로 보인다. */}
           <span className="hero-swim-face block h-full w-full">
-            <span key={hop} className={`block h-full w-full ${hop > 0 ? 'beluga-hop' : ''}`}>
-              <span className="swim-bob block h-full w-full">
-                <BelugaArt mood="swim" swimming className="h-full w-full drop-shadow-[0_6px_10px_rgba(10,40,140,.28)]" />
+            <span key={`${hop}-${pose ?? ''}`} className={`block h-full w-full ${hop > 0 ? 'beluga-hop' : pose ? 'wave-pop' : ''}`}>
+              <span className={`block h-full w-full ${pose ? 'beluga-breathe' : 'swim-bob'}`}>
+                <BelugaArt mood={pose ?? 'swim'} swimming={!pose} className="h-full w-full drop-shadow-[0_6px_10px_rgba(10,40,140,.28)]" />
               </span>
             </span>
           </span>

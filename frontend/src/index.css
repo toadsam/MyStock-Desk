@@ -1482,6 +1482,12 @@ html[data-liveliness="quiet"] .art-zz text {
   transform: translateX(-50%);
 }
 
+/* 포즈를 보여주는 동안은 그 자리에 멈춘다. 뒤집기도 같이 멈춰 방향이 그대로다. */
+.hero-swim-paused,
+.hero-swim-paused .hero-swim-face {
+  animation-play-state: paused;
+}
+
 html[data-liveliness="quiet"] .hero-swimmer {
   display: none;
 }

@@ -24,6 +24,8 @@ import { useDrowsy, useWakeToken } from './useDrowsy'
 const SIZE = 112
 const SPEED = 110 // px/s. 서두르지 않는다.
 const IDLE_LINES = ['물이 참 좋네요.', '저 여기 있어요~', '천천히, 꾸준히.', '오늘 기록 잊지 않았죠?', '간지러워요!', '카드 뒤는 시원해요.']
+// 쉴 때 하는 포즈. 틈에서, 집에서 번갈아 보여준다. 나쁜 소식용 concern 은 여기 없다.
+const REST_POSES: BelugaMood[] = ['hello', 'think', 'point', 'cheer', 'hello']
 
 type Point = { x: number; y: number }
 
@@ -32,9 +34,12 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
   const x = useMotionValue(0)
   const y = useMotionValue(0)
   const pitch = useMotionValue(0)
+  // 보는 방향. 1 이면 오른쪽, -1 이면 왼쪽. 돌아설 때 0 을 지나며 납작해진다.
+  const facing = useMotionValue(1)
+  // 공중제비. 쉴 때 가끔 한 바퀴.
+  const roll = useMotionValue(0)
   const [front, setFront] = useState(true)
   const [shown, setShown] = useState(false)
-  const [flip, setFlip] = useState(false)
   const [swimming, setSwimming] = useState(false)
   const [mood, setMood] = useState<BelugaMood>('hello')
   const [line, setLine] = useState<string | null>(null)
@@ -45,7 +50,7 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
   const generation = useRef(0)
   const lineTimer = useRef<number | undefined>(undefined)
   const trailId = useRef(0)
-  // 헤엄치는 동안 기포를 어느 쪽에 남길지 알기 위한 방향 거울 (setFlip 과 같이 쓴다)
+  // 헤엄치는 동안 기포를 어느 쪽에 남길지 알기 위한 방향 거울 (facing 과 같이 쓴다)
   const flipRef = useRef(false)
   // 1분 동안 아무 일도 없으면 집에서 존다. 자는 동안은 나가지 않고, 깨면 움찔한다.
   const drowsy = useDrowsy()
@@ -75,18 +80,29 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
     if (text) lineTimer.current = window.setTimeout(() => setLine(null), 2800)
   }, [])
 
-  /** 지금 자리에서 target 까지 헤엄친다. 방향을 보고 몸을 뒤집고, 오르내림만큼 기울인다. */
+  /** 그림은 오른쪽을 본다. 가는 쪽이 왼쪽이면 돌아선다. 몸이 0 을 지나며 납작해졌다 펴지는 0.35초. */
+  const turnToward = useCallback(async (dx: number) => {
+    if (Math.abs(dx) <= 24) return
+    const want = dx < 0 ? -1 : 1
+    if (facing.get() === want) return
+    flipRef.current = want < 0
+    await animate(facing, want, { duration: 0.35, ease: 'easeInOut' })
+  }, [facing])
+
+  /**
+   * 지금 자리에서 target 까지 헤엄친다.
+   * 한 번에 미끄러지듯 가지 않는다. 물고기처럼 꼬리로 한 번 힘차게 밀고(빠르게) 미끄러지기(느려짐)를
+   * 거리만큼 되풀이하고, 토막 사이사이 길이 살짝 위아래로 물결친다. 오르내림만큼 몸을 기울인다.
+   */
   const swimTo = useCallback(async (target: Point, speed = SPEED, alive: () => boolean = () => true) => {
-    const dx = target.x - x.get()
-    const dy = target.y - y.get()
+    const x0 = x.get()
+    const y0 = y.get()
+    const dx = target.x - x0
+    const dy = target.y - y0
     const distance = Math.hypot(dx, dy)
     if (distance < 4) return
-    const duration = Math.max(0.9, distance / speed)
-    // 그림은 오른쪽을 본다. 왼쪽으로 갈 때만 뒤집는다.
-    if (Math.abs(dx) > 24) {
-      flipRef.current = dx < 0
-      setFlip(dx < 0)
-    }
+    await turnToward(dx)
+    if (!alive()) return
     setSwimming(true)
     const angle = (Math.atan2(dy, Math.max(60, Math.abs(dx))) * 180) / Math.PI
     animate(pitch, Math.max(-16, Math.min(16, angle * 0.6)), { duration: 0.5 })
@@ -98,17 +114,43 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
       window.setTimeout(() => setTrail((items) => items.filter((item) => item.id !== id)), 1500)
     }, 520)
     try {
-      await Promise.all([
-        animate(x, target.x, { duration, ease: [0.42, 0, 0.28, 1] }),
-        animate(y, target.y, { duration, ease: [0.42, 0, 0.28, 1] }),
-      ])
+      const strokes = Math.max(1, Math.round(distance / 170))
+      const wobble = rand(0, Math.PI * 2)
+      for (let index = 1; index <= strokes && alive(); index += 1) {
+        const t = index / strokes
+        const last = index === strokes
+        // 가로로 갈수록 물결이 크고, 마지막 토막은 정확히 목적지에 닿는다.
+        const sway = last ? 0 : Math.sin(wobble + index * 1.9) * 12 * (Math.abs(dx) / distance)
+        const duration = Math.max(0.55, distance / strokes / speed)
+        await Promise.all([
+          animate(x, x0 + dx * t, { duration, ease: [0.18, 0.72, 0.32, 1] }),
+          animate(y, y0 + dy * t + sway, { duration, ease: [0.18, 0.72, 0.32, 1] }),
+        ])
+      }
     } finally {
       window.clearInterval(bubbles)
     }
     if (!alive()) return
     animate(pitch, 0, { duration: 0.6 })
     setSwimming(false)
-  }, [pitch, x, y])
+  }, [pitch, turnToward, x, y])
+
+  /** 쉬는 동안 가끔 다른 포즈를 보여주고, 드물게 공중제비를 돈다. ms 만큼 머문다. */
+  const linger = useCallback(async (ms: number, alive: () => boolean) => {
+    const until = performance.now() + ms
+    while (alive() && performance.now() < until) {
+      await sleep(Math.min(2600, Math.max(200, until - performance.now())))
+      if (!alive()) return
+      const dice = Math.random()
+      if (dice < 0.08) {
+        roll.set(0)
+        await animate(roll, 360, { duration: 0.9, ease: [0.4, 0, 0.2, 1] })
+        roll.set(0)
+      } else if (dice < 0.4) {
+        setMood(pick(REST_POSES))
+      }
+    }
+  }, [roll])
 
   /** 집에서 쉬고, 틈을 헤엄치고, 돌아오는 하루. generation 이 바뀌면 조용히 멈춘다. */
   const startDay = useCallback((fromHome: boolean) => {
@@ -129,9 +171,10 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
       let atHome = fromHome
       while (alive()) {
         if (atHome) {
-          await sleep(rand(9000, 18000))
+          await linger(rand(9000, 18000), alive)
           if (!alive()) return
           if (document.visibilityState !== 'visible' || asleepRef.current) continue
+          setMood('hello')
           setFront(false)
           await sleep(200)
         }
@@ -141,20 +184,23 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
           if (!target) break
           await swimTo(target, SPEED, alive)
           if (!alive()) return
-          await sleep(rand(3000, 7000))
+          setMood(pick(REST_POSES))
+          await linger(rand(3000, 7000), alive)
         }
         if (!alive()) return
         const back = homePoint()
         if (!back) return
+        setMood('hello')
         await swimTo(back, SPEED * 1.3, alive)
         if (!alive()) return
+        await turnToward(1)
         setFront(true)
         atHome = true
         say(pick(IDLE_LINES))
       }
     }
     void run()
-  }, [pageLine, say, swimTo, x, y])
+  }, [linger, pageLine, say, swimTo, turnToward, x, y])
 
   // 화면이 바뀌면 집에서 다시 시작한다. 배치가 달라져 틈 자리도 달라지기 때문이다.
   useEffect(() => {
@@ -178,11 +224,8 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
       setFront(true)
       setMood(call.kind === 'cheer' ? 'cheer' : 'hello')
       // 먼저 그쪽으로 몸을 돌려 쳐다보고(눈은 gaze 가 따라간다), 한 박자 뒤에 출발한다.
-      if (Math.abs(target.x - x.get()) > 24) {
-        flipRef.current = target.x < x.get()
-        setFlip(target.x < x.get())
-      }
-      await sleep(420)
+      await turnToward(target.x - x.get())
+      await sleep(380)
       if (!alive()) return
       await swimTo(target, SPEED * 2.4, alive)
       if (!alive()) return
@@ -196,7 +239,7 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
       startDay(false)
     }
     void run()
-  }), [say, startDay, swimTo, x, y])
+  }), [say, startDay, swimTo, turnToward, x, y])
 
   return (
     <div aria-hidden={!shown} className="pointer-events-none fixed inset-0 hidden lg:block" style={{ zIndex: front ? 60 : 0, opacity: shown ? 1 : 0, transition: 'opacity 400ms' }}>
@@ -223,15 +266,17 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
           say(pick(IDLE_LINES))
         }}
       >
-        <div className={flip ? '-scale-x-100' : ''} style={{ width: SIZE, height: SIZE }}>
+        <motion.div style={{ scaleX: facing, width: SIZE, height: SIZE }}>
           <motion.div style={{ rotate: pitch, width: SIZE, height: SIZE }}>
+           <motion.div style={{ rotate: roll, width: SIZE, height: SIZE }}>
             <div className={`${swimming ? 'swim-bob' : 'beluga-breathe'} h-full w-full`}>
               <span key={jump.token} className={`block h-full w-full ${jump.token === 0 ? '' : jump.kind === 'startle' ? 'beluga-startle' : 'beluga-hop'}`}>
                 <BelugaArt mood={swimming ? 'swim' : mood} asleep={drowsy && front && !swimming} swimming={swimming} className="h-full w-full drop-shadow-[0_12px_18px_rgba(10,40,140,.28)]" />
               </span>
             </div>
+           </motion.div>
           </motion.div>
-        </div>
+        </motion.div>
         <BubbleBurst token={burst} />
         {line && front && (
           <div role="status" className={`bubble-pop absolute bottom-full mb-1 w-max max-w-[220px] rounded-[16px] bg-white px-3.5 py-2.5 text-[13px] font-bold leading-5 text-slate-900 shadow-[0_8px_24px_rgba(25,31,40,.18)] ${x.get() > window.innerWidth / 2 ? 'right-0' : 'left-0'}`}>
