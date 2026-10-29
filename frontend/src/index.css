@@ -1467,9 +1467,30 @@ html[data-liveliness="quiet"] .art-zz text {
   animation: hero-swim-face var(--swim-duration, 16s) ease-in-out infinite;
 }
 
+/* 고르게 미끄러지지 않는다. 토막마다 ease-in-out 이라 많이 가는 토막은 밀기, 조금 가는 토막은 미끄러지기가 된다. */
 @keyframes hero-swim {
-  0%, 100% { transform: translateX(0); }
+  0% { transform: translateX(0); }
+  10% { transform: translateX(calc(var(--swim-span, 0px) * 0.3)); }
+  20% { transform: translateX(calc(var(--swim-span, 0px) * 0.42)); }
+  31% { transform: translateX(calc(var(--swim-span, 0px) * 0.78)); }
+  40% { transform: translateX(calc(var(--swim-span, 0px) * 0.9)); }
   45%, 50% { transform: translateX(var(--swim-span, 0px)); }
+  60% { transform: translateX(calc(var(--swim-span, 0px) * 0.7)); }
+  70% { transform: translateX(calc(var(--swim-span, 0px) * 0.58)); }
+  81% { transform: translateX(calc(var(--swim-span, 0px) * 0.22)); }
+  90% { transform: translateX(calc(var(--swim-span, 0px) * 0.1)); }
+  95%, 100% { transform: translateX(0); }
+}
+
+/* 헤엄치는 동안 물결 타듯 오르내리며 그쪽으로 살짝 기운다. face 안에 있어 돌아서면 기울기도 같이 뒤집힌다. */
+.hero-swim-wave {
+  animation: hero-swim-wave 2.4s ease-in-out infinite;
+}
+
+@keyframes hero-swim-wave {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  30% { transform: translateY(-5px) rotate(-3.5deg); }
+  65% { transform: translateY(4px) rotate(2.5deg); }
 }
 
 @keyframes hero-swim-face {
@@ -1482,9 +1503,20 @@ html[data-liveliness="quiet"] .art-zz text {
   transform: translateX(-50%);
 }
 
-/* 포즈를 보여주는 동안은 그 자리에 멈춘다. 뒤집기도 같이 멈춰 방향이 그대로다. */
+/* 바닥에서 --swim-rise 만큼 떠올랐다 가라앉는다. 가로 왕복과 길이가 달라 매번 다른 길을 그린다. */
+.hero-swim-dive {
+  animation: hero-swim-dive var(--dive-duration, 7s) ease-in-out infinite;
+}
+
+@keyframes hero-swim-dive {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(calc(-1 * var(--swim-rise, 0px))); }
+}
+
+/* 포즈를 보여주는 동안은 그 자리에 멈춘다. 뒤집기와 오르내림도 같이 멈춰 자리가 그대로다. */
 .hero-swim-paused,
-.hero-swim-paused .hero-swim-face {
+.hero-swim-paused .hero-swim-face,
+.hero-swim-paused .hero-swim-dive {
   animation-play-state: paused;
 }
 
@@ -1494,7 +1526,9 @@ html[data-liveliness="quiet"] .hero-swimmer {
 
 @media (prefers-reduced-motion: reduce) {
   .hero-swim-path,
-  .hero-swim-face {
+  .hero-swim-face,
+  .hero-swim-wave,
+  .hero-swim-dive {
     animation: none;
   }
 }

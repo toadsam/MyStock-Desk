@@ -28,7 +28,7 @@ export function MobileBlueSummary({ title, value, detail, tone = 'blue' }: { tit
       </div>
       <div className="absolute -bottom-8 -right-8 h-32 w-44 rounded-full bg-white/15 blur-xl" />
       {/* 제목 오른쪽 빈 띠를 벨루가가 오간다. 큰 숫자 줄(아래)은 건드리지 않는다. */}
-      <HeroSwimmer className="left-[46%] right-3 top-1 lg:hidden" size={56} />
+      <HeroSwimmer className="left-[46%] right-3 top-1 lg:hidden" size={56} rise={26} />
     </section>
   )
 }

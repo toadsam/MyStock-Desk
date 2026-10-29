@@ -9,7 +9,8 @@ import { useLiveliness } from './liveliness'
  * 화면을 꽉 채워 뒤로 지나가면 보이지 않는다. 대신 파란 히어로 카드가 곧 물이다.
  * 홈에서는 하루 예산 잔 속을, 다른 화면에서는 요약 카드의 제목 오른쪽 띠를 오간다.
  *
- * 띠(lane)의 양 끝 사이를 천천히 왕복하고, 끝에서 몸이 납작해지며 돌아선다. 누르면 뛰고 한마디 한다.
+ * 띠(lane)의 양 끝 사이를 밀고 미끄러지며 왕복하고, 물결 타듯 오르내리며, 끝에서 몸이 납작해지며 돌아선다.
+ * rise 만큼 위로 잠수했다 떠오르기를 가로 왕복과 다른 박자로 되풀이해 길이 매번 다르다. 누르면 뛰고 한마디 한다.
  * 조용히 단계에서는 안 보인다. 동작 줄이기를 켠 사람에게는 제자리에 떠 있다.
  */
 const LINES = ['물이 참 좋네요.', '여기가 제 수영장이에요.', '간식 사기 전에 잔 한번 보기!', '천천히, 꾸준히.', '저 여기 있어요~']
@@ -23,6 +24,7 @@ export function HeroSwimmer({
   bump = 0,
   bumpLine,
   speed = 42,
+  rise = 0,
 }: {
   size?: number
   /** 띠의 자리. absolute 로 놓을 left/right/top/bottom 유틸리티를 넘긴다. */
@@ -33,6 +35,8 @@ export function HeroSwimmer({
   bumpLine?: string
   /** px/s. 서두르지 않는다. */
   speed?: number
+  /** 띠 바닥에서 위로 오르내릴 수 있는 높이(px). 0 이면 가로로만 오간다. */
+  rise?: number
 }) {
   const { quiet } = useLiveliness()
   const lane = useRef<HTMLDivElement>(null)
@@ -91,13 +95,17 @@ export function HeroSwimmer({
 
   if (quiet) return null
   const duration = Math.max(8, (span * 2) / speed + 2)
+  // 오르내림은 가로 왕복과 박자가 어긋나야 같은 길을 되풀이하지 않는다. 가로의 0.37배.
+  const dive = Math.max(4.5, duration * 0.37)
 
   return (
-    <div ref={lane} className={`hero-swimmer pointer-events-none absolute ${className}`} style={{ height: size }}>
+    <div ref={lane} className={`hero-swimmer pointer-events-none absolute ${className}`} style={{ height: size + rise }}>
       <div
-        className={`hero-swim-path absolute left-0 top-0 ${pose ? 'hero-swim-paused' : ''}`}
-        style={{ width: size, height: size, ['--swim-span' as string]: `${span}px`, ['--swim-duration' as string]: `${duration}s` }}
+        className={`hero-swim-path absolute bottom-0 left-0 ${pose ? 'hero-swim-paused' : ''}`}
+        style={{ width: size, height: size, ['--swim-span' as string]: `${span}px`, ['--swim-duration' as string]: `${duration}s`, ['--swim-rise' as string]: `${rise}px`, ['--dive-duration' as string]: `${dive}s` }}
       >
+       {/* 잠수했다 떠오르기. 말풍선도 같이 오르내린다. */}
+       <div className={`relative h-full w-full ${rise > 0 ? 'hero-swim-dive' : ''}`}>
         <button
           type="button"
           onClick={() => say(lines[hop % lines.length])}
@@ -107,7 +115,7 @@ export function HeroSwimmer({
           {/* 뒤집기(hero-swim-face)는 그림에만 건다. 말풍선까지 뒤집히면 글이 거울로 보인다. */}
           <span className="hero-swim-face block h-full w-full">
             <span key={`${hop}-${pose ?? ''}`} className={`block h-full w-full ${hop > 0 ? 'beluga-hop' : pose ? 'wave-pop' : ''}`}>
-              <span className={`block h-full w-full ${pose ? 'beluga-breathe' : 'swim-bob'}`}>
+              <span className={`block h-full w-full ${pose ? 'beluga-breathe' : 'hero-swim-wave'}`}>
                 <BelugaArt mood={pose ?? 'swim'} swimming={!pose} className="h-full w-full drop-shadow-[0_6px_10px_rgba(10,40,140,.28)]" />
               </span>
             </span>
@@ -118,6 +126,7 @@ export function HeroSwimmer({
             {line}
           </div>
         )}
+       </div>
       </div>
     </div>
   )

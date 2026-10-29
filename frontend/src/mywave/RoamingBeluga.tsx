@@ -13,16 +13,21 @@ import { useDrowsy, useWakeToken } from './useDrowsy'
  * 수족관 유리 뒤로 지나가는 물고기처럼. 글을 가리지 않고 버튼을 막지 않는다.
  *
  * 하루:
- *  1. 집(사이드바 아래)에서 쉰다. 화면이 바뀌면 그 화면 한마디를 한다.
- *  2. 9~18초 뒤 카드 뒤로 들어가 틈을 골라 두세 번 헤엄치고, 틈마다 잠시 머문다.
+ *  1. 집(사이드바 아래)에서 떠다니며 쉰다. 화면이 바뀌면 그 화면 한마디를 한다.
+ *  2. 5~11초 뒤 카드 뒤로 들어가 틈을 골라 서너 번 헤엄치고, 틈마다 잠시 떠다닌다.
  *  3. 집으로 돌아와 한마디 하고 다시 쉰다.
+ *
+ * 움직임은 전부 매 프레임 직접 그린다(requestAnimationFrame). 가는 길은 직선이 아니라 S 자로 휘고,
+ * 그 길 위를 꼬리질 박자에 맞춰 밀고(빠르게) 미끄러지며(느리게) 끊김 없이 나아간다.
+ * 쉴 때도 가만있지 않고 자리 둘레를 천천히 떠다니며 두리번거리고, 포즈를 바꾸고, 가끔 한 바퀴 돈다.
  *
  * 화면이 부르면(callBeluga) 하던 일을 멈추고 카드 앞으로 나와 그 자리로 헤엄쳐 가 뛰고 돌아온다.
  * 누르면 말을 걸고, 잡아서 던지면 미끄러졌다가 다시 헤엄친다.
  * 집은 Companion 이 비워 둔 자리([data-beluga-home])다. 벨루가는 한 마리뿐이다.
  */
 const SIZE = 112
-const SPEED = 110 // px/s. 서두르지 않는다.
+const SPEED = 120 // px/s 평균. 밀 때는 이보다 빠르고 미끄러질 때는 느리다.
+const STROKE_HZ = 1.15 // 보통 속도일 때 초당 꼬리질 횟수
 const IDLE_LINES = ['물이 참 좋네요.', '저 여기 있어요~', '천천히, 꾸준히.', '오늘 기록 잊지 않았죠?', '간지러워요!', '카드 뒤는 시원해요.']
 // 쉴 때 하는 포즈. 틈에서, 집에서 번갈아 보여준다. 나쁜 소식용 concern 은 여기 없다.
 const REST_POSES: BelugaMood[] = ['hello', 'think', 'point', 'cheer', 'hello']
@@ -36,7 +41,7 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
   const pitch = useMotionValue(0)
   // 보는 방향. 1 이면 오른쪽, -1 이면 왼쪽. 돌아설 때 0 을 지나며 납작해진다.
   const facing = useMotionValue(1)
-  // 공중제비. 쉴 때 가끔 한 바퀴.
+  // 공중제비. 쉴 때 가끔, 신날 때 헤엄치다가 한 바퀴.
   const roll = useMotionValue(0)
   const [front, setFront] = useState(true)
   const [shown, setShown] = useState(false)
@@ -50,8 +55,8 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
   const generation = useRef(0)
   const lineTimer = useRef<number | undefined>(undefined)
   const trailId = useRef(0)
-  // 헤엄치는 동안 기포를 어느 쪽에 남길지 알기 위한 방향 거울 (facing 과 같이 쓴다)
-  const flipRef = useRef(false)
+  // 지금 보고 있는(또는 돌아서는 중인) 방향. facing 애니메이션을 겹쳐 걸지 않기 위한 거울.
+  const facingWant = useRef<1 | -1>(1)
   // 1분 동안 아무 일도 없으면 집에서 존다. 자는 동안은 나가지 않고, 깨면 움찔한다.
   const drowsy = useDrowsy()
   const asleepRef = useRef(false)
@@ -84,73 +89,142 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
   const turnToward = useCallback(async (dx: number) => {
     if (Math.abs(dx) <= 24) return
     const want = dx < 0 ? -1 : 1
-    if (facing.get() === want) return
-    flipRef.current = want < 0
+    if (facingWant.current === want) return
+    facingWant.current = want
     await animate(facing, want, { duration: 0.35, ease: 'easeInOut' })
   }, [facing])
 
+  /** 기포 하나를 꼬리 쪽(가는 방향의 반대)에 남긴다. */
+  const dropBubble = useCallback(() => {
+    const id = ++trailId.current
+    setTrail((items) => [...items.slice(-10), { id, x: x.get() + (facingWant.current < 0 ? SIZE * 0.75 : SIZE * 0.2), y: y.get() + SIZE * 0.55 }])
+    window.setTimeout(() => setTrail((items) => items.filter((item) => item.id !== id)), 1500)
+  }, [x, y])
+
+  /** 한 바퀴 공중제비. 끝나면 각도를 0 으로 되돌려 다음에 또 돌 수 있게 한다. */
+  const somersault = useCallback(async () => {
+    roll.set(0)
+    await animate(roll, 360, { duration: 1.0, ease: [0.4, 0, 0.2, 1] })
+    roll.set(0)
+  }, [roll])
+
   /**
    * 지금 자리에서 target 까지 헤엄친다.
-   * 한 번에 미끄러지듯 가지 않는다. 물고기처럼 꼬리로 한 번 힘차게 밀고(빠르게) 미끄러지기(느려짐)를
-   * 거리만큼 되풀이하고, 토막 사이사이 길이 살짝 위아래로 물결친다. 오르내림만큼 몸을 기울인다.
+   * 직선이 아니라 S 자로 휜 길을 따라, 꼬리질 박자에 맞춰 밀고 미끄러지기를 되풀이하며 끊김 없이 나아간다.
+   * 몸은 길이 향하는 쪽으로 기울고, 꼬리질마다 길 위아래로 살짝 들썩이며, 밀 때 기포를 남긴다.
+   * 방향이 바뀌면 가는 중에 돌아선다. playful 이면 가끔 가다가 한 바퀴 돈다.
    */
-  const swimTo = useCallback(async (target: Point, speed = SPEED, alive: () => boolean = () => true) => {
-    const x0 = x.get()
-    const y0 = y.get()
-    const dx = target.x - x0
-    const dy = target.y - y0
-    const distance = Math.hypot(dx, dy)
-    if (distance < 4) return
-    await turnToward(dx)
-    if (!alive()) return
+  const swimTo = useCallback((target: Point, speed = SPEED, alive: () => boolean = () => true, playful = false) => new Promise<void>((resolve) => {
+    const from = { x: x.get(), y: y.get() }
+    const distance = Math.hypot(target.x - from.x, target.y - from.y)
+    if (distance < 6) {
+      resolve()
+      return
+    }
+    const path = bendPath(from, target, Math.min(140, distance * 0.28))
     setSwimming(true)
-    const angle = (Math.atan2(dy, Math.max(60, Math.abs(dx))) * 180) / Math.PI
-    animate(pitch, Math.max(-16, Math.min(16, angle * 0.6)), { duration: 0.5 })
-    const bubbles = window.setInterval(() => {
-      if (!alive()) return
-      const id = ++trailId.current
-      // 기포는 꼬리 쪽(가는 방향의 반대)에 남는다.
-      setTrail((items) => [...items.slice(-10), { id, x: x.get() + (flipRef.current ? SIZE * 0.75 : SIZE * 0.2), y: y.get() + SIZE * 0.55 }])
-      window.setTimeout(() => setTrail((items) => items.filter((item) => item.id !== id)), 1500)
-    }, 520)
-    try {
-      const strokes = Math.max(1, Math.round(distance / 170))
-      const wobble = rand(0, Math.PI * 2)
-      for (let index = 1; index <= strokes && alive(); index += 1) {
-        const t = index / strokes
-        const last = index === strokes
-        // 가로로 갈수록 물결이 크고, 마지막 토막은 정확히 목적지에 닿는다.
-        const sway = last ? 0 : Math.sin(wobble + index * 1.9) * 12 * (Math.abs(dx) / distance)
-        const duration = Math.max(0.55, distance / strokes / speed)
-        await Promise.all([
-          animate(x, x0 + dx * t, { duration, ease: [0.18, 0.72, 0.32, 1] }),
-          animate(y, y0 + dy * t + sway, { duration, ease: [0.18, 0.72, 0.32, 1] }),
-        ])
+    let travelled = 0
+    let phase = rand(0, Math.PI * 2)
+    let last = performance.now()
+    let lastBubble = 0
+    // 신날 때 셋 중 하나는 가다가 한 바퀴 돈다. 짧은 길에서는 안 돈다.
+    let rolled = !playful || distance < 260 || Math.random() > 0.35
+    const rollAt = rand(0.3, 0.65) * path.length
+    const step = (now: number) => {
+      if (!alive()) {
+        resolve()
+        return
       }
-    } finally {
-      window.clearInterval(bubbles)
+      const dt = Math.min(0.05, (now - last) / 1000)
+      last = now
+      // 꼬리질 박자. 빠르게 갈 때는 박자도 조금 빠르다.
+      phase += dt * Math.PI * 2 * STROKE_HZ * Math.sqrt(speed / SPEED)
+      const push = Math.pow(0.5 + 0.5 * Math.sin(phase), 2) // 0~1, 평균 3/8
+      // 밀 때 1.75배, 미끄러질 때 0.55배. 평균이 speed 가 된다. 목적지 앞에서는 미끄러지듯 느려진다.
+      const brake = Math.min(1, 0.3 + (path.length - travelled) / 150)
+      travelled += speed * (0.55 + push * 1.2) * brake * dt
+      const s = Math.min(path.length, travelled)
+      const here = path.at(s)
+      const ahead = path.at(Math.min(path.length, s + 10))
+      const vx = ahead.x - here.x
+      const vy = ahead.y - here.y
+      const len = Math.hypot(vx, vy) || 1
+      // 꼬리질에 맞춰 몸이 길 위아래로 살짝 들썩인다.
+      const bob = Math.sin(phase - 0.8) * 5
+      x.set(here.x + (-vy / len) * bob)
+      y.set(here.y + (vx / len) * bob)
+      // 가는 쪽을 본다. 길이 휘어 방향이 바뀌면 가는 중에 돌아선다.
+      if (Math.abs(vx) > len * 0.3) void turnToward(vx < 0 ? -100 : 100)
+      // 오르내림만큼 기울인다. 홱 꺾지 않고 조금씩 따라간다.
+      const want = clamp(((Math.atan2(vy, Math.max(len * 0.6, Math.abs(vx))) * 180) / Math.PI) * 0.7, -18, 18)
+      pitch.set(pitch.get() + (want - pitch.get()) * Math.min(1, dt * 6))
+      if (push > 0.8 && now - lastBubble > 420) {
+        lastBubble = now
+        dropBubble()
+      }
+      if (!rolled && s >= rollAt) {
+        rolled = true
+        void somersault()
+      }
+      if (s >= path.length) {
+        setSwimming(false)
+        animate(pitch, 0, { duration: 0.6 })
+        resolve()
+        return
+      }
+      requestAnimationFrame(step)
     }
-    if (!alive()) return
-    animate(pitch, 0, { duration: 0.6 })
-    setSwimming(false)
-  }, [pitch, turnToward, x, y])
+    requestAnimationFrame(step)
+  }), [dropBubble, pitch, somersault, turnToward, x, y])
 
-  /** 쉬는 동안 가끔 다른 포즈를 보여주고, 드물게 공중제비를 돈다. ms 만큼 머문다. */
-  const linger = useCallback(async (ms: number, alive: () => boolean) => {
-    const until = performance.now() + ms
-    while (alive() && performance.now() < until) {
-      await sleep(Math.min(2600, Math.max(200, until - performance.now())))
-      if (!alive()) return
-      const dice = Math.random()
-      if (dice < 0.08) {
-        roll.set(0)
-        await animate(roll, 360, { duration: 0.9, ease: [0.4, 0, 0.2, 1] })
-        roll.set(0)
-      } else if (dice < 0.4) {
-        setMood(pick(REST_POSES))
+  /**
+   * ms 만큼 쉰다. 쉬는 동안도 가만있지 않는다.
+   * 자리 둘레를 천천히 떠다니며(가로세로 박자가 달라 같은 길을 두 번 그리지 않는다) 떠가는 쪽으로 살짝 기울고,
+   * 2~3초마다 주사위를 굴려 포즈를 바꾸거나, 반대쪽을 두리번거리거나, 한 바퀴 돈다. 졸 때는 아주 조금만 흔들린다.
+   */
+  const linger = useCallback((ms: number, alive: () => boolean) => new Promise<void>((resolve) => {
+    const anchor = { x: x.get(), y: y.get() }
+    const start = performance.now()
+    const phaseX = rand(0, Math.PI * 2)
+    const phaseY = rand(0, Math.PI * 2)
+    const hzX = rand(0.1, 0.17)
+    const hzY = rand(0.16, 0.26)
+    let nextDice = start + rand(1800, 3200)
+    const step = (now: number) => {
+      if (!alive()) {
+        resolve()
+        return
       }
+      const t = (now - start) / 1000
+      // 처음 1초는 서서히 커져 도착하자마자 튀지 않는다. 졸면 0.35배.
+      const amp = Math.min(1, t / 1.2) * (asleepRef.current ? 0.35 : 1)
+      const ax = Math.PI * 2 * hzX
+      const ay = Math.PI * 2 * hzY
+      x.set(anchor.x + Math.sin(t * ax + phaseX) * 16 * amp)
+      y.set(anchor.y + Math.sin(t * ay + phaseY) * 16 * amp)
+      const wantPitch = Math.cos(t * ay + phaseY) * 6 * amp
+      pitch.set(pitch.get() + (wantPitch - pitch.get()) * 0.06)
+      if (now - start >= ms) {
+        resolve()
+        return
+      }
+      if (now >= nextDice) {
+        nextDice = now + rand(1800, 3200)
+        const dice = Math.random()
+        if (asleepRef.current) {
+          // 자는 동안은 포즈도 재주도 없다.
+        } else if (dice < 0.1) {
+          void somersault()
+        } else if (dice < 0.42) {
+          setMood(pick(REST_POSES))
+        } else if (dice < 0.6) {
+          void turnToward(facingWant.current > 0 ? -100 : 100)
+        }
+      }
+      requestAnimationFrame(step)
     }
-  }, [roll])
+    requestAnimationFrame(step)
+  }), [pitch, somersault, turnToward, x, y])
 
   /** 집에서 쉬고, 틈을 헤엄치고, 돌아오는 하루. generation 이 바뀌면 조용히 멈춘다. */
   const startDay = useCallback((fromHome: boolean) => {
@@ -171,21 +245,21 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
       let atHome = fromHome
       while (alive()) {
         if (atHome) {
-          await linger(rand(9000, 18000), alive)
+          await linger(rand(5000, 11000), alive)
           if (!alive()) return
           if (document.visibilityState !== 'visible' || asleepRef.current) continue
           setMood('hello')
           setFront(false)
           await sleep(200)
         }
-        const trips = randInt(2, 4)
+        const trips = randInt(3, 5)
         for (let index = 0; index < trips && alive(); index += 1) {
           const target = pickGap({ x: x.get(), y: y.get() })
           if (!target) break
-          await swimTo(target, SPEED, alive)
+          await swimTo(target, SPEED, alive, true)
           if (!alive()) return
           setMood(pick(REST_POSES))
-          await linger(rand(3000, 7000), alive)
+          await linger(rand(2000, 5000), alive)
         }
         if (!alive()) return
         const back = homePoint()
@@ -193,7 +267,7 @@ export function RoamingBeluga({ pageLine }: { pageLine: string }) {
         setMood('hello')
         await swimTo(back, SPEED * 1.3, alive)
         if (!alive()) return
-        await turnToward(1)
+        await turnToward(100)
         setFront(true)
         atHome = true
         say(pick(IDLE_LINES))
@@ -339,6 +413,54 @@ function visibleFraction(point: Point, blockers: DOMRect[]) {
     }
   }
   return visible / 9
+}
+
+type Path = { length: number; at: (s: number) => Point }
+
+/**
+ * from 에서 to 로 가는 휜 길. 양 끝 1/3 지점의 조종점을 길의 수직 방향으로 제각각 밀어 S 자나 C 자가 된다.
+ * 길이 따라 고른 속도로 걸을 수 있게 쉰 토막으로 잘라 누적 길이표를 만든다. at(s) 는 출발점에서 s px 간 자리.
+ */
+function bendPath(from: Point, to: Point, bend: number): Path {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const d = Math.hypot(dx, dy) || 1
+  const nx = -dy / d
+  const ny = dx / d
+  const k1 = bend * rand(-1, 1)
+  const k2 = bend * rand(-1, 1)
+  const c1 = { x: from.x + dx / 3 + nx * k1, y: from.y + dy / 3 + ny * k1 }
+  const c2 = { x: to.x - dx / 3 + nx * k2, y: to.y - dy / 3 + ny * k2 }
+  const curve = (t: number): Point => {
+    const u = 1 - t
+    const a = u * u * u
+    const b = 3 * u * u * t
+    const c = 3 * u * t * t
+    const e = t * t * t
+    return { x: a * from.x + b * c1.x + c * c2.x + e * to.x, y: a * from.y + b * c1.y + c * c2.y + e * to.y }
+  }
+  const segments = 50
+  const points: Point[] = []
+  const lengths: number[] = [0]
+  for (let index = 0; index <= segments; index += 1) {
+    const point = curve(index / segments)
+    if (index > 0) lengths.push(lengths[index - 1] + Math.hypot(point.x - points[index - 1].x, point.y - points[index - 1].y))
+    points.push(point)
+  }
+  const length = lengths[segments]
+  return {
+    length,
+    at(s: number) {
+      const target = clamp(s, 0, length)
+      let index = 1
+      while (index < segments && lengths[index] < target) index += 1
+      const span = lengths[index] - lengths[index - 1] || 1
+      const t = (target - lengths[index - 1]) / span
+      const p = points[index - 1]
+      const q = points[index]
+      return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t }
+    },
+  }
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
