@@ -352,6 +352,12 @@ function SodaGlass({ today, level, over, splash, shake }: { today: MyWaveTodayRe
   const fizz = lively ? FIZZ_MORE : FIZZ
   // 잔 높이 220px 가운데 글자는 위에서 56px 안에 있다. 물이 그 위까지 올라오면 글자가 물 위에 놓인다.
   const onLiquid = level >= 0.74
+  // 물이 줄면 벨루가 기운도 빠진다. 60% 아래면 느려지고 아끼자는 말을, 몸이 안 잠기면(36% 아래) 엎드려 힘없이 쉰다.
+  // 혼내지 않는다. 남은 금액을 알려 주고 내일이면 다시 찬다고 말한다.
+  const remaining = fmt(today.remainingToday)
+  const energy = level >= 0.6 ? 'full' : 'low'
+  const savingLines = level >= 0.6 ? undefined : ['슬슬 아껴 볼까요?', `남은 건 ${remaining}원이에요. 천천히!`, '오늘 남은 건 꼭 필요한 데만.', '간식은 한 번만 더 생각해요.']
+  const shallowLines = ['오늘은 여기서 좀 아껴요…', `조금만 남았어요. ${remaining}원.`, '간식은 내일 물 차면 사요!', '내일이면 다시 차요. 조금만 참아요.']
 
   // 기록이 저장되면 액체가 한 번 출렁한다. 높이 전환(wave-liquid)과 겹쳐야 하므로 다시 그리지 않고 WAAPI 로 얹는다.
   useEffect(() => {
@@ -424,7 +430,17 @@ function SodaGlass({ today, level, over, splash, shake }: { today: MyWaveTodayRe
       {/* 좁은 화면에서는 벨루가가 잔 속 물에서 헤엄친다. 물 밖으로는 안 나간다: 안쪽 높이 212px 중 물 높이에서 띠 바닥(12px)을 뺀 만큼이 깊이.
           물이 몸보다 얕으면(약 36% 아래) 헤엄을 멈추고 바닥에 엎드린다. 물이 없으면 벨루가 대신 빨간 글씨. */}
       {level > 0 && (
-        <HeroSwimmer className="inset-x-3 bottom-3 lg:hidden" size={60} rise={64} depth={level * 212 - 12} bump={splash} bumpLine={over ? '오늘은 여기까지만 해요.' : '기록했어요!'} />
+        <HeroSwimmer
+          className="inset-x-3 bottom-3 lg:hidden"
+          size={60}
+          rise={64}
+          depth={level * 212 - 12}
+          energy={energy}
+          lines={savingLines}
+          shallowLines={shallowLines}
+          bump={splash}
+          bumpLine={over ? '오늘은 여기까지만 해요.' : '기록했어요!'}
+        />
       )}
       {level === 0 && (
         <div className="absolute inset-x-0 bottom-5 z-10 text-center">

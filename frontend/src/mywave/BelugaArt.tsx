@@ -183,6 +183,7 @@ export function BelugaArt({
   gaze = true,
   asleep = false,
   swimming = false,
+  tired = false,
 }: {
   mood?: BelugaMood
   className?: string
@@ -194,6 +195,8 @@ export function BelugaArt({
   asleep?: boolean
   /** 헤엄치는 중. 꼬리를 크고 빠르게 흔든다. */
   swimming?: boolean
+  /** 기운이 없다. 눈을 반쯤 감고 꼬리를 느리게 조금만 흔든다. */
+  tired?: boolean
 }) {
   const shown: BelugaMood = asleep ? 'sleep' : mood
   const art = ART[shown]
@@ -242,7 +245,7 @@ export function BelugaArt({
 
   const tail = art.tail
   const zz = art.zz ?? (eyes[0] ? { x: eyes[0].x + art.width * 0.14, y: eyes[0].y - art.width * 0.06 } : null)
-  const state = `${asleep ? 'art-asleep' : ''} ${swimming ? 'art-swimming' : ''}`
+  const state = `${asleep ? 'art-asleep' : ''} ${swimming ? 'art-swimming' : ''} ${tired ? 'art-tired' : ''}`
   return (
     <svg ref={svg} viewBox={`0 0 ${art.width} ${art.height}`} className={`overflow-visible ${state} ${className}`} aria-hidden="true" focusable="false">
       <defs>

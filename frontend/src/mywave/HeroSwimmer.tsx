@@ -15,8 +15,9 @@ import { useLiveliness } from './liveliness'
  * 조용히 단계에서는 안 보인다. 동작 줄이기를 켠 사람에게는 제자리에 떠 있다.
  */
 const LINES = ['물이 참 좋네요.', '여기가 제 수영장이에요.', '간식 사기 전에 잔 한번 보기!', '천천히, 꾸준히.', '저 여기 있어요~']
-// 가끔 멈춰 서서 보여주는 포즈. 헤엄 그림 말고 다른 얼굴도 보여야 살아 있어 보인다.
+// 가끔 멈춰 서서 보여주는 포즈. 헤엄 그림 말고 다른 얼굴도 보여야 살아 있어 보인다. 기운이 빠지면 생각하는 얼굴이 잦다.
 const REST_POSES: BelugaMood[] = ['hello', 'think', 'point', 'cheer']
+const LOW_POSES: BelugaMood[] = ['think', 'think', 'hello', 'think']
 // 물이 얕아 바닥에 엎드렸을 때 하는 말.
 const SHALLOW_LINES = ['물이 얕아요…', '여기선 헤엄을 못 쳐요.', '내일이면 다시 차요!']
 
@@ -30,6 +31,7 @@ export function HeroSwimmer({
   rise = 0,
   depth,
   shallowLines = SHALLOW_LINES,
+  energy = 'full',
 }: {
   size?: number
   /** 띠의 자리. absolute 로 놓을 left/right/top/bottom 유틸리티를 넘긴다. */
@@ -49,6 +51,8 @@ export function HeroSwimmer({
   depth?: number
   /** 엎드려 있을 때 누르면 하는 말. */
   shallowLines?: string[]
+  /** 기운. low 면 느리게, 낮게 헤엄치고 생각하는 얼굴이 잦다. 물이 몸보다 얕으면 이와 상관없이 엎드린다. */
+  energy?: 'full' | 'low'
 }) {
   const { quiet } = useLiveliness()
   const lane = useRef<HTMLDivElement>(null)
@@ -59,7 +63,9 @@ export function HeroSwimmer({
   const lastBump = useRef(bump)
   // 몸(size)이 다 안 잠기면 헤엄치지 않는다. 물이 있으면 그 안에서만 오르내린다(수면 아래 10px 여유).
   const stranded = depth !== undefined && depth < size + 4
-  const room = depth === undefined ? rise : Math.max(0, Math.min(rise, depth - size - 10))
+  const low = energy === 'low'
+  // 기운이 없으면 오르내림도 낮다.
+  const room = (depth === undefined ? rise : Math.max(0, Math.min(rise, depth - size - 10))) * (low ? 0.6 : 1)
   // 14~26초마다 2.8초 동안 멈춰 다른 포즈를 보여준다.
   const [pose, setPose] = useState<BelugaMood | null>(null)
   useEffect(() => {
@@ -68,7 +74,10 @@ export function HeroSwimmer({
     let hide = 0
     const schedule = () => {
       show = window.setTimeout(() => {
-        if (document.visibilityState === 'visible') setPose(REST_POSES[Math.floor(Math.random() * REST_POSES.length)])
+        if (document.visibilityState === 'visible') {
+          const poses = low ? LOW_POSES : REST_POSES
+          setPose(poses[Math.floor(Math.random() * poses.length)])
+        }
         hide = window.setTimeout(() => {
           setPose(null)
           schedule()
@@ -81,7 +90,7 @@ export function HeroSwimmer({
       window.clearTimeout(hide)
       setPose(null)
     }
-  }, [stranded])
+  }, [low, stranded])
 
   // 띠 너비를 재서 왕복 거리(--swim-span)를 정한다. 카드가 늘거나 줄면 다시 잰다.
   useEffect(() => {
@@ -111,7 +120,9 @@ export function HeroSwimmer({
   }, [bump, bumpLine])
 
   if (quiet) return null
-  const duration = Math.max(8, (span * 2) / speed + 2)
+  // 기운이 없으면 느리게 간다.
+  const pace = low ? speed * 0.65 : speed
+  const duration = Math.max(8, (span * 2) / pace + 2)
   // 오르내림은 가로 왕복과 박자가 어긋나야 같은 길을 되풀이하지 않는다. 가로의 0.37배.
   const dive = Math.max(4.5, duration * 0.37)
   const bubble = line && (
@@ -133,7 +144,7 @@ export function HeroSwimmer({
           >
             <span key={hop} className={`block h-full w-full ${hop > 0 ? 'beluga-hop' : ''}`}>
               <span className="hero-stranded block h-full w-full">
-                <BelugaArt mood="concern" className="h-full w-full drop-shadow-[0_6px_10px_rgba(10,40,140,.28)]" />
+                <BelugaArt mood="concern" tired className="h-full w-full drop-shadow-[0_6px_10px_rgba(10,40,140,.28)]" />
               </span>
             </span>
           </button>
@@ -147,7 +158,7 @@ export function HeroSwimmer({
     <div ref={lane} className={`hero-swimmer pointer-events-none absolute ${className}`} style={{ height: size + room }}>
       <div
         className={`hero-swim-path absolute bottom-0 left-0 ${pose ? 'hero-swim-paused' : ''}`}
-        style={{ width: size, height: size, ['--swim-span' as string]: `${span}px`, ['--swim-duration' as string]: `${duration}s`, ['--swim-rise' as string]: `${room}px`, ['--dive-duration' as string]: `${dive}s` }}
+        style={{ width: size, height: size, ['--swim-span' as string]: `${span}px`, ['--swim-duration' as string]: `${duration}s`, ['--swim-rise' as string]: `${room}px`, ['--dive-duration' as string]: `${dive}s`, ['--wave-duration' as string]: low ? '3.4s' : '2.4s' }}
       >
        {/* 잠수했다 떠오르기. 말풍선도 같이 오르내린다. */}
        <div className={`relative h-full w-full ${room > 0 ? 'hero-swim-dive' : ''}`}>

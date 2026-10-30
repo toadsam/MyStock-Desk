@@ -1405,6 +1405,18 @@ html[data-liveliness="quiet"] .rig-sparkle {
   transition: transform 600ms ease-in-out;
 }
 
+/* 기운이 없을 때는 눈꺼풀이 반쯤 내려와 머물고, 꼬리는 느리게 조금만 흔들린다. */
+.art-tired .art-lid {
+  animation: none;
+  transform: scaleY(0.55);
+  transition: transform 600ms ease-in-out;
+}
+
+.art-tired .art-tail {
+  --sway: 1.5deg;
+  animation-duration: 4.2s;
+}
+
 /* 자는 벨루가 머리 위로 z 가 떠오른다. 셋이 번갈아 가며. */
 .art-zz text {
   opacity: 0;
@@ -1482,9 +1494,9 @@ html[data-liveliness="quiet"] .art-zz text {
   95%, 100% { transform: translateX(0); }
 }
 
-/* 헤엄치는 동안 물결 타듯 오르내리며 그쪽으로 살짝 기운다. face 안에 있어 돌아서면 기울기도 같이 뒤집힌다. */
+/* 헤엄치는 동안 물결 타듯 오르내리며 그쪽으로 살짝 기운다. face 안에 있어 돌아서면 기울기도 같이 뒤집힌다. 기운이 없으면 느리다. */
 .hero-swim-wave {
-  animation: hero-swim-wave 2.4s ease-in-out infinite;
+  animation: hero-swim-wave var(--wave-duration, 2.4s) ease-in-out infinite;
 }
 
 @keyframes hero-swim-wave {
