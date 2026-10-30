@@ -198,8 +198,22 @@ function FlowingNumber({ value }: { value: number }) {
 
 /** 잔에 남은 비율. 하루 예산이 0 이면(예산 미설정 포함) 잔은 비어 있다. */
 function glassLevel(today: MyWaveTodayResponse) {
+  const forced = devWaterLevel()
+  if (forced !== null) return forced
   if (today.dailyBudget <= 0) return 0
   return Math.max(0, Math.min(1, today.remainingToday / today.dailyBudget))
+}
+
+/**
+ * 개발 서버에서만: 주소 뒤에 ?water=0.3 처럼 붙이면 데이터와 상관없이 잔의 물 높이를 그 값(0~1)으로 보여 준다.
+ * 벨루가의 단계(활발 / 느려짐 / 엎드림 / 없음)를 눈으로 맞출 때 쓴다. 배포 빌드에서는 이 분기가 통째로 빠진다.
+ */
+function devWaterLevel(): number | null {
+  if (!import.meta.env.DEV) return null
+  const raw = new URLSearchParams(window.location.search).get('water')
+  if (raw === null) return null
+  const value = Number(raw)
+  return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : null
 }
 
 function dateLabel(value: string) {
