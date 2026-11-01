@@ -4,6 +4,7 @@ import com.stockflow.auth.dto.AuthResponse;
 import com.stockflow.auth.dto.LoginRequest;
 import com.stockflow.auth.dto.RegisterRequest;
 import com.stockflow.auth.security.JwtProvider;
+import com.stockflow.auth.security.LoginAttemptLimiter;
 import com.stockflow.member.dto.MemberDto;
 import com.stockflow.member.entity.Member;
 import com.stockflow.member.repository.MemberRepository;
@@ -24,13 +25,17 @@ public class AuthService {
     private final PortfolioRepository portfolioRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final LoginAttemptLimiter loginAttemptLimiter;
 
-    public AuthResponse login(LoginRequest request) {
-        Member member = memberRepository.findByEmail(request.email())
-                .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다."));
-        if (!passwordEncoder.matches(request.password(), member.getPasswordHash())) {
+    public AuthResponse login(LoginRequest request, String clientIp) {
+        loginAttemptLimiter.checkAllowed(clientIp, request.email());
+        Member member = memberRepository.findByEmail(request.email()).orElse(null);
+        // 없는 이메일과 틀린 비밀번호를 같은 문장, 같은 실패 횟수로 다룬다. 어느 쪽인지 알려 주면 이메일을 골라낼 수 있다.
+        if (member == null || !passwordEncoder.matches(request.password(), member.getPasswordHash())) {
+            loginAttemptLimiter.recordFailure(clientIp, request.email());
             throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
+        loginAttemptLimiter.recordSuccess(clientIp, request.email());
         return toAuthResponse(member);
     }
 

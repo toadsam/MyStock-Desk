@@ -47,6 +47,7 @@ services:
       SEC_USER_AGENT: ${SEC_USER_AGENT:-StockFlow/1.0 contact@example.com}
     expose:
       - "8080"
+    # 이미지의 HEALTHCHECK(/api/health, DB 핑 포함)를 그대로 쓴다. nginx 는 이게 healthy 가 된 뒤에 뜬다.
 
   frontend:
     build:
@@ -56,7 +57,8 @@ services:
     container_name: stockflow-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
       BACKEND_UPSTREAM: backend:8080
     ports:

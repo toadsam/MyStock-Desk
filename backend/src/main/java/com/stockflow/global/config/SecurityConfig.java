@@ -35,7 +35,7 @@ public class SecurityConfig {
                     if (h2ConsoleEnabled) {
                         auth.requestMatchers("/h2-console/**").permitAll();
                     }
-                    auth.requestMatchers("/api/auth/**").permitAll()
+                    auth.requestMatchers("/api/auth/**", "/api/health").permitAll()
                             .anyRequest().authenticated();
                 })
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(jsonAuthenticationEntryPoint()))

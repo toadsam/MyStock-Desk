@@ -25,6 +25,8 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
 | 400 | `BAD_REQUEST` | 없는 기록, 남의 기록, 잘못된 값 (`IllegalArgumentException`) |
 | 400 | `INVALID_JSON` | 요청 본문을 읽을 수 없음 |
 | 401 | | 토큰이 없거나 만료. 프론트는 토큰을 지우고 로그인 화면으로 보냅니다 |
+| 429 | `TOO_MANY_REQUESTS` | 같은 주소에서 같은 이메일로 로그인을 5번 틀림. 10분 동안 맞는 비밀번호도 막힙니다 |
+| 503 | `SERVICE_UNAVAILABLE` | `/api/health`에서 DB에 닿지 못함 |
 | 500 | `INTERNAL_SERVER_ERROR` | 그 밖의 서버 오류 |
 
 **형식.** 금액은 숫자(원), 날짜는 `2026-10-12`, 달은 `2026-10`(`yyyy-MM`)입니다. `month`를 빼면 이번 달입니다. 시간대는 `Asia/Seoul`입니다.
@@ -40,6 +42,7 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
 | POST | `/api/auth/register` 🔓 | 회원가입. 가입하자마자 로그인된 상태로 토큰을 돌려줌 | `{ name, email, password }` |
 | POST | `/api/auth/login` 🔓 | 로그인 | `{ email, password }` |
 | POST | `/api/auth/logout` 🔓 | 로그아웃 (서버는 할 일이 없고, 프론트가 토큰을 지움) | |
+| GET | `/api/health` 🔓 | 살아 있는지. DB 커넥션을 하나 빌려 확인하고 `{ status, db }`를 돌려줌. compose healthcheck와 모니터가 부름 | |
 | GET | `/api/members/me` | 내 정보 | |
 | PATCH | `/api/members/me/profile` | 이름, 이메일, 프로필 이미지 수정 | `{ name, email, profileImageUrl }` |
 | PATCH | `/api/members/me/membership` | 멤버십 등급 변경 | `{ membershipGrade }` (`BASIC` \| `VIP`) |

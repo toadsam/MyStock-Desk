@@ -129,4 +129,6 @@ frontend/src/
 | 프론트 | `:5173` (Vite) | `:5173` | nginx `:80`이 화면과 `/api` 프록시를 함께 냄 |
 | CORS 허용 | `localhost:5173`, `127.0.0.1:5173`, `localhost:3000` | 같음 | 없음 (같은 주소라 불필요). `STOCKFLOW_CORS_ALLOWED_ORIGINS`로 추가 |
 
+푸시와 PR마다 GitHub Actions([`.github/workflows/ci.yml`](../.github/workflows/ci.yml))가 백엔드 테스트, 프론트 린트·타입·빌드, compose 설정 검사를 돕니다. 배포는 하지 않습니다.
+
 `docker compose up -d --build`이면 MySQL, 백엔드, nginx가 한 번에 뜹니다([`docker-compose.yml`](../docker-compose.yml)). 비밀값은 `.env`에만 두고(`.env.example` 참고), 비어 있으면 compose가 멈춥니다.

@@ -31,6 +31,11 @@ stockflow:
   # 인증 없이 들어온 요청을 어느 회원으로 볼지. 비워 두면(기본) 로그인 없는 요청은 401 이다.
   # SecurityConfig 가 /api/auth 밖의 모든 요청에 로그인을 요구하므로 평소에는 쓰이지 않는다. 개발 중 잠깐 열 때만 쓴다.
   mock-member-id: ${STOCKFLOW_MOCK_MEMBER_ID:}
+  auth:
+    login:
+      # 같은 주소에서 같은 이메일로 이만큼 틀리면 lock-minutes 동안 맞는 비밀번호도 429 다(LoginAttemptLimiter).
+      max-failures: ${STOCKFLOW_LOGIN_MAX_FAILURES:5}
+      lock-minutes: ${STOCKFLOW_LOGIN_LOCK_MINUTES:10}
   cors:
     # 쉼표로 나눈 허용 주소. 개발 기본값은 Vite(5173)와 미리보기(3000). 운영은 nginx 가 같은 주소에서 /api 를 넘겨 주므로 비워 둔다.
     allowed-origins: ${STOCKFLOW_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000}
