@@ -106,8 +106,8 @@ AI 코치, AI 리포트, AI 요약, 테마 설명 넷 중 실제로 OpenAI를 �
 - 백엔드에 MyWave가 쓰지 않는 엔드포인트가 56개, 테이블이 10개 남아 있습니다(모의 주문, 시장, 뉴스, 공시, 리서치 등). 프론트의 옛 화면은 지웠지만 백엔드는 아직입니다. 목록은 [API 명세](docs/API.md#mywave가-쓰지-않는-나머지) 맨 아래에 있습니다.
 - 외부에서 온 시세를 범위 검증 없이 그대로 씁니다. 예전에 갱신 뒤 SK하이닉스 현재가가 평균단가의 정확히 10배로 들어와 수익률이 `900.00%`로 찍힌 적이 있습니다. 시세 갱신은 지금 기본으로 꺼져 있지만, 켜면 같은 일이 생길 수 있습니다.
 - 테스트가 24개입니다. 하루 예산은 날짜를 고정한 단위 테스트로 잠갔지만, 평균단가(`Holding.buy()`/`sell()`)의 "전량 매도 후 재매수", 투자 가능 금액, 소비 비교 같은 나머지 계산에는 단위 테스트가 없습니다.
-- `application-mysql.yml`의 DB 비밀번호와 JWT 시크릿에 기본값이 박혀 있습니다. 환경변수로 덮이긴 하지만 값 자체가 저장소에 있으면 안 됩니다. 전부 `${ENV}`로만 받게 바꿔야 합니다.
-- `CurrentMemberProvider`는 인증이 없으면 회원 1번으로 떨어집니다. 지금은 `SecurityConfig`가 모든 요청에 인증을 걸어 막고 있지만, 한 사람만 쓰던 시절의 코드가 남은 것입니다.
+- 스키마 마이그레이션 도구(Flyway 등)가 없어서 운영 프로파일도 `ddl-auto: update`로 테이블을 만듭니다. 컬럼을 지우거나 이름을 바꾸는 변경은 Hibernate가 따라가지 못하므로, 도구를 들이고 `validate`로 바꿔야 합니다.
+- 헬스체크 엔드포인트와 로그인 시도 제한이 없습니다.
 - 거래 CSV 가져오기(`POST /api/transactions/import/csv`)는 백엔드에만 있고 UI에서 열 수 없습니다.
 
 ## 실행하기
@@ -124,7 +124,7 @@ cd backend
 SPRING_PROFILES_ACTIVE=default ./gradlew bootRun     # Windows: .\gradlew.bat bootRun
 ```
 
-MySQL로 붙일 때는 프로파일을 그대로 두고 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `STOCKFLOW_JWT_SECRET`을 환경변수로 줍니다. `docker compose up`이면 MySQL 8.4, 백엔드, 프론트가 한 번에 뜹니다(`docker-compose.yml`).
+내 컴퓨터의 MySQL로 붙일 때는 프로파일을 그대로 두고 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`를 환경변수로 줍니다. 비밀번호 기본값은 없습니다. 서버에 올릴 때는 아래 "배포하기"의 `prod` 프로파일을 씁니다.
 
 부팅 때 `DataSeeder`가 종목 10개와 데모 회원 하나를 만들고, 그 회원에게 계좌, 이번 달과 지난달 예산, 지난달 1일부터 오늘까지의 소비, 목표 3개, 퀵버튼 3개, 거래 기록, 알림 3개를 채워 넣습니다. 로그인 화면의 "데모 계정으로 로그인" 버튼이 그 계정(`investor@stockflow.com` / `stockflow1234`)으로 들어갑니다. 새로 가입한 계정은 전부 비어 있는 상태로 시작합니다.
 
@@ -134,7 +134,7 @@ MySQL로 붙일 때는 프로파일을 그대로 두고 `SPRING_DATASOURCE_URL`,
 cd frontend && npm install && npm run dev
 ```
 
-`frontend/.env.example`이 그대로 기본값입니다. `VITE_API_BASE_URL`(기본 `http://localhost:8080`), `VITE_ALLOW_MOCK_FALLBACK`. 백엔드 포트를 바꿨으면 프론트도 같이 바꿔야 하고, CORS 허용 목록이 `localhost:5173`, `127.0.0.1:5173`, `localhost:3000` 세 개뿐이라([`CorsConfig#L13`](backend/src/main/java/com/stockflow/global/config/CorsConfig.java#L13)) 프론트 포트는 그대로 두는 편이 낫습니다.
+`frontend/.env.example`이 그대로 기본값입니다. `VITE_API_BASE_URL`(개발 기본 `http://localhost:8080`), `VITE_ALLOW_MOCK_FALLBACK`. 백엔드 포트를 바꿨으면 프론트도 같이 바꿔야 합니다. CORS 허용 목록은 `STOCKFLOW_CORS_ALLOWED_ORIGINS`(쉼표로 구분, 개발 기본 `localhost:5173`, `127.0.0.1:5173`, `localhost:3000`)로 바꿀 수 있습니다([`CorsConfig`](backend/src/main/java/com/stockflow/global/config/CorsConfig.java)).
 
 **선택 환경변수.** 없으면 그 기능만 시드나 규칙으로 내려가고 앱은 뜹니다.
 
@@ -145,6 +145,22 @@ cd frontend && npm install && npm run dev
 | `SEC_USER_AGENT` | SEC EDGAR에 예시 User-Agent로 요청합니다. 실제로 쓸 거면 연락처를 넣어야 합니다 |
 
 Windows OneDrive 경로에서 Gradle이 `.class` 동기화 때문에 실패하는 것을 피하려고, 백엔드 빌드 산출물은 OS 임시 폴더의 `stockflow-backend-build`에 만들어집니다([`build.gradle#L11`](backend/build.gradle#L11)).
+
+</details>
+
+<details>
+<summary>배포하기: docker compose 한 번, 비밀값은 .env 에만</summary>
+
+서버 한 대에 MySQL 8.4, 백엔드(`prod` 프로파일), nginx(빌드한 화면 + `/api` 프록시)를 [`docker-compose.yml`](docker-compose.yml)로 띄웁니다. 브라우저는 화면과 API를 같은 주소에서 받으므로 CORS 설정이 필요 없고, 밖으로 열리는 포트는 nginx 하나입니다.
+
+```bash
+cp .env.example .env     # MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD, STOCKFLOW_JWT_SECRET 을 채운다 (openssl rand -base64 48)
+docker compose up -d --build
+```
+
+`prod` 프로파일([`application-prod.yml`](backend/src/main/resources/application-prod.yml))은 DB 접속 정보와 JWT 시크릿을 기본값 없이 환경변수로만 받아서, 하나라도 비면 부팅이 멈춥니다. 값이 있어도 개발용 시크릿이거나 32바이트보다 짧거나, H2 콘솔·`mock-member`·`show-sql`이 켜져 있으면 [`ProductionGuard`](backend/src/main/java/com/stockflow/global/config/ProductionGuard.java)가 이유를 적고 서버를 띄우지 않습니다. 개발 프로파일(`default`)에만 H2 콘솔과 개발용 시크릿이 있습니다.
+
+HTTPS는 이 compose 앞에 Caddy 같은 리버스 프록시를 두고 `WEB_PORT`를 내부 포트로 돌려서 붙입니다. 아직 Flyway 같은 마이그레이션 도구가 없어 운영도 `ddl-auto: update`로 테이블을 만듭니다("남은 과제" 참고).
 
 </details>
 

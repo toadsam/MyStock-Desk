@@ -1,8 +1,12 @@
 import axios from 'axios'
 import type { ApiResponse } from '../types/common'
 
+// 개발(npm run dev)은 8080 의 백엔드를 직접 부르고, 빌드한 화면은 같은 주소의 /api 를 불러 nginx 가 백엔드로 넘긴다.
+// API 를 다른 도메인에 둘 때만 VITE_API_BASE_URL 을 채운다.
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:8080' : '')
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080',
+  baseURL: apiBaseUrl,
   timeout: 30000,
 })
 

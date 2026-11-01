@@ -41,6 +41,8 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// 테스트는 H2 로 돈다. 밖에서 프로파일을 안 주면 application.yml 기본값(mysql,local)이 붙어 localhost:3306 을 찾으므로 여기서 고정한다.
+	environment 'SPRING_PROFILES_ACTIVE', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'default'
 }
 
 tasks.withType(JavaCompile).configureEach {

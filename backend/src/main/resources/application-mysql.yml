@@ -1,3 +1,6 @@
+# 내 컴퓨터의 MySQL 에 붙여 개발할 때. 비밀번호와 JWT 시크릿은 저장소에 두지 않는다.
+# 비밀번호는 SPRING_DATASOURCE_PASSWORD 로 주고, JWT 시크릿은 application.yml 의 개발 기본값을 쓰거나 STOCKFLOW_JWT_SECRET 으로 준다.
+# 서버에 올릴 때는 이 프로파일이 아니라 prod 를 쓴다(application-prod.yml).
 server:
   port: 8080
 
@@ -5,7 +8,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/stockflow?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false}
     username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:6247}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -15,8 +18,3 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
-
-stockflow:
-  jwt:
-    secret: ${STOCKFLOW_JWT_SECRET:stockflow-local-mysql-secret-key-change-before-production}
-    expiration-seconds: 86400

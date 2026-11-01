@@ -119,12 +119,14 @@ frontend/src/
 
 ## 실행 환경
 
-| | 기본 (H2) | MySQL |
-|---|---|---|
-| 프로파일 | `SPRING_PROFILES_ACTIVE=default` | `mysql` (기본값은 `mysql,local`) |
-| DB | 인메모리. 서버를 띄울 때마다 시드로 새로 채움 | `localhost:3306/stockflow`, 테이블은 `ddl-auto: update` |
-| 백엔드 | `:8080` | `:8080` |
-| 프론트 | `:5173` (Vite) | `:5173` |
-| CORS 허용 | `localhost:5173`, `127.0.0.1:5173`, `localhost:3000` | 같음 |
+| | 기본 (H2) | MySQL (내 컴퓨터) | 운영 (`prod`) |
+|---|---|---|---|
+| 프로파일 | `SPRING_PROFILES_ACTIVE=default` | `mysql` (기본값은 `mysql,local`) | `prod` (도커 이미지 기본값) |
+| DB | 인메모리. 서버를 띄울 때마다 시드로 새로 채움 | `localhost:3306/stockflow`, 비밀번호는 환경변수 | `SPRING_DATASOURCE_*` 환경변수 필수. 테이블은 `ddl-auto: update` |
+| JWT 시크릿 | 개발용 기본값 | 같음 (`STOCKFLOW_JWT_SECRET`으로 덮기) | `STOCKFLOW_JWT_SECRET` 필수, 32바이트 이상, 개발용 값 거부 |
+| H2 콘솔 · show-sql · mock-member | 켜짐 · 켜짐 · 꺼짐 | 꺼짐 · 켜짐 · 꺼짐 | 전부 꺼짐. 켜져 있으면 `ProductionGuard`가 부팅 거부 |
+| 백엔드 | `:8080` | `:8080` | compose 안에서만 `backend:8080` |
+| 프론트 | `:5173` (Vite) | `:5173` | nginx `:80`이 화면과 `/api` 프록시를 함께 냄 |
+| CORS 허용 | `localhost:5173`, `127.0.0.1:5173`, `localhost:3000` | 같음 | 없음 (같은 주소라 불필요). `STOCKFLOW_CORS_ALLOWED_ORIGINS`로 추가 |
 
-`docker compose up`이면 MySQL, 백엔드, 프론트가 한 번에 뜹니다([`docker-compose.yml`](../docker-compose.yml)).
+`docker compose up -d --build`이면 MySQL, 백엔드, nginx가 한 번에 뜹니다([`docker-compose.yml`](../docker-compose.yml)). 비밀값은 `.env`에만 두고(`.env.example` 참고), 비어 있으면 compose가 멈춥니다.
