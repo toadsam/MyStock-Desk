@@ -435,7 +435,7 @@ function GoalSummary() {
     <Card title="목표 요약">
       <div className="space-y-4">
         <SummaryLine label="진행 중인 목표" value={`${goals.filter((goal) => goal.status === '진행 중').length}개`} />
-        <SummaryLine label="메인 목표일" value={`${financeSummary.mainGoalTargetDate} (D-${financeSummary.daysLeft})`} />
+        <SummaryLine label="메인 목표일" value={financeSummary.mainGoalTargetDate ? `${financeSummary.mainGoalTargetDate} (D-${financeSummary.daysLeft})` : '아직 목표가 없어요'} />
         <SummaryLine label="평균 달성률" value={`${financeSummary.averageGoalRate}%`} />
         <SummaryLine label="이번 달 저축 계획" value={financeSummary.plannedSaving > 0 ? won(financeSummary.plannedSaving) : '예산에서 정해 주세요'} muted />
         <Progress value={financeSummary.averageGoalRate} className="mt-3" />

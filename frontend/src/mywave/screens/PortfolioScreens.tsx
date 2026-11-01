@@ -510,9 +510,9 @@ function InvestmentTransactionManager({ onSaved }: { onSaved?: () => void } = {}
             </div>
           </div>
         </Card>
-        <Card title="API 보유 종목">
+        <Card title="종목별 보유 요약">
           <div className="space-y-3">
-            {holdings.length === 0 && <div className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-500">아직 API 기준 보유 종목이 없습니다.</div>}
+            {holdings.length === 0 && <div className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-500">아직 보유 종목이 없어요. 거래를 적으면 여기에 모여요.</div>}
             {holdings.map((holding) => (
               <div key={holding.symbol} className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl bg-slate-50 p-3">
                 <div>

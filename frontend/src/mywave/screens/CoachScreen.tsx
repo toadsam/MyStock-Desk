@@ -34,7 +34,9 @@ export function CoachPage() {
  * 둘을 한 문장에 섞지 않는 것이 이 화면의 규칙이다.
  */
 function CoachBanner() {
-  const { financeSummary } = useMyWaveData()
+  // 숫자가 오기 전에는 0 을 그리지 않는다. 0 은 "기록이 없다"는 뜻이라 아직 모를 때 쓰면 안 된다.
+  const { financeSummary, status } = useMyWaveData()
+  const pending = status === 'loading'
   const behind = financeSummary.goalRate < 50
 
   return (
@@ -49,9 +51,9 @@ function CoachBanner() {
         </BelugaSays>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <CoachStat label="목표 달성률" value={financeSummary.goalRate} suffix="%" highlight />
-          <CoachStat label="남은 목표 금액" value={financeSummary.remainingAmount} currency />
-          <CoachStat label="바로 투자 가능" value={financeSummary.investableAmount} currency />
+          <CoachStat label="목표 달성률" value={financeSummary.goalRate} suffix="%" highlight pending={pending} />
+          <CoachStat label="남은 목표 금액" value={financeSummary.remainingAmount} currency pending={pending} />
+          <CoachStat label="바로 투자 가능" value={financeSummary.investableAmount} currency pending={pending} />
         </div>
       </div>
     </Card>
@@ -59,12 +61,12 @@ function CoachBanner() {
 }
 
 /** 라벨은 작게, 숫자는 크게. 값이 바뀌면 새로 세어 올린다. */
-function CoachStat({ label, value, suffix, currency, highlight }: { label: string; value: number; suffix?: string; currency?: boolean; highlight?: boolean }) {
+function CoachStat({ label, value, suffix, currency, highlight, pending = false }: { label: string; value: number; suffix?: string; currency?: boolean; highlight?: boolean; pending?: boolean }) {
   return (
     <div className={`rounded-[14px] px-4 py-4 ${highlight ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-900'}`}>
       <div className={`text-[12px] font-semibold ${highlight ? 'text-blue-100' : 'text-slate-500'}`}>{label}</div>
       <div className="mt-1.5 text-[24px] font-bold leading-none tracking-[-0.02em]">
-        <Amount value={value} currency={currency} suffix={suffix} />
+        {pending ? <span aria-label="불러오는 중" className="opacity-60">—</span> : <Amount value={value} currency={currency} suffix={suffix} />}
       </div>
     </div>
   )
