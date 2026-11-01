@@ -1,10 +1,10 @@
-import { ChevronDown, ChevronRight, Save, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Save } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { won } from '../format'
 import { Notice } from '../motion'
 import { callBeluga } from '../roaming'
-import { Card, Field, ListRow } from '../uiKit'
+import { Card, ConfirmDeleteButton, Field, ListRow } from '../uiKit'
 import { BelugaSays } from '../Beluga'
 import {
   createMyWaveTransaction,
@@ -451,9 +451,7 @@ function InvestmentTransactionManager({ onSaved }: { onSaved?: () => void } = {}
                   <div className="text-lg font-black">{won(Number(transaction.totalAmount))}</div>
                   <div className="text-xs font-bold text-slate-400">{transaction.quantity}주 · {won(Number(transaction.price))}</div>
                 </div>
-                <button onClick={() => removeTransaction(transaction.id)} className="pressable grid h-9 w-9 place-items-center rounded-full text-red-500 hover:bg-red-50">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <ConfirmDeleteButton compact label="거래 기록 삭제" onConfirm={() => removeTransaction(transaction.id)} />
               </div>
             </div>
           ))}

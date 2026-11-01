@@ -7,8 +7,14 @@ export function won(value: number) {
 
 /** 오늘 날짜를 yyyy-MM-dd 로. 입력 폼의 기본 날짜에 쓴다. */
 export function todayDateString() {
-  const today = new Date()
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  return dateStringAfterDays(0)
+}
+
+/** 오늘부터 days 일 뒤를 yyyy-MM-dd 로. 목표 날짜처럼 "앞으로"가 기본인 입력에 쓴다. 고정 날짜를 두면 언젠가 과거가 된다. */
+export function dateStringAfterDays(days: number) {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 /** 알림·지표 톤 이름을 배경과 글자색 클래스로. */

@@ -20,7 +20,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { won } from '../format'
-import { Card, Field } from '../uiKit'
+import { Card, ConfirmDeleteButton, Field } from '../uiKit'
 import { LivelinessPicker } from '../motion'
 import {
   createMyWaveAccount,
@@ -563,7 +563,8 @@ function accountTypeLabel(type: string) {
 }
 
 export function AssetDetailPage() {
-  const { financeSummary, activities } = useMyWaveData()
+  // 총자산과 저축률은 코치, 프로필 등 다른 화면도 공용 데이터로 보여 준다. 여기서 바꾸면 다시 불러야 한다.
+  const { financeSummary, activities, reload } = useMyWaveData()
   const [accounts, setAccounts] = useState<MyWaveFinancialAccountResponse[]>([])
   const [accountForm, setAccountForm] = useState<AccountFormState>(emptyAccountForm)
   const [editingAccountId, setEditingAccountId] = useState<number | null>(null)
@@ -643,6 +644,7 @@ export function AssetDetailPage() {
       }
       resetAccountForm()
       await refreshAssets()
+      reload()
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : '계좌 저장에 실패했습니다.')
     }
@@ -654,6 +656,7 @@ export function AssetDetailPage() {
       if (editingAccountId === id) resetAccountForm()
       setStatusMessage('계좌가 삭제되었습니다.')
       await refreshAssets()
+      reload()
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : '계좌 삭제에 실패했습니다.')
     }
@@ -664,6 +667,7 @@ export function AssetDetailPage() {
       await saveMyWaveMonthlyBudget(budgetForm)
       setStatusMessage('이번 달 예산이 저장되었습니다.')
       await refreshAssets(budgetForm.budgetMonth)
+      reload()
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : '예산 저장에 실패했습니다.')
     }
@@ -713,9 +717,7 @@ export function AssetDetailPage() {
                     <div className="text-lg font-black">{won(Number(account.balance))}</div>
                     <div className="text-xs font-bold text-slate-400">ID {account.id}</div>
                   </div>
-                  <button onClick={() => removeAccount(account.id)} className="pressable grid h-9 w-9 place-items-center rounded-full text-red-500 hover:bg-red-50">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <ConfirmDeleteButton compact label="계좌 삭제" onConfirm={() => removeAccount(account.id)} />
                 </div>
               </div>
             ))}

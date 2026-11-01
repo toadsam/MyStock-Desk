@@ -47,10 +47,11 @@ public class AuthService {
                 .membershipGrade("BASIC")
                 .createdAt(LocalDateTime.now())
                 .build());
+        // 기록이 없으면 0 이다. 예수금과 총자산은 거래 기록(입금, 매매, 배당)에서만 생긴다.
         portfolioRepository.save(Portfolio.builder()
                 .memberId(member.getId())
-                .cash(BigDecimal.valueOf(100_000_000))
-                .totalAsset(BigDecimal.valueOf(100_000_000))
+                .cash(BigDecimal.ZERO)
+                .totalAsset(BigDecimal.ZERO)
                 .totalPurchaseAmount(BigDecimal.ZERO)
                 .totalEvaluationAmount(BigDecimal.ZERO)
                 .totalProfitLoss(BigDecimal.ZERO)

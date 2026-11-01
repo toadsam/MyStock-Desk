@@ -30,9 +30,7 @@ import com.stockflow.notification.entity.Notification;
 import com.stockflow.notification.repository.NotificationRepository;
 import com.stockflow.news.entity.News;
 import com.stockflow.news.repository.NewsRepository;
-import com.stockflow.portfolio.entity.Holding;
 import com.stockflow.portfolio.entity.Portfolio;
-import com.stockflow.portfolio.repository.HoldingRepository;
 import com.stockflow.portfolio.repository.PortfolioRepository;
 import com.stockflow.research.entity.AiInsight;
 import com.stockflow.research.repository.AiInsightRepository;
@@ -40,6 +38,7 @@ import com.stockflow.stock.entity.Stock;
 import com.stockflow.stock.repository.StockRepository;
 import com.stockflow.transaction.entity.InvestmentTransaction;
 import com.stockflow.transaction.repository.InvestmentTransactionRepository;
+import com.stockflow.transaction.service.TransactionService;
 import com.stockflow.watchlist.entity.Watchlist;
 import com.stockflow.watchlist.repository.WatchlistRepository;
 import java.math.BigDecimal;
@@ -72,8 +71,8 @@ public class DataSeeder implements CommandLineRunner {
     private final PricePointRepository pricePointRepository;
     private final WatchlistRepository watchlistRepository;
     private final PortfolioRepository portfolioRepository;
-    private final HoldingRepository holdingRepository;
     private final InvestmentTransactionRepository transactionRepository;
+    private final TransactionService transactionService;
     private final EarningsRepository earningsRepository;
     private final NewsRepository newsRepository;
     private final AiInsightRepository aiInsightRepository;
@@ -107,9 +106,11 @@ public class DataSeeder implements CommandLineRunner {
         seedPricePoints();
         seedSectors();
         seedWatchlist(member.getId(), stocks);
-        Portfolio portfolio = seedPortfolio(member.getId());
-        seedHoldings(portfolio.getId(), stocks);
+        seedPortfolio(member.getId());
         seedInvestmentTransactions(member.getId(), stocks);
+        // 보유 종목, 평균단가, 예수금은 손으로 넣지 않는다. 화면과 같은 길로 거래 기록에서 다시 만든다.
+        // 그래야 거래 하나를 고쳐도 데모 숫자가 조용히 바뀌지 않는다.
+        transactionService.rebuildForMember(member.getId());
         seedEarnings(stocks);
         seedNews();
         seedInsights();
@@ -423,49 +424,19 @@ public class DataSeeder implements CommandLineRunner {
                 .build();
     }
 
+    /** 빈 포트폴리오. 합계는 거래 기록을 재생하면서 채워진다. 전일 손익만 시드 값이다. */
     private Portfolio seedPortfolio(Long memberId) {
         return portfolioRepository.save(Portfolio.builder()
                 .memberId(memberId)
-                .totalAsset(bd(450_900))
-                .cash(bd(23_600))
-                .totalPurchaseAmount(bd(401_940))
-                .totalEvaluationAmount(bd(427_300))
-                .totalProfitLoss(bd(25_360))
-                .totalReturnRate(BigDecimal.valueOf(6.31))
+                .totalAsset(BigDecimal.ZERO)
+                .cash(BigDecimal.ZERO)
+                .totalPurchaseAmount(BigDecimal.ZERO)
+                .totalEvaluationAmount(BigDecimal.ZERO)
+                .totalProfitLoss(BigDecimal.ZERO)
+                .totalReturnRate(BigDecimal.ZERO)
                 .dailyProfitLoss(bd(3_900))
                 .dailyReturnRate(BigDecimal.valueOf(0.87))
                 .build());
-    }
-
-    private void seedHoldings(Long portfolioId, Map<String, Stock> stocks) {
-        holdingRepository.saveAll(List.of(
-                holding(portfolioId, stocks.get("005930"), 3, 73700, 235_800, 14_800, 6.70, 52.3),
-                holding(portfolioId, stocks.get("360750"), 8, 12243, 101_200, 3_260, 3.33, 22.4),
-                holding(portfolioId, stocks.get("035720"), 2, 41500, 90_300, 7_300, 8.80, 20.0)
-        ));
-    }
-
-    private Holding holding(
-            Long portfolioId,
-            Stock stock,
-            int quantity,
-            long averagePrice,
-            long evaluationAmount,
-            long profitLoss,
-            double returnRate,
-            double weight
-    ) {
-        return Holding.builder()
-                .portfolioId(portfolioId)
-                .stockId(stock.getId())
-                .quantity(quantity)
-                .averagePrice(bd(averagePrice))
-                .currentPrice(stock.getCurrentPrice())
-                .evaluationAmount(bd(evaluationAmount))
-                .profitLoss(bd(profitLoss))
-                .returnRate(BigDecimal.valueOf(returnRate))
-                .weight(BigDecimal.valueOf(weight))
-                .build();
     }
 
     private void seedInvestmentTransactions(Long memberId, Map<String, Stock> stocks) {
@@ -476,6 +447,7 @@ public class DataSeeder implements CommandLineRunner {
                 transaction(memberId, stocks.get("035720"), TransactionType.SELL, 2, 44800, 13, 161, 6600, 4, "기존 정리 기준에 도달", "교재비 필요해서 2주만 정리", "플랫폼,리스크관리"),
                 transaction(memberId, stocks.get("005930"), TransactionType.BUY, 2, 71400, 21, 0, 0, 8, "학기 초 소액 매수", "용돈 남은 걸로 시작", "반도체,첫투자"),
                 transaction(memberId, stocks.get("360750"), TransactionType.BUY, 5, 12100, 9, 0, 0, 13, "적립식으로 모으기", "한 달에 5주씩 목표", "ETF,적립"),
+                cashTransaction(memberId, TransactionType.DEPOSIT, 390_000, 25, "첫 투자금 입금", "모아 둔 용돈으로 시작"),
                 cashTransaction(memberId, TransactionType.DEPOSIT, 30_000, 15, "월 투자금 입금", "알바비에서 3만원 떼어 넣기"),
                 cashTransaction(memberId, TransactionType.DIVIDEND, 1_450, 22, "배당금 입금", "현금흐름 기록")
         ));

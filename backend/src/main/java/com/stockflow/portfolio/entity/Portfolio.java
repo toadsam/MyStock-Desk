@@ -46,6 +46,14 @@ public class Portfolio {
         cash = cash.add(amount);
     }
 
+    /**
+     * 직접 적은 매매 기록을 재생할 때 쓰는 출금. 입금 기록 없이 매수만 적은 사람이 대부분이라
+     * 현금이 모자라도 막지 않는다. 모자란 만큼은 적지 않은 입금이 그때 있었다고 보고 예수금을 0 에 둔다.
+     */
+    public void spend(BigDecimal amount) {
+        cash = cash.subtract(amount).max(BigDecimal.ZERO);
+    }
+
     public void resetForRecordRecalculation(BigDecimal cash) {
         this.cash = cash.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
         this.totalAsset = this.cash;

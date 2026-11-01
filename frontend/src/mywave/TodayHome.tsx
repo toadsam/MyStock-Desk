@@ -10,6 +10,7 @@ import { useLiveliness } from './liveliness'
 import { useCursorTilt } from './useCursorTilt'
 import { rememberHandoff } from './handoff'
 import { callBeluga } from './roaming'
+import { useMyWaveData } from './runtime'
 import {
   deleteMyWaveExpense,
   getMyWaveExpenseTemplates,
@@ -91,6 +92,9 @@ export function TodayHome() {
     }
   }, [])
 
+  // 소비, 코치, 리포트 화면은 화면 틀이 한 번 불러 둔 공용 데이터를 쓴다. 여기서 기록하면 그것도 다시 불러야 한다.
+  const { reload } = useMyWaveData()
+
   async function logQuick(template: MyWaveExpenseTemplateResponse) {
     setBusyId(template.id)
     const wasOver = (today?.overToday ?? 0) > 0
@@ -102,6 +106,7 @@ export function TodayHome() {
       showToast({ id: saved.id, text: `${template.name} ${fmt(Number(template.amount))}원 기록했어요` })
       const home = await fetchHome()
       apply(home)
+      reload()
       if (!wasOver && home.today.overToday > 0) setShake((value) => value + 1)
     } catch {
       setNotice('기록하지 못했어요. 잠시 후 다시 눌러 주세요.')
@@ -118,6 +123,7 @@ export function TodayHome() {
       await deleteMyWaveExpense(id)
       showToast({ id: null, text: '기록을 되돌렸어요' })
       await load()
+      reload()
     } catch {
       showToast({ id: null, text: '되돌리지 못했어요. 소비 화면에서 지워 주세요.' })
     }

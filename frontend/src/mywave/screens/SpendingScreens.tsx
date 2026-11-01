@@ -1,8 +1,8 @@
-import { ChevronRight, CircleHelp, Save, Trash2 } from 'lucide-react'
+import { ChevronRight, CircleHelp, Save } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { won } from '../format'
-import { Card, Field } from '../uiKit'
+import { Card, ConfirmDeleteButton, Field } from '../uiKit'
 import { CashFlowCard, ExpenseImportCard, MerchantAutocomplete, QuickExpenseButtons } from '../ExpenseCapture'
 import {
   createMyWaveExpense,
@@ -470,6 +470,8 @@ function ExpenseRecordsManager() {
     memo: '',
   })
   const [message, setMessage] = useState('')
+  // 위쪽 요약 카드들은 화면 틀이 한 번 불러 둔 공용 데이터를 쓴다. 여기서 기록을 바꾸면 그것도 다시 불러야 같은 숫자를 말한다.
+  const { reload } = useMyWaveData()
 
   async function loadExpenses(month = monthStringFromDate(form.spentDate)) {
     try {
@@ -530,6 +532,7 @@ function ExpenseRecordsManager() {
       const month = monthStringFromDate(form.spentDate)
       resetExpenseForm()
       await loadExpenses(month)
+      reload()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '소비 내역 저장에 실패했습니다.')
     }
@@ -541,6 +544,7 @@ function ExpenseRecordsManager() {
       if (editingId === id) resetExpenseForm()
       setMessage('소비 내역이 삭제되었습니다.')
       await loadExpenses()
+      reload()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '소비 내역 삭제에 실패했습니다.')
     }
@@ -572,9 +576,7 @@ function ExpenseRecordsManager() {
               </button>
               <div className="flex items-center justify-between gap-3 sm:justify-end">
                 <div className="text-right text-lg font-black">{won(Number(expense.amount))}</div>
-                <button onClick={() => removeExpense(expense.id)} className="pressable grid h-9 w-9 place-items-center rounded-full text-red-500 hover:bg-red-50">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <ConfirmDeleteButton compact label="소비 기록 삭제" onConfirm={() => removeExpense(expense.id)} />
               </div>
             </div>
           ))}

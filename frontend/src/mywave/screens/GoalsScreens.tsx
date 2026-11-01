@@ -1,8 +1,8 @@
 import { CalendarDays, ChevronRight, Edit3, Info, Save, SlidersHorizontal, WalletCards } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { won } from '../format'
-import { Card, Field } from '../uiKit'
+import { dateStringAfterDays, won } from '../format'
+import { Card, ConfirmDeleteButton, Field } from '../uiKit'
 import { BelugaSays } from '../Beluga'
 import { Celebration } from '../Celebration'
 import { BubbleBurst, Notice } from '../motion'
@@ -328,6 +328,8 @@ function GoalsList() {
 
 function GoalManagementPanel() {
   const navigate = useNavigate()
+  // 위의 메인 목표 카드와 목표 요약은 공용 데이터를 쓴다. 여기서 바꾸면 그것도 다시 불러야 한다.
+  const { reload } = useMyWaveData()
   const [goals, setGoals] = useState<MyWaveGoalResponse[]>([])
   const [message, setMessage] = useState('')
   const [celebrating, setCelebrating] = useState<string | null>(null)
@@ -362,6 +364,7 @@ function GoalManagementPanel() {
       setMessage(status === 'COMPLETED' ? '목표를 완료 처리했습니다.' : '목표 상태가 변경되었습니다.')
       if (status === 'COMPLETED' && goal.status !== 'COMPLETED') setCelebrating(goal.title)
       await loadGoals()
+      reload()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '목표 상태 변경에 실패했습니다.')
     }
@@ -372,6 +375,7 @@ function GoalManagementPanel() {
       await deleteMyWaveGoal(id)
       setMessage('목표가 삭제되었습니다.')
       await loadGoals()
+      reload()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '목표 삭제에 실패했습니다.')
     }
@@ -409,7 +413,7 @@ function GoalManagementPanel() {
               <button onClick={() => changeGoalStatus(goal, 'ACTIVE')} className="pressable rounded-full bg-white px-3 py-2 text-sm font-black text-blue-700">진행</button>
               <button onClick={() => changeGoalStatus(goal, 'PAUSED')} className="pressable rounded-full bg-white px-3 py-2 text-sm font-black text-slate-600">일시정지</button>
               <button onClick={() => changeGoalStatus(goal, 'COMPLETED')} className="pressable rounded-full bg-white px-3 py-2 text-sm font-black text-emerald-700">완료</button>
-              <button onClick={() => removeGoal(goal.id)} className="pressable rounded-full bg-white px-3 py-2 text-sm font-black text-red-500">삭제</button>
+              <ConfirmDeleteButton label="삭제" onConfirm={() => removeGoal(goal.id)} />
             </div>
           </div>
         ))}
@@ -442,12 +446,14 @@ function GoalSummary() {
 
 export function GoalEditorPage() {
   const navigate = useNavigate()
+  const { reload } = useMyWaveData()
   const [searchParams] = useSearchParams()
   const editingId = Number(searchParams.get('id') ?? 0)
   const [title, setTitle] = useState('새 저축 목표')
   const [targetAmount, setTargetAmount] = useState(0)
   const [currentAmount, setCurrentAmount] = useState(0)
-  const [targetDate, setTargetDate] = useState('2026-07-21')
+  // 기본 목표일은 한 달 뒤. 고정 날짜를 두면 언젠가 과거가 되어 "남은 날 0일"로 시작한다.
+  const [targetDate, setTargetDate] = useState(() => dateStringAfterDays(30))
   const [goalStatus, setGoalStatus] = useState('ACTIVE')
   const [priority, setPriority] = useState(1)
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
@@ -492,6 +498,7 @@ export function GoalEditorPage() {
       setStatus('idle')
       return
     }
+    reload()
     setStatus('saved')
     window.setTimeout(() => navigate('/goals'), 500)
   }
