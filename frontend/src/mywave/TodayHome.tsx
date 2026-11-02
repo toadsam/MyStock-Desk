@@ -227,7 +227,7 @@ function dateLabel(value: string) {
   return `${date.getMonth() + 1}월 ${date.getDate()}일 ${WEEKDAY[date.getDay()]}요일`
 }
 
-function SodaHero({
+export function SodaHero({
   today,
   templates,
   busyId,
@@ -271,8 +271,8 @@ function SodaHero({
       <div aria-hidden="true" className="hero-sheen" />
 
       <div className={`relative flex flex-wrap items-center gap-2 ${today.budgetSet ? 'lg:pr-[92px]' : 'pr-[76px] sm:pr-[92px]'}`}>
-        <span className="rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold">{dateLabel(today.date)}</span>
-        <span className="rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold">이번 달 {today.daysLeftInMonth}일 남음</span>
+        <span data-story-piece="date" className="rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold">{dateLabel(today.date)}</span>
+        <span data-story-piece="date" className="rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold">이번 달 {today.daysLeftInMonth}일 남음</span>
       </div>
 
       {/* 벨루가는 날짜와 제목 줄 높이 안에서만 앉는다. 큰 숫자 줄은 가리지 않는다. 누르면 말을 건다. */}
@@ -290,12 +290,12 @@ function SodaHero({
       </motion.div>
 
       <div className="relative mt-6">
-        <span className="wave-jua text-[20px]">오늘 더 써도 되는 돈</span>
+        <span data-story-piece="budget-label" className="wave-jua text-[20px]">오늘 더 써도 되는 돈</span>
         <div className="flex items-baseline gap-x-1.5 whitespace-nowrap">
-          <span className="wave-num text-[56px] font-bold leading-[1.1] [text-shadow:0_5px_0_rgba(25,79,229,.35)] sm:text-[76px]">
+          <span data-story-piece="balance" className="wave-num text-[56px] font-bold leading-[1.1] [text-shadow:0_5px_0_rgba(25,79,229,.35)] sm:text-[76px]">
             <FlowingNumber value={today.remainingToday} />
           </span>
-          <span className="wave-jua text-[28px] sm:text-[30px]">원</span>
+          <span data-story-piece="currency" className="wave-jua text-[28px] sm:text-[30px]">원</span>
         </div>
       </div>
 
@@ -310,11 +310,12 @@ function SodaHero({
       )}
 
       <div className="relative mt-5">
-        <span className="text-[13px] font-bold">눌러서 바로 기록</span>
+        <span data-story-piece="quick-label" className="text-[13px] font-bold">눌러서 바로 기록</span>
         <div className="mt-2.5 flex flex-wrap gap-2">
           {templates.map((template) => (
             <button
               key={template.id}
+              data-beluga-target={`quick-${template.id}`}
               onClick={() => onQuick(template)}
               disabled={busyId !== null}
               className="wave-chip flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-[14px] font-bold text-slate-900 shadow-[0_4px_0_rgba(25,79,229,.3)] disabled:opacity-60"

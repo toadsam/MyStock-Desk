@@ -1,0 +1,72 @@
+/* Film direction: readable product, a guiding character, quiet playback controls. */
+.wave-story .story-product-anchor{z-index:3}
+.story-product-focus{width:350px;height:640px;transform-style:preserve-3d;transform:translate3d(0,0,0) scale(1);transform-origin:50% 48%;transition:transform 1.45s cubic-bezier(.22,.7,.25,1)}
+.story-app-theatre[data-focus=true] .story-product-focus{transform:translate3d(-8px,-8px,0) rotateY(3deg) scale(1.065)}
+.wave-story[data-surfing=true] .story-product-focus{transition:none}
+.wave-story:not([data-immersed=true]) .story-view-controls{display:none}
+.wave-story:not([data-immersed=true]) .story-narrator{bottom:98px;height:auto;width:min(680px,70vw)}
+.wave-story .story-narrator p{background:#06245385;border-color:#b0dfff20;box-shadow:none;text-shadow:none;padding:9px 18px}
+.wave-story .story-speaker i{display:none}
+.wave-story .story-copy{transition:opacity .6s}
+.wave-story .story-description{max-width:315px}
+
+.story-guide-bob{position:relative;aspect-ratio:1}
+.wave-story .story-guide{transform-origin:0 0}
+.story-guide-swim{position:absolute;inset:0;opacity:0;filter:drop-shadow(0 12px 10px #021d4350);pointer-events:none}
+.story-guide-wake{position:absolute;inset:30% -15% 8% -18%;opacity:0;pointer-events:none;transform-origin:75% 50%}
+.story-guide-wake i{position:absolute;inset:0;border-radius:50%;border-top:2px solid #c4f4ff;border-bottom:1px solid #5bc5f855;transform:rotate(-12deg);box-shadow:0 -4px 12px #80dfff20}
+.story-guide-wake i:nth-child(2){inset:9% -5%;border-top-color:#88d6ff80;transform:rotate(-22deg)}
+.story-guide-wake i:nth-child(3){inset:20% 4%;border-top-color:#efffffaa;transform:rotate(9deg)}
+.wave-story[data-surfing=true] .story-guide{transition:none;transform-style:preserve-3d}
+.wave-story[data-surfing=true] .story-guide-bob{animation:none}
+.wave-story[data-surfing=true] .story-guide-presenter{animation:none}
+.wave-story[data-surfing=true] .story-product-heading::after,.wave-story[data-surfing=true] .story-phone-brand::after{content:'';position:absolute;inset:-4px;z-index:-1;border-radius:12px;background:#eef6ff;box-shadow:0 3px 0 #8ab2d7;transform:translateZ(-3px);opacity:var(--layer-depth,0);pointer-events:none}
+.wave-story .story-guide-art{filter:drop-shadow(0 11px 14px #03255755)}
+.wave-story .story-guide-art.is-tapping{animation:story-guide-tap .4s ease-in-out both}
+.wave-story .story-guide-shadow{background:radial-gradient(ellipse,#8bd7ff55,transparent 70%);filter:none;height:28px;bottom:0;transform:scaleY(.6)}
+.wave-story .story-guide-touch>span{animation:none;transform:scale(.9);opacity:.55;border-color:#8ae5ff;box-shadow:0 0 0 6px #74d9ff16}
+.wave-story .story-app-theatre[data-tapping=true] .story-guide-touch>span{animation:story-touch-confirm .65s .18s cubic-bezier(.2,.7,.3,1) both}
+@keyframes story-touch-confirm{0%{transform:scale(.7);opacity:1}100%{transform:scale(2.1);opacity:0}}
+
+.wave-story .story-controls{left:50%;right:auto;transform:translateX(-50%);width:min(760px,calc(100% - 40px));bottom:20px;padding:0 15px;border-radius:22px;background:#061d45c4;border-color:#bce5ff30;backdrop-filter:blur(12px);box-shadow:0 8px 24px #02132e30}
+.wave-story .story-transport{min-height:52px;gap:13px}
+.wave-story .story-controls .story-time{order:3;font-size:10px;white-space:nowrap}
+.wave-story .story-scrubber{order:2;flex:1;min-width:30px}
+.wave-story .story-voice{order:4;font-size:0!important;width:32px;justify-content:center}
+.wave-story .story-transport>.story-icon-button{order:5}
+.wave-story .story-playback{gap:3px}
+.wave-story .story-scene-picker{display:flex;align-items:center;gap:8px;flex-shrink:0;min-height:40px;padding:0 8px;background:transparent;border:0;border-radius:10px;font-size:11px;color:#e6f5ff}
+.story-scene-picker>span{color:#83cde9;font-size:9px;letter-spacing:.06em}
+.story-scene-picker svg{transition:transform .2s}.story-scene-picker[aria-expanded=true] svg{transform:rotate(180deg)}
+.story-scene-picker:hover{background:#ffffff10}
+.story-player-details[hidden]{display:none}
+.wave-story .story-chapters{padding-top:4px;gap:6px}
+.wave-story .story-chapter-content{gap:7px}
+.wave-story .story-chapter-text{font-size:10px}
+.wave-story .story-chapter-text i{display:none}
+.wave-story .story-chapters>button{padding:12px 4px 0;gap:9px;min-height:54px}
+.story-player-options{display:flex;align-items:center;justify-content:space-between;min-height:39px;border-bottom:1px solid #bce5ff20}
+.wave-story .story-player-options .story-key-hint{display:block;font-size:9px}
+.wave-story .story-player-options .story-auto{font-size:10px!important;gap:7px}
+.wave-story .story-controls:focus-within{border-color:#bce5ff80}
+.wave-story[data-surfing=true] .story-controls{background:#061d459c}
+@media(min-width:761px){.wave-story .story-copy{max-width:36vw}.wave-story .story-copy h1{font-size:clamp(32px,3.2vw,50px)}}
+@media(max-width:760px){
+ .story-app-theatre[data-focus=true] .story-product-focus{transform:translate3d(-3px,-4px,0) rotateY(2deg) scale(1.035)}
+ .wave-story .story-controls{width:calc(100% - 24px);bottom:12px;padding:0 8px;border-radius:19px}
+ .wave-story .story-transport{gap:5px;min-height:50px}
+ .wave-story .story-playback>.story-icon-button{display:none}
+ .wave-story .story-play-button{width:34px;height:34px}
+ .wave-story .story-scene-picker{font-size:10px;padding:0 4px;gap:5px;min-height:40px}
+ .wave-story .story-transport>.story-icon-button{min-width:28px;width:28px}
+ .wave-story .story-controls .story-time{font-size:9px}
+ .wave-story .story-voice{width:28px;min-height:40px}
+ .wave-story .story-chapter-content{flex-direction:column;gap:5px}
+ .wave-story .story-chapter-text{font-size:8px}
+ .wave-story .story-player-options .story-key-hint{display:none}
+ .story-player-options{justify-content:flex-end}
+ .wave-story:not([data-immersed=true]) .story-narrator{bottom:79px;height:auto;width:calc(100% - 32px)}
+ .wave-story .story-narrator p{font-size:10px;padding:8px 12px;margin-top:5px}
+ .wave-story .story-speaker{font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){.story-product-focus{transform:none!important;transition:none!important}.story-guide-wake,.story-guide-swim{display:none}.wave-story .story-guide-touch>span{animation:none!important}}

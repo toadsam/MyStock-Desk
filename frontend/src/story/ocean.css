@@ -1,0 +1,47 @@
+/* MyWave's blue ocean is shared by every chapter; interaction uses transform/opacity only. */
+.wave-story{--story-ink:#f5faff;--story-muted:#c9e0ff;background:#061d4e;color:#f5faff}
+.story-atmosphere{background:radial-gradient(ellipse at 72% 38%,#1465e845,transparent 49%),linear-gradient(90deg,#03153599,transparent 65%),linear-gradient(180deg,#04183755,transparent 45%,#03132e77)}
+.story-header,.story-copy,.story-narrator,.story-end-actions{color:#fff}
+.story-brand-dot{color:#9fe7ff}.story-brand-mark{border:1px solid #a4d8ff80;background:linear-gradient(135deg,#71baff,#2675ed);box-shadow:0 4px 0 #124ba5,0 9px 25px #07327d40}
+.story-header-note,.story-eyebrow{color:#d0e6ff}.story-eyebrow>span{background:#a5edff;box-shadow:0 0 0 4px #a5edff18}
+.story-copy h1{text-shadow:0 2px 0 #12458a55,0 7px 25px #062e7b28}.story-title-accent{color:#b9efff}
+.story-description{color:#e0efff}.story-watch-note,.story-watch-note strong,.story-intro-note{color:#e7f5ff}.story-film-bars{border-color:#b7ddff70;background:#ffffff14}.story-film-bars i{background:#b5f2ff}
+.story-live-dot{background:#a6f1ff;box-shadow:0 0 0 4px #91e6ff20,0 0 12px #6edcff60}
+.story-immersion{background:#ffffff15;border-color:#d3e9ff50;color:#fff!important}.story-app-link{color:#fff!important}
+.story-start{background:#edf7ff;color:#205ec5!important;box-shadow:0 4px 0 #76a7df,0 9px 22px #07317e33}.story-start>span{background:#d8eaff}.story-start:hover{background:#fff}
+.story-speaker{color:#cfedff}.story-speaker i{color:#d5eaff;border-color:#c1dfff55}.story-narrator p{color:#fff;text-shadow:0 2px 8px #08378a;background:#073d948c;border:1px solid #d4efff30;border-radius:14px;padding:8px 14px;box-shadow:0 6px 18px #07398315}
+.story-controls{color:#e8f4ff;background:#07378480;border-color:#bce5ff40;box-shadow:inset 0 1px 0 #ffffff16,0 10px 35px #062a761f}
+.story-chapters{border-bottom-color:#bbdcff22}.story-chapters>button{color:#c0dbff}.story-chapters>button.is-current{color:#fff}.story-chapter-track>span{background:#9aeaff;box-shadow:0 0 8px #9aeaff70}
+.story-play-button{background:#eaf7ff;color:#2267d8!important;box-shadow:0 3px 0 #8abbec}.story-icon-button:hover{background:#ffffff20}
+.story-time>span,.story-key-hint{color:#b9d5ff}.story-key-hint kbd{border-color:#accbff40}
+.story-scrubber{accent-color:#b0f0ff}.story-scrubber::-webkit-slider-runnable-track{background:linear-gradient(to right,#a1eaff var(--progress),#c2e1ff30 var(--progress))}.story-scrubber::-webkit-slider-thumb{background:#b7f1ff;box-shadow:0 0 0 3px #c6f5ff1f}
+.story-scrubber::-moz-range-track{background:#c2e1ff30}.story-scrubber::-moz-range-progress{background:#a1eaff}.story-scrubber::-moz-range-thumb{background:#b7f1ff}
+.story-auto>span{background:#6386bd}.story-auto[aria-pressed=true]>span{background:#5cbce8}.story-voice[aria-pressed=true]{color:#acffff}.story-error{color:#ffe4c0}
+.story-view-controls{background:#0b419547;border-color:#c0e8ff40;color:#fff}.story-view-controls button:hover{background:#ffffff26}
+.story-product-window{color:#273d58}.story-loading,.story-fallback{color:#244769;background:#eef8ff}.story-world-note>span,.story-world-note p{color:#dcf0ff}
+.wave-story :focus-visible{outline-color:#b9f3ff}
+.story-ocean-response{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+.story-ocean-halo{position:absolute;left:38%;top:4%;width:70vw;height:85vh;background:radial-gradient(ellipse,#267fff30,#155ae518 40%,transparent 68%);border-radius:50%}
+.story-current-field{position:absolute;inset:0;perspective:1000px;transform-style:preserve-3d}
+.story-current-field i{position:absolute;left:5%;top:39%;width:110%;height:70%;border:1px solid #65cfff50;border-left-color:transparent;border-bottom-color:#2876eb20;border-radius:50%;box-shadow:0 -1px 0 #b7efff22,0 -9px 26px #2377e60b;transform:rotateX(66deg) rotateZ(-22deg);animation:story-current-drift 18s ease-in-out infinite alternate}
+.story-current-field i:nth-child(2){left:25%;top:34%;width:105%;height:88%;border-color:#629cff25;border-right-color:transparent;animation-delay:-7s}
+.story-current-field i:nth-child(3){left:-25%;top:62%;width:140%;height:58%;border-color:#54d7ff20;border-top-color:#8adbff55;animation-delay:-12s}
+@keyframes story-current-drift{from{transform:rotateX(66deg) rotateZ(-22deg) translate3d(-25px,0,0)}to{transform:rotateX(72deg) rotateZ(-10deg) translate3d(35px,-35px,40px)}}
+.wave-story[data-playing=false] .story-current-field i{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.story-current-field i{animation:none}}
+.wave-story:not([data-immersed=true]) .story-ocean-reaction{display:none}
+.story-ocean-beam{position:absolute;top:-20%;height:140%;width:180px;background:linear-gradient(90deg,transparent,#a6eaff0d 45%,#d1f6ff16 50%,transparent);transform-origin:top center;animation:story-beam-drift 15s ease-in-out infinite alternate}
+.story-ocean-beam-one{left:30%;rotate:24deg}.story-ocean-beam-two{left:80%;rotate:22deg;animation-delay:-8s;width:100px}
+.story-pointer-light{position:absolute;left:0;top:0;width:440px;height:440px;margin-left:-220px;margin-top:-220px;border-radius:50%;background:radial-gradient(circle,#b5f4ff25,transparent 66%);opacity:0;transition:opacity .5s;will-change:translate}
+.story-pointer-ripple{position:absolute;width:170px;height:170px;border:1px solid #c9f9ff;border-radius:50%;box-shadow:0 0 0 9px #8fddff18,inset 0 0 0 9px #a7ecff10;opacity:0}
+.story-ocean-reaction{position:absolute;left:66%;top:67%;width:0;height:0}
+.story-ocean-rings{position:absolute;left:0;top:0;transform:rotateX(64deg);transform-style:preserve-3d}
+.story-ocean-rings i{position:absolute;left:-260px;top:-260px;width:520px;height:520px;border:2px solid #cff9ff;border-radius:50%;box-shadow:0 0 0 10px #9eeaff13;animation:story-response-ring 2s cubic-bezier(.2,.6,.25,1) both}
+.story-ocean-rings i:nth-child(2){animation-delay:.18s}.story-ocean-rings i:nth-child(3){animation-delay:.36s}
+.story-ocean-reaction>span{position:absolute;left:-9px;top:-9px;width:18px;height:18px;border:1px solid #e4fbffb0;border-radius:50%;background:radial-gradient(circle at 30% 25%,#fff,#b3ecff60 32%,#3c9eea22 65%,#c9f7ff80);box-shadow:0 3px 6px #0f4a9c25;animation:story-response-bubble 1.8s ease-out var(--bubble-delay) both}
+.wave-story[data-playing=false] .story-ocean-beam{animation-play-state:paused}
+@keyframes story-beam-drift{from{transform:translateX(-30px);opacity:.45}to{transform:translateX(40px);opacity:1}}
+@keyframes story-response-ring{0%{transform:scale(.12);opacity:0}15%{opacity:.7}100%{transform:scale(1.25);opacity:0}}
+@keyframes story-response-bubble{0%{transform:translate(0,0) scale(.2);opacity:0}20%{opacity:.8}100%{transform:translate(var(--bubble-x),var(--bubble-y)) scale(.65);opacity:0}}
+@media(max-width:760px){.story-ocean-reaction{left:56%;top:63%}.story-ocean-rings i{left:-150px;top:-150px;width:300px;height:300px}.story-ocean-reaction>span{width:12px;height:12px}.story-ocean-beam{width:90px}.story-ocean-halo{left:10%;width:95vw}.story-pointer-light{display:none}}
+@media(prefers-reduced-motion:reduce){.story-ocean-beam,.story-pointer-light,.story-pointer-ripple,.story-ocean-reaction{display:none}}

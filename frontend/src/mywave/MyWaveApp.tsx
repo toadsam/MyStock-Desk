@@ -1,5 +1,5 @@
 import { Bell, ChevronRight, Search, UserRound } from 'lucide-react'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useOutlet, useParams } from 'react-router-dom'
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { Ocean } from './motion'
@@ -23,12 +23,14 @@ import { ReportsPage } from './screens/ReportsScreen'
 import { SimulationDetailPage, SpendingDetailPage, SpendingPage } from './screens/SpendingScreens'
 
 const activeClass = 'text-blue-700'
+const StoryPage = lazy(() => import('../story/StoryPage'))
 
 const inactiveClass = 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
 
 export default function MyWaveApp() {
   return (
     <Routes>
+      <Route path="story" element={<Suspense fallback={<div role="status" className="p-8 text-slate-600">MyWave 소개를 불러오고 있어요…</div>}><StoryPage /></Suspense>} />
       <Route path="login" element={<AuthPage />} />
       <Route path="register" element={<AuthPage />} />
       <Route element={<ProtectedRoute />}>
