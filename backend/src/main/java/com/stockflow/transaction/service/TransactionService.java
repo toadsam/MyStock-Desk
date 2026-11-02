@@ -37,7 +37,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class TransactionService {
 
-    private static final BigDecimal RECORD_BASE_CASH = BigDecimal.valueOf(100_000_000L);
+    /** 거래 기록을 처음부터 재생할 때의 시작 현금. 기록이 없으면 0 이다. 옛 모의투자의 1억은 여기서 지웠다. */
+    private static final BigDecimal RECORD_BASE_CASH = BigDecimal.ZERO;
 
     private final InvestmentTransactionRepository transactionRepository;
     private final StockRepository stockRepository;
@@ -266,7 +267,7 @@ public class TransactionService {
         BigDecimal realizedProfitLoss = BigDecimal.ZERO;
         if (type == TransactionType.BUY) {
             requireStock(stock);
-            portfolio.withdraw(totalAmount.add(fee).add(tax));
+            portfolio.spend(totalAmount.add(fee).add(tax));
             Holding holding = holdingRepository.findByPortfolioIdAndStockId(portfolio.getId(), stock.getId())
                     .orElseGet(() -> holdingRepository.save(Holding.builder()
                             .portfolioId(portfolio.getId())
@@ -297,10 +298,16 @@ public class TransactionService {
         } else if (type == TransactionType.DIVIDEND || type == TransactionType.DEPOSIT) {
             portfolio.deposit(price.subtract(fee).subtract(tax));
         } else if (type == TransactionType.WITHDRAWAL) {
-            portfolio.withdraw(price.add(fee).add(tax));
+            portfolio.spend(price.add(fee).add(tax));
         }
         portfolioSnapshotService.refresh(portfolio);
         return realizedProfitLoss;
+    }
+
+    /** 시드처럼 거래 기록을 직접 넣은 뒤 보유 종목과 예수금을 기록에서 다시 만들 때 부른다. */
+    @Transactional
+    public void rebuildForMember(Long memberId) {
+        rebuildPortfolioFromTransactions(memberId);
     }
 
     private void rebuildPortfolioFromTransactions(Long memberId) {

@@ -1,0 +1,53 @@
+# nginx 공식 이미지가 컨테이너를 띄울 때 ${PORT}, ${BACKEND_UPSTREAM}, ${NGINX_RESOLVER} 만 채워서
+# /etc/nginx/conf.d/default.conf 로 만든다 (NGINX_ENVSUBST_FILTER 가 그 셋만 허용해서 $uri 같은 nginx 변수는 건드리지 않는다).
+# 브라우저는 화면과 API 를 같은 주소에서 받는다. 그래서 백엔드에 CORS 허용 주소가 필요 없다.
+server {
+  # PORT 는 이미지 기본 80. Railway 처럼 플랫폼이 포트를 정해 주는 곳에서는 그 값이 들어온다.
+  # [::] 도 듣는 이유: Railway 내부망은 IPv6 라 IPv4 만 들으면 연결이 거절된다.
+  listen ${PORT};
+  listen [::]:${PORT};
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  gzip on;
+  gzip_types text/plain text/css application/json application/javascript image/svg+xml;
+  gzip_min_length 1024;
+
+  add_header X-Content-Type-Options nosniff always;
+  add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+  # 백엔드 주소를 요청 때마다 다시 찾는다(10초 캐시). proxy_pass 에 변수를 쓰면 nginx 가 시작할 때 주소를 못 찾아도
+  # 죽지 않고, 백엔드가 재배포되어 내부 IP 가 바뀌어도 따라간다. 리졸버는 컨테이너의 /etc/resolv.conf 에서 읽는다
+  # (compose 는 127.0.0.11, Railway 는 내부망 DNS).
+  resolver ${NGINX_RESOLVER} valid=10s;
+
+  # /api/... 는 백엔드로. 거래 CSV 가져오기가 있어 본문 크기를 조금 열어 둔다.
+  location /api/ {
+    set $backend "http://${BACKEND_UPSTREAM}";
+    proxy_pass $backend;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 60s;
+    client_max_body_size 5m;
+  }
+
+  # 새 배포가 옛 index.html 에 가리지 않게. 해시가 붙은 /assets 만 오래 캐시한다.
+  location = /index.html {
+    add_header Cache-Control "no-cache" always;
+    add_header X-Content-Type-Options nosniff always;
+  }
+
+  location /assets/ {
+    expires 1y;
+    add_header Cache-Control "public, immutable" always;
+    add_header X-Content-Type-Options nosniff always;
+  }
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+}

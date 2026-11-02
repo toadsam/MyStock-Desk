@@ -1,39 +1,228 @@
 import { BarChart3, BriefcaseBusiness, CalendarDays, ChevronRight, CircleHelp, Info } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { won } from './format'
 import { Card } from './uiKit'
+import { motion } from 'motion/react'
+import { Bubbles, MouthBubbles, Odometer } from './motion'
+import { BelugaArt, type BelugaMood } from './BelugaArt'
+import { useLiveliness } from './liveliness'
+import { useDrowsy } from './useDrowsy'
+import { HeroSwimmer } from './HeroSwimmer'
+import { useIdleAntics } from './useIdleAntics'
+import { useCursorTilt } from './useCursorTilt'
+import { useHandoffEntrance } from './handoff'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { useMyWaveData } from './runtime'
 
-export function MobileBlueSummary({ title, value, detail }: { title: string; value: string; detail: string }) {
+export type HeroTone = 'blue' | 'mint' | 'violet' | 'navy' | 'cyan'
+
+export function MobileBlueSummary({ title, value, detail, tone = 'blue' }: { title: string; value: string; detail: string; tone?: HeroTone }) {
   return (
-    <section className="motion-card pressable relative overflow-hidden rounded-[20px] bg-blue-700 p-5 text-white shadow-blue">
+    <section className={`motion-card pressable relative overflow-hidden rounded-[24px] p-5 text-white hero-tone-${tone}`}>
       <div className="relative z-10">
-        <div className="text-sm font-black text-white/90">{title} <Info className="inline h-4 w-4" /></div>
-        <div className="mt-4 text-4xl font-black tracking-[-0.04em]">{value}</div>
+        <div className="wave-jua text-[15px] text-white/90">{title} <Info className="inline h-4 w-4" /></div>
+        <div className="wave-num mt-4 text-4xl font-bold tracking-[-0.02em]">{value}</div>
         <div className="mt-4 text-sm font-black text-white/85">{detail}</div>
       </div>
       <div className="absolute -bottom-8 -right-8 h-32 w-44 rounded-full bg-white/15 blur-xl" />
+      {/* 제목 오른쪽 빈 띠를 벨루가가 오간다. 큰 숫자 줄(아래)은 건드리지 않는다. */}
+      <HeroSwimmer className="left-[46%] right-3 top-1 lg:hidden" size={56} rise={26} />
     </section>
   )
 }
 
-export function BlueCard({ children, className }: { children: ReactNode; className?: string }) {
+/**
+ * 파란 히어로 카드.
+ *
+ * 벨루가(art)는 글 위에 떠 있지 않고 자기 열을 갖는다. 전에는 absolute 로 오른쪽 아래에
+ * 붙여 두어서 숫자가 길어지면 벨루가가 "보유 종목 3개"를 가렸다. 열을 따로 주면
+ * 숫자가 아무리 길어져도 그림과 만나지 않는다. 좁은 화면에서는 그림을 숨긴다.
+ */
+export function BlueCard({
+  children,
+  className,
+  art,
+  artBump = 0,
+  artClassName = 'h-40 w-40',
+  handoffId,
+  overlay,
+  targetId,
+  tone = 'blue',
+}: {
+  children: ReactNode
+  className?: string
+  art?: BelugaMood
+  /** 값이 바뀔 때마다 벨루가가 한 번 뛴다. 거래를 저장한 순간 같은 데 쓴다. */
+  artBump?: number
+  artClassName?: string
+  /** 다른 화면에서 rememberHandoff(id) 로 기억해 둔 카드 자리에서 출발해 이 자리까지 날아온다 (홈의 목표 카드 → 목표 히어로). */
+  handoffId?: string
+  /** 카드 전체 위에 얹는 연출. 기포 폭발 같은 것. */
+  overlay?: ReactNode
+  /** 풀어둔 벨루가가 찾아올 때 쓰는 이름 (data-beluga-target). */
+  targetId?: string
+  /** 화면마다 다른 색. 홈 파랑, 목표 민트, 소비 보라, 투자 남색, 리포트 청록. */
+  tone?: HeroTone
+}) {
+  const { lively } = useLiveliness()
+  // 카드 위에서 커서가 움직이면 벨루가가 그쪽으로 조금 몸을 튼다. 신나게 단계에서는 화면 어디서든.
+  const section = useRef<HTMLElement>(null)
+  const tilt = useCursorTilt(7, 10, lively, section)
+  useHandoffEntrance(handoffId, section)
+  const antics = useArtAntics(lively && !!art)
+  const asleep = useDrowsy()
   return (
-    <section className={`relative overflow-hidden rounded-[26px] bg-[linear-gradient(135deg,#194fe5_0%,#1d67f2_48%,#51b9ff_100%)] p-7 text-white shadow-blue ${className ?? ''}`}>
+    <section
+      ref={section}
+      data-beluga-target={targetId}
+      {...tilt.handlers}
+      className={`relative overflow-hidden rounded-[28px] p-7 text-white shadow-blue hero-tone-${tone} ${className ?? ''}`}
+    >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(255,255,255,.24),transparent_28%),linear-gradient(90deg,rgba(0,0,0,.10),transparent_55%)]" />
-      {children}
+      <div aria-hidden="true" className="hero-glow pointer-events-none absolute inset-0" />
+      <HeroWaves />
+      <Bubbles />
+      <div aria-hidden="true" className="hero-sheen" />
+      {overlay}
+      {art
+        ? (
+            <div className="relative z-10 flex items-end gap-6">
+              <div data-handoff-content className="min-w-0 flex-1">{children}</div>
+              <motion.div data-handoff-content style={tilt.style} className="hidden shrink-0 md:block">
+                <div className="beluga-breathe">
+                  <div key={`${artBump}-${antics.token}`} className={`relative ${artBump + antics.token > 0 ? antics.className : ''} ${artClassName}`}>
+                    <BelugaArt mood={art} asleep={asleep} className="h-full w-full drop-shadow-[0_14px_20px_rgba(10,40,140,.35)]" />
+                    <MouthBubbles token={antics.mouth} className="left-[24%] top-[30%]" />
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )
+        : <div data-handoff-content className="relative z-10">{children}</div>}
     </section>
   )
 }
 
+/**
+ * 히어로의 벨루가가 혼자 노는 것. 신나게 단계에서만.
+ * 깡충 뛰거나, 몸을 흔들거나, 입에서 기포를 뱉는다. 흔든 뒤에는 다시 "뛰기"로 돌아와
+ * 거래 저장 같은 바깥의 bump 가 늘 깡충으로 보이게 한다.
+ */
+const ART_ANTICS = ['hop', 'wiggle', 'bubbles'] as const
+
+function useArtAntics(enabled: boolean) {
+  const [token, setToken] = useState(0)
+  const [kind, setKind] = useState<'hop' | 'wiggle'>('hop')
+  const [mouth, setMouth] = useState(0)
+  const reset = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(reset.current), [])
+  useIdleAntics(enabled, ART_ANTICS, (antic) => {
+    if (antic === 'bubbles') {
+      setMouth((value) => value + 1)
+      return
+    }
+    setKind(antic)
+    setToken((value) => value + 1)
+    window.clearTimeout(reset.current)
+    if (antic === 'wiggle') reset.current = window.setTimeout(() => setKind('hop'), 900)
+  })
+  return { token, mouth, className: kind === 'wiggle' ? 'beluga-wiggle' : 'beluga-hop' }
+}
+
+/**
+ * 히어로 바닥에 아주 느리게 흐르는 물결 두 겹. MyWave 라는 이름값이다.
+ * 가만히 있어도 화면이 숨 쉬게 하되, 글을 읽는 데 방해가 되지 않을 만큼만 옅다.
+ * 경로는 주기가 800 이고 폭이 1600 이라, 절반만큼 밀면 처음과 이어진다.
+ */
+function HeroWaves() {
+  const path = 'M0 60 C200 20 600 100 800 60 C1000 20 1400 100 1600 60 V120 H0 Z'
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-24 overflow-hidden">
+      <svg className="hero-wave absolute bottom-0 left-0 h-full w-[200%] opacity-[.14]" viewBox="0 0 1600 120" preserveAspectRatio="none">
+        <path d={path} fill="#fff" />
+      </svg>
+      <svg className="hero-wave-slow absolute -bottom-3 left-0 h-full w-[200%] opacity-[.10]" viewBox="0 0 1600 120" preserveAspectRatio="none">
+        <path d={path} fill="#fff" />
+      </svg>
+    </div>
+  )
+}
+
+/**
+ * 히어로의 큰 숫자. 홈의 "오늘 더 써도 되는 돈"과 같은 글꼴(Fredoka)이고,
+ * 값이 바뀌면 자릿수마다 오도미터처럼 굴러서 새 값에 맞춰진다.
+ * 통화 기호와 단위는 숫자보다 작게 둔다. 읽어야 할 것은 숫자다.
+ */
+export function HeroAmount({
+  value,
+  prefix = '',
+  suffix = '',
+  decimals = 0,
+}: {
+  value: number
+  prefix?: string
+  suffix?: string
+  decimals?: number
+}) {
+  const text = decimals > 0
+    ? value.toFixed(decimals)
+    : new Intl.NumberFormat('ko-KR').format(Math.round(value))
+  return (
+    <span className="wave-num tnum font-bold">
+      {prefix && <span className="mr-0.5 text-[0.6em] font-semibold">{prefix}</span>}
+      <Odometer value={text} />
+      {suffix && <span className="ml-1 text-[0.55em] font-semibold">{suffix}</span>}
+    </span>
+  )
+}
+
+/**
+ * 히어로 안의 작은 숫자. 구분선을 긋지 않고 간격으로만 나눈다.
+ * 금액은 줄바꿈이 안 되므로, 칸보다 길어지면 옆 칸을 덮는 대신 말줄임으로 끝낸다.
+ * 값이 바뀌면 아래에서 살짝 튀어오른다 (key 가 바뀌어 다시 그려진다).
+ */
 export function BlueMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-white/20 lg:border-l lg:pl-8 first:lg:border-l-0 first:lg:pl-0">
+    <div className="min-w-0">
       <div className="text-sm font-bold text-white/80">{label}</div>
-      <div className="mt-2 text-2xl font-black">{value}</div>
+      <div key={value} className="tnum tick-pop mt-1.5 truncate text-[22px] font-black" title={value}>{value}</div>
+    </div>
+  )
+}
+
+/**
+ * 쏠림 게이지.
+ *
+ * 전에는 초록·노랑·빨강 신호등이었다. 그런데 이 앱에서 빨강은 수익(국내 시세 관행)이라
+ * 같은 화면에서 빨강이 "좋음"과 "위험" 둘 다가 됐다. 그래서 색 하나로만 말한다.
+ * 회색에서 주황으로 가는 한 줄이고, 가장 큰 종목의 비중만큼 찬다.
+ */
+export function RiskGauge({ value, level }: { value: number; level: string }) {
+  const radius = 80
+  const length = Math.PI * radius
+  const ratio = Math.max(0, Math.min(100, value)) / 100
+  const color = level === '높음' ? '#f76707' : level === '보통' ? '#f59f00' : '#8b95a1'
+  return (
+    <div className="mx-auto w-48">
+      <svg viewBox="0 0 200 110" className="w-full" aria-hidden="true">
+        <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#e9ecef" strokeWidth="16" strokeLinecap="round" />
+        <path
+          d="M20 100 A80 80 0 0 1 180 100"
+          fill="none"
+          stroke={color}
+          strokeWidth="16"
+          strokeLinecap="round"
+          strokeDasharray={`${length} ${length}`}
+          strokeDashoffset={length * (1 - ratio)}
+          className="gauge-fill"
+        />
+      </svg>
+      <div className="-mt-11 text-center">
+        <div className="text-[22px] font-black" style={{ color }}>{level}</div>
+        <div className="mt-0.5 text-[12px] font-medium text-slate-400">가장 큰 종목 {Math.round(value)}%</div>
+      </div>
     </div>
   )
 }
@@ -72,7 +261,7 @@ export function InlineAction({ to, label, primary = false }: { to: string; label
 
 export function MobileCard({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <section className={`motion-card rounded-[20px] bg-white p-4 ${className}`}>
+    <section className={`motion-card rounded-[24px] bg-white p-4 ${className}`}>
       {children}
     </section>
   )
@@ -166,9 +355,13 @@ export function FlagIcon() {
 }
 
 export function Progress({ value, className, barClassName, color }: { value: number; className?: string; barClassName?: string; color?: string }) {
+  const bar = barClassName ?? 'bg-blue-700'
   return (
     <div className={`h-3 overflow-hidden rounded-full bg-slate-100 ${className ?? ''}`}>
-      <div className={`progress-fill h-full rounded-full ${barClassName ?? 'bg-blue-700'}`} style={{ width: `${Math.min(value, 100)}%`, backgroundColor: color }} />
+      <div className={`progress-fill relative h-full overflow-hidden rounded-full ${bar}`} style={{ width: `${Math.min(value, 100)}%`, backgroundColor: color }}>
+        {/* 신나게 단계에서 흐르는 줄무늬. 흰 막대에는 파란 줄. */}
+        <span aria-hidden="true" className={`stripes ${bar.includes('bg-white') ? 'stripes-dark' : ''}`} />
+      </div>
     </div>
   )
 }

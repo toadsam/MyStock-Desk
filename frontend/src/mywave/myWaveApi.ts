@@ -286,9 +286,16 @@ export type MyWaveCompanyAnalysisResponse = {
     dividendYield?: number
   }
   metrics: Array<{ label: string; value: number; unit: string; tone: string; description: string }>
-  performance: Array<{ year: string; sales: number; operatingProfit: number }>
-  aiSummary: string
-  portfolioImpact: string
+  performance: Array<{ year: string; sales: number | null; operatingProfit: number | null }>
+  /** 실적 추이의 단위. 조원 또는 십억 달러. */
+  performanceUnit: string
+  /** 규칙으로 만든 한 줄 정리. 있었던 숫자만 말한다. */
+  summary: string
+  /** 지표의 기준 분기. 실적 자료가 없으면 null. */
+  period: string | null
+  source: string
+  sourceLabel: string
+  estimated: boolean
   dividendAvailable: boolean
 }
 

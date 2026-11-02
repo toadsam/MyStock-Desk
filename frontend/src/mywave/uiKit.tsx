@@ -1,4 +1,5 @@
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -9,6 +10,51 @@ import { useNavigate } from 'react-router-dom'
  * 두 파일이 같은 Card/Field 를 써야 하는데, 서로를 import 하면 순환이 된다.
  * 금액 표기(won)는 컴포넌트가 아니므로 format.ts 에 따로 둔다.
  */
+
+/**
+ * 지우기 전에 한 번 더 묻는 버튼. 처음 누르면 "지울까요?"와 지우기·취소가 펼쳐지고, 5초 안에 고르지 않으면 접힌다.
+ * 기록 하나가 터치 한 번에 사라지면 안 된다. compact 면 쓰레기통 아이콘, 아니면 글자 버튼이다.
+ */
+export function ConfirmDeleteButton({
+  onConfirm,
+  label = '삭제',
+  compact = false,
+  className = '',
+}: {
+  onConfirm: () => void | Promise<void>
+  label?: string
+  compact?: boolean
+  className?: string
+}) {
+  const [armed, setArmed] = useState(false)
+  useEffect(() => {
+    if (!armed) return
+    const timer = window.setTimeout(() => setArmed(false), 5000)
+    return () => window.clearTimeout(timer)
+  }, [armed])
+
+  if (armed) {
+    return (
+      <span role="group" aria-label={`${label} 확인`} className={`inline-flex items-center gap-1 rounded-full bg-red-50 p-1 ${className}`}>
+        <span className="pl-2 text-xs font-black text-red-500">지울까요?</span>
+        <button type="button" onClick={() => { setArmed(false); void onConfirm() }} className="pressable rounded-full bg-red-500 px-3 py-1.5 text-xs font-black text-white">지우기</button>
+        <button type="button" onClick={() => setArmed(false)} className="pressable rounded-full bg-white px-3 py-1.5 text-xs font-black text-slate-600">취소</button>
+      </span>
+    )
+  }
+  if (compact) {
+    return (
+      <button type="button" onClick={() => setArmed(true)} aria-label={label} className={`pressable grid h-9 w-9 place-items-center rounded-full text-red-500 hover:bg-red-50 ${className}`}>
+        <Trash2 className="h-4 w-4" />
+      </button>
+    )
+  }
+  return (
+    <button type="button" onClick={() => setArmed(true)} className={`pressable rounded-full bg-white px-3 py-2 text-sm font-black text-red-500 ${className}`}>
+      {label}
+    </button>
+  )
+}
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -29,10 +75,10 @@ export function Card({ children, title, action, actionTo, className }: { childre
   const navigate = useNavigate()
 
   return (
-    <section className={`rounded-[20px] bg-white p-5 lg:p-6 ${className ?? ''}`}>
+    <section className={`card-lift rounded-[24px] bg-white p-5 lg:p-6 ${className ?? ''}`}>
       {(title || action) && (
         <div className="mb-4 flex items-center justify-between gap-4">
-          {title && <h2 className="text-[17px] font-bold tracking-[-0.02em] text-slate-900">{title}</h2>}
+          {title && <h2 className="wave-jua text-[19px] text-slate-900">{title}</h2>}
           {typeof action === 'string'
             ? (
                 <button onClick={() => actionTo && navigate(actionTo)} className="pressable shrink-0 text-[13px] font-semibold text-slate-400">

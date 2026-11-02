@@ -2,7 +2,8 @@ import { LockKeyhole, LogIn, UserPlus } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import belugaJump from '../assets/mywave/beluga-jump.png'
+import { BelugaArt } from '../mywave/BelugaArt'
+import { Ocean } from '../mywave/motion'
 
 export default function AuthPage() {
   const location = useLocation()
@@ -56,10 +57,14 @@ export default function AuthPage() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[var(--bg)] px-5 py-10 text-slate-900">
+    <main className="relative isolate grid min-h-screen place-items-center overflow-hidden bg-[var(--bg)] px-5 py-10 text-slate-900">
+      {/* 첫 화면부터 바다다. 활기 설정과 상관없이 보인다. */}
+      <Ocean always />
       <div className="w-full max-w-md space-y-5">
         <Link to="/" className="flex flex-col items-center text-center">
-          <img src={belugaJump} alt="" className="beluga-hop h-24 w-24 object-contain drop-shadow-[0_10px_16px_rgba(10,40,140,.22)]" />
+          <span className="beluga-hop block h-28 w-28">
+            <BelugaArt mood="hello" className="h-full w-full drop-shadow-[0_10px_16px_rgba(10,40,140,.22)]" />
+          </span>
           <span className="mt-1 text-[32px] font-black leading-none tracking-[-0.02em] text-blue-700">MyWave</span>
           <span className="mt-2 text-[13px] font-medium text-slate-500">나만의 투자 흐름을 만든다.</span>
         </Link>

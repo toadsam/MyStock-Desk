@@ -1,4 +1,4 @@
-import { CheckCircle2, Save } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Card } from '../uiKit'
@@ -78,6 +78,8 @@ export function CompanyDetailPage() {
               <span className="font-bold text-slate-500">{company.ticker}</span>
             </div>
             <div className="mt-2 text-sm font-bold text-slate-500">{company.market}</div>
+            {/* 숫자가 어디서 왔는지 항상 보인다. 예시 데이터면 예시라고 적는다. */}
+            <div className="mt-1 text-xs font-bold text-slate-400">출처 {analysis.sourceLabel}{analysis.period ? ` · ${analysis.period}` : ''}{analysis.estimated ? ' · 추정치' : ''}</div>
             <div className="mt-4 text-2xl font-black">{company.price} <span className={company.change.startsWith('+') ? 'text-red-500' : 'text-blue-700'}>{company.change}</span></div>
           </div>
           <button onClick={toggleWatch} className={`pressable grid h-11 w-11 place-items-center rounded-full ${watched ? 'bg-blue-700 text-white' : 'bg-blue-50 text-blue-700'}`}>
@@ -86,32 +88,50 @@ export function CompanyDetailPage() {
         </div>
         {watched && <div className="mt-5 rounded-2xl bg-blue-50 p-4 text-sm font-black text-blue-700">관심 기업에 저장되었습니다.</div>}
       </Card>
-      <div className="grid gap-3 sm:grid-cols-5">
-        {analysis.metrics.map((metric) => (
-          <Card key={metric.label} className="p-4">
-            <div className={`grid h-10 w-10 place-items-center rounded-2xl ${toneBg(metric.tone)}`}><CheckCircle2 className="h-5 w-5" /></div>
-            <div className="mt-3 text-sm font-black">{metric.label}</div>
-            <div className="mt-2 text-xl font-black text-blue-700">{metric.value}{metric.unit}</div>
-          </Card>
-        ))}
-      </div>
-      <Card title="실적 추이">
-        <div className="h-72">
-          <ResponsiveContainer>
-            <AreaChart data={analysis.performance}>
-              <CartesianGrid stroke="#e8eef7" vertical={false} />
-              <XAxis dataKey="year" axisLine={false} tickLine={false} />
-              <YAxis axisLine={false} tickLine={false} />
-              <Tooltip />
-              <Area dataKey="sales" stroke="#2563eb" fill="#dbeafe" strokeWidth={3} />
-              <Line dataKey="operatingProfit" stroke="#60a5fa" strokeWidth={3} />
-            </AreaChart>
-          </ResponsiveContainer>
+      {analysis.metrics.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-6">
+          {analysis.metrics.map((metric) => (
+            <Card key={metric.label} className="p-4">
+              <div className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-black ${toneBg(metric.tone)}`}>{metric.label}</div>
+              <div className="mt-3 text-xl font-black text-blue-700">{Number(metric.value).toLocaleString('ko-KR')}{metric.unit}</div>
+              <div className="mt-1 text-xs font-bold text-slate-400">{metric.description}</div>
+            </Card>
+          ))}
         </div>
+      )}
+      {/* 실적은 모인 만큼만 그린다. 분기가 둘 이상이면 추이, 하나면 그 분기만, 없으면 없다고 말한다. */}
+      <Card title={`실적 추이 (${analysis.performanceUnit})`}>
+        {analysis.performance.length >= 2 ? (
+          <div className="h-72">
+            <ResponsiveContainer>
+              <AreaChart data={analysis.performance}>
+                <CartesianGrid stroke="#e8eef7" vertical={false} />
+                <XAxis dataKey="year" axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} />
+                <Tooltip />
+                <Area dataKey="sales" name="매출" stroke="#2563eb" fill="#dbeafe" strokeWidth={3} />
+                <Line dataKey="operatingProfit" name="영업이익" stroke="#60a5fa" strokeWidth={3} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ) : analysis.performance.length === 1 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="text-xs font-bold text-slate-500">{analysis.performance[0].year} 매출</div>
+              <div className="mt-1 text-xl font-black">{analysis.performance[0].sales ?? '-'}{analysis.performanceUnit}</div>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="text-xs font-bold text-slate-500">{analysis.performance[0].year} 영업이익</div>
+              <div className="mt-1 text-xl font-black">{analysis.performance[0].operatingProfit ?? '-'}{analysis.performanceUnit}</div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm font-bold text-slate-500">아직 모인 실적 자료가 없어요.</p>
+        )}
       </Card>
-      <Card title="AI 요약" action="AI 코치에게 묻기" actionTo="/coach">
+      <Card title="실적 한 줄 정리" action="AI 코치에게 묻기" actionTo="/coach">
         <p className="text-base font-bold leading-8 text-slate-600">
-          {analysis.aiSummary}
+          {analysis.summary}
         </p>
       </Card>
     </div>

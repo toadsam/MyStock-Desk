@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { won } from '../format'
 import { Card } from '../uiKit'
 import { Beluga, BelugaSays } from '../Beluga'
+import { Typewriter } from '../motion'
 import { Amount } from '../Amount'
 import { chatWithMyWaveCoach } from '../myWaveApi'
 import { MiniStat, MobileTitle, RingProgress, SummaryLine } from '../components'
@@ -12,12 +13,12 @@ import { RiskPanel } from './PortfolioScreens'
 export function CoachPage() {
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_430px]">
-      <div className="space-y-5">
+      <div className="reveal-stack space-y-5">
         <MobileTitle title="AI코치" />
         <CoachBanner />
         <ChatPanel />
       </div>
-      <div className="space-y-5">
+      <div className="reveal-stack space-y-5">
         <FinanceState />
         <GoalOutlook />
         <RiskPanel />
@@ -33,22 +34,26 @@ export function CoachPage() {
  * 둘을 한 문장에 섞지 않는 것이 이 화면의 규칙이다.
  */
 function CoachBanner() {
-  const { financeSummary } = useMyWaveData()
+  // 숫자가 오기 전에는 0 을 그리지 않는다. 0 은 "기록이 없다"는 뜻이라 아직 모를 때 쓰면 안 된다.
+  const { financeSummary, status } = useMyWaveData()
+  const pending = status === 'loading'
   const behind = financeSummary.goalRate < 50
 
   return (
     <Card>
       <div className="space-y-6">
         <BelugaSays mood={behind ? 'concern' : 'calm'} size="lg">
-          {behind
-            ? '이번 달은 목표 페이스가 조금 느려요. 어디를 조정할 수 있을지 같이 볼까요?'
-            : '이번 달 흐름을 정리해뒀어요. 아래 숫자부터 같이 볼까요?'}
+          <Typewriter
+            text={behind
+              ? '이번 달은 목표 페이스가 조금 느려요. 어디를 조정할 수 있을지 같이 볼까요?'
+              : '이번 달 흐름을 정리해뒀어요. 아래 숫자부터 같이 볼까요?'}
+          />
         </BelugaSays>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <CoachStat label="목표 달성률" value={financeSummary.goalRate} suffix="%" highlight />
-          <CoachStat label="남은 목표 금액" value={financeSummary.remainingAmount} currency />
-          <CoachStat label="바로 투자 가능" value={financeSummary.investableAmount} currency />
+          <CoachStat label="목표 달성률" value={financeSummary.goalRate} suffix="%" highlight pending={pending} />
+          <CoachStat label="남은 목표 금액" value={financeSummary.remainingAmount} currency pending={pending} />
+          <CoachStat label="바로 투자 가능" value={financeSummary.investableAmount} currency pending={pending} />
         </div>
       </div>
     </Card>
@@ -56,12 +61,12 @@ function CoachBanner() {
 }
 
 /** 라벨은 작게, 숫자는 크게. 값이 바뀌면 새로 세어 올린다. */
-function CoachStat({ label, value, suffix, currency, highlight }: { label: string; value: number; suffix?: string; currency?: boolean; highlight?: boolean }) {
+function CoachStat({ label, value, suffix, currency, highlight, pending = false }: { label: string; value: number; suffix?: string; currency?: boolean; highlight?: boolean; pending?: boolean }) {
   return (
     <div className={`rounded-[14px] px-4 py-4 ${highlight ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-900'}`}>
       <div className={`text-[12px] font-semibold ${highlight ? 'text-blue-100' : 'text-slate-500'}`}>{label}</div>
       <div className="mt-1.5 text-[24px] font-bold leading-none tracking-[-0.02em]">
-        <Amount value={value} currency={currency} suffix={suffix} />
+        {pending ? <span aria-label="불러오는 중" className="opacity-60">—</span> : <Amount value={value} currency={currency} suffix={suffix} />}
       </div>
     </div>
   )
@@ -71,7 +76,11 @@ function ChatPanel() {
   const { coachMessages } = useMyWaveData()
   // 저장된 대화 뒤에 이번에 주고받은 말을 이어 붙인다. 저장된 대화가 늦게 도착해도 순서가 맞다.
   const [sent, setSent] = useState<RuntimeCoachMessage[]>([])
-  const messages = [...coachMessages, ...sent]
+  // 이번에 받은 답만 타자 치듯 찍힌다. 저장된 대화는 이미 읽은 말이다.
+  const messages = [
+    ...coachMessages.map((message) => ({ ...message, fresh: false })),
+    ...sent.map((message) => ({ ...message, fresh: true })),
+  ]
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
 
@@ -105,7 +114,7 @@ function ChatPanel() {
         <div key={`${message.from}-${index}`} className={`chat-row flex ${message.from === 'user' ? 'justify-end' : 'justify-start'} gap-4`} style={{ animationDelay: `${index * 120}ms` }}>
           {message.from === 'bot' && <Beluga mood="calm" size="sm" float={false} className="mt-1" />}
           <div className={`max-w-[720px] px-5 py-3.5 text-[15px] font-medium leading-7 ${message.from === 'user' ? 'rounded-[18px] rounded-br-[6px] bg-blue-700 text-white' : 'rounded-[18px] rounded-bl-[6px] bg-wave-foam text-blue-950'}`}>
-            {message.text}
+            {message.from === 'bot' && message.fresh ? <Typewriter text={message.text} /> : message.text}
             {message.stats && (
               <div className="mt-4 grid gap-3 rounded-2xl bg-blue-50 p-4 sm:grid-cols-3">
                 {message.stats.map((stat) => <MiniStat key={stat.label} label={stat.label} value={stat.value} />)}
@@ -122,7 +131,7 @@ function ChatPanel() {
       ))}
       {sending && (
         <div className="flex items-center gap-3">
-          <Beluga mood="calm" size="sm" />
+          <Beluga mood="think" size="sm" />
           <div className="flex items-center gap-1.5 rounded-[20px] rounded-bl-lg bg-wave-foam px-5 py-4">
             <span className="typing-dot h-2 w-2 rounded-full bg-blue-700" />
             <span className="typing-dot h-2 w-2 rounded-full bg-blue-700" />

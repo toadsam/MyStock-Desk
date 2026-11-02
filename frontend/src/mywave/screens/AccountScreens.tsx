@@ -6,9 +6,9 @@ import {
   CircleHelp,
   FileText,
   LogOut,
-  MessageCircle,
   Save,
   Search,
+  MessageCircle,
   ShieldAlert,
   SlidersHorizontal,
   Target,
@@ -20,7 +20,8 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { won } from '../format'
-import { Card, Field } from '../uiKit'
+import { Card, ConfirmDeleteButton, Field } from '../uiKit'
+import { LivelinessPicker } from '../motion'
 import {
   createMyWaveAccount,
   deleteMyWaveAccount,
@@ -35,7 +36,6 @@ import {
   searchMyWave,
   saveMyWaveMonthlyBudget,
   updateMyWaveAccount,
-  updateMyWaveMembership,
   changeMyWavePassword,
   logoutMyWaveSession,
   updateMyWaveProfile,
@@ -171,7 +171,6 @@ export function ProfilePage() {
   const navigate = useNavigate()
   const auth = useAuth()
   const { financeSummary } = useMyWaveData()
-  const [membershipOpen, setMembershipOpen] = useState(false)
   const [member, setMember] = useState<MyWaveMemberResponse | null>(null)
   const [profileName, setProfileName] = useState(auth.member?.name ?? '')
   const [profileEmail, setProfileEmail] = useState(auth.member?.email ?? '')
@@ -191,13 +190,11 @@ export function ProfilePage() {
       .catch(() => { if (live) setAccountCount(null) })
     return () => { live = false }
   }, [])
+  // 실제로 있는 화면만 적는다. 2단계 인증, 푸시 알림, 고객센터 같은 없는 기능을 메뉴로 보여 주지 않는다.
   const rows = [
-    { icon: UserRound, title: '계정 설정', detail: '프로필, 이메일, 비밀번호 변경', to: '/profile' },
-    { icon: Bell, title: '알림 설정', detail: '푸시 알림 및 이메일 알림 관리', to: '/notifications' },
-    { icon: WalletCards, title: '연결 계좌 관리', detail: '계좌 연결 및 갱신', to: '/assets' },
-    { icon: ShieldAlert, title: '보안 설정', detail: '2단계 인증, 로그인 관리', to: '/profile' },
-    { icon: MessageCircle, title: 'AI 설정', detail: '투자 성향 및 리포트 설정', to: '/coach' },
-    { icon: CircleHelp, title: '도움말', detail: 'FAQ 및 고객센터', to: '/onboarding' },
+    { icon: Bell, title: '알림', detail: '목표, 소비, 투자에서 온 알림 보기', to: '/notifications' },
+    { icon: WalletCards, title: '계좌와 예산', detail: '직접 적은 계좌, 이번 달 생활비 예산', to: '/assets' },
+    { icon: CircleHelp, title: 'MyWave 쓰는 법', detail: '시작 안내 3장 다시 보기', to: '/onboarding' },
   ]
 
   function syncAuthMember(updated: MyWaveMemberResponse) {
@@ -209,18 +206,6 @@ export function ProfilePage() {
       membershipGrade: updated.membershipGrade ?? auth.member?.membershipGrade ?? 'Wave 사용자',
       createdAt: auth.member?.createdAt ?? new Date().toISOString(),
     })
-  }
-
-  async function toggleMembership() {
-    const open = !membershipOpen
-    setMembershipOpen(open)
-    try {
-      const updated = await updateMyWaveMembership(open ? '프리미엄' : 'Wave 사용자')
-      setMember(updated)
-      syncAuthMember(updated)
-    } catch {
-      // 백엔드가 꺼져 있어도 멤버십 패널 흐름은 유지합니다.
-    }
   }
 
   async function saveProfile() {
@@ -314,15 +299,6 @@ export function ProfilePage() {
             </div>
             <p className="mt-2 text-sm font-bold text-slate-500">{member?.email ?? auth.member?.email ?? ''}</p>
           </div>
-          <ChevronRight className="h-6 w-6 text-slate-400" />
-        </div>
-        <div className="mt-6 rounded-[20px] bg-blue-700 p-5 text-white">
-          <div className="text-lg font-black">MyWave 프리미엄</div>
-          <p className="mt-2 text-sm font-bold text-blue-100">다양한 데이터와 AI 인사이트를 무제한으로 이용해 보세요.</p>
-          <button onClick={toggleMembership} className="pressable mt-4 rounded-full border border-white/35 px-4 py-2 text-sm font-black">
-            {membershipOpen ? '멤버십 상세 닫기' : '멤버십 관리'} <ChevronRight className="inline h-4 w-4" />
-          </button>
-          {membershipOpen && <p className="mt-3 rounded-2xl bg-white/10 p-3 text-sm font-bold text-blue-50">현재 플랜은 프리미엄입니다. AI 코치와 기업 분석 리포트가 활성화되어 있어요.</p>}
         </div>
       </Card>
       <Card title="계정 요약">
@@ -331,6 +307,9 @@ export function ProfilePage() {
           <MiniStat label="총 자산" value={won(financeSummary.totalAsset)} change="계좌 + 투자" />
           <MiniStat label="저축률" value={`${financeSummary.savingRate}%`} change="이번 달" />
         </div>
+      </Card>
+      <Card title="화면 활기">
+        <LivelinessPicker />
       </Card>
       <div className="grid gap-5 xl:grid-cols-2">
         <Card title="프로필 수정">
@@ -559,7 +538,8 @@ function accountTypeLabel(type: string) {
 }
 
 export function AssetDetailPage() {
-  const { financeSummary, activities } = useMyWaveData()
+  // 총자산과 저축률은 코치, 프로필 등 다른 화면도 공용 데이터로 보여 준다. 여기서 바꾸면 다시 불러야 한다.
+  const { financeSummary, activities, reload } = useMyWaveData()
   const [accounts, setAccounts] = useState<MyWaveFinancialAccountResponse[]>([])
   const [accountForm, setAccountForm] = useState<AccountFormState>(emptyAccountForm)
   const [editingAccountId, setEditingAccountId] = useState<number | null>(null)
@@ -639,6 +619,7 @@ export function AssetDetailPage() {
       }
       resetAccountForm()
       await refreshAssets()
+      reload()
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : '계좌 저장에 실패했습니다.')
     }
@@ -650,6 +631,7 @@ export function AssetDetailPage() {
       if (editingAccountId === id) resetAccountForm()
       setStatusMessage('계좌가 삭제되었습니다.')
       await refreshAssets()
+      reload()
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : '계좌 삭제에 실패했습니다.')
     }
@@ -660,6 +642,7 @@ export function AssetDetailPage() {
       await saveMyWaveMonthlyBudget(budgetForm)
       setStatusMessage('이번 달 예산이 저장되었습니다.')
       await refreshAssets(budgetForm.budgetMonth)
+      reload()
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : '예산 저장에 실패했습니다.')
     }
@@ -707,11 +690,8 @@ export function AssetDetailPage() {
                 <div className="flex items-center justify-between gap-3 sm:justify-end">
                   <div className="text-right">
                     <div className="text-lg font-black">{won(Number(account.balance))}</div>
-                    <div className="text-xs font-bold text-slate-400">ID {account.id}</div>
                   </div>
-                  <button onClick={() => removeAccount(account.id)} className="pressable grid h-9 w-9 place-items-center rounded-full text-red-500 hover:bg-red-50">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <ConfirmDeleteButton compact label="계좌 삭제" onConfirm={() => removeAccount(account.id)} />
                 </div>
               </div>
             ))}

@@ -1,0 +1,49 @@
+/* A brief exploded view followed by staggered assembly of the original app nodes. */
+.story-water-wash{position:absolute;inset:19% -15% 12%;z-index:2;pointer-events:none;opacity:calc(var(--wash-opacity,0) * .18);transform:translate3d(var(--wash-x,-125%),0,0) rotate(-13deg);will-change:transform,opacity}
+.story-water-wash svg{width:100%;height:100%;overflow:visible}
+.wave-story[data-surfing=true] .story-copy,.wave-story[data-surfing=true] .story-narrator{opacity:var(--copy-handoff,1);pointer-events:none;transition:none;animation:none}
+.wave-story[data-surfing=true] .story-product-window{rotate:y var(--phone-bank,0deg);scale:var(--phone-breathe,1);transform:rotateX(calc(2deg + var(--phone-pitch,0deg))) rotateY(-6deg) rotateZ(1deg);transform-style:preserve-3d;isolation:auto}
+.wave-story[data-surfing=true] .story-product-main{overflow:visible;perspective:none}
+.wave-story[data-surfing=true] .story-product-shell{transform:translateZ(2px)}
+.wave-story[data-surfing=true] .story-phone-brand{transform:translateZ(2px);transform-style:preserve-3d}
+.wave-story[data-surfing=true] .story-product-shell,.wave-story[data-surfing=true] .story-product-main,.wave-story[data-surfing=true] .story-home-grid,.wave-story[data-surfing=true] .story-native-home,.wave-story[data-surfing=true] .story-native-home>section,.wave-story[data-surfing=true] .story-goals-demo,.wave-story[data-surfing=true] .story-portfolio-demo,.wave-story[data-surfing=true] .story-finale-demo{transform-style:preserve-3d}
+.wave-story[data-surfing=true] .story-product-nav,.wave-story[data-surfing=true] .story-native-home>section>.relative,.wave-story[data-surfing=true] .story-native-home>section>.relative>div,.wave-story[data-surfing=true] .story-main-goal,.wave-story[data-surfing=true] .story-goal-details,.wave-story[data-surfing=true] .story-goal-actions,.wave-story[data-surfing=true] .story-goal-details dl,.wave-story[data-surfing=true] .story-allocation,.wave-story[data-surfing=true] .story-allocation>div,.wave-story[data-surfing=true] .story-asset-choices,.wave-story[data-surfing=true] .story-product-side,.wave-story[data-surfing=true] .story-relief-chart,.wave-story[data-surfing=true] .story-finale-stats{transform-style:preserve-3d}
+.story-flight-piece{will-change:transform;transform-style:preserve-3d;transform-origin:center;backface-visibility:visible}
+.story-flight-piece.story-chart-piece{transform-origin:50% 45%}
+.story-phone-part{display:none;pointer-events:none}
+.wave-story[data-surfing=true] .story-phone-part{display:block;position:absolute}
+.wave-story[data-surfing=true] .story-product-window{background:transparent;border-color:transparent;box-shadow:none}
+.wave-story[data-surfing=true] .story-product-window::before,.wave-story[data-surfing=true] .story-product-window::after{visibility:hidden}
+.story-phone-backplate{inset:8px;border-radius:35px;background:#f3f7fb;box-shadow:0 0 0 1px #c8ddeb,0 3px 0 #afccdf,0 8px 18px #07193333}
+.story-chassis-piece{width:50%;height:50%;border:8px solid #f5fbff;border-left-color:#bfd9ed;border-bottom-color:#9cbedb;filter:drop-shadow(2px 3px 0 #6d97bb);box-sizing:border-box}
+.story-chassis-tl{left:0;top:0;border-right:0;border-bottom:0;border-radius:44px 0 0 0}
+.story-chassis-tr{right:0;top:0;border-left:0;border-bottom:0;border-radius:0 44px 0 0}
+.story-chassis-bl{left:0;bottom:0;border-right:0;border-top:0;border-radius:0 0 0 44px}
+.story-chassis-br{right:0;bottom:0;border-left:0;border-top:0;border-radius:0 0 44px 0}
+.story-phone-homebar{bottom:15px;left:calc(50% - 47px);width:94px;height:4px;border-radius:10px;background:#172a3c}
+.wave-story[data-surfing=true] .story-phone-status{transform-style:preserve-3d}
+.story-assembly-pulse{position:absolute;inset:-22px;pointer-events:none;opacity:0;border:2px solid #b1efff;border-radius:60px;background:radial-gradient(ellipse,#7bcfff30,transparent 65%);box-shadow:0 0 30px #4eafff55,inset 0 0 20px #a7e8ff22;transform:scale(var(--assembly-ring-scale,1))}
+.wave-story[data-surfing=true] .story-assembly-pulse{opacity:var(--assembly-impact,0)}
+.story-depth-plate{position:relative;--piece-thickness:16px;--piece-corner:20px}
+.story-depth-plate:is(button){--piece-thickness:7px;--piece-corner:12px}
+.story-phone-backplate.story-depth-plate{--piece-thickness:22px;--piece-corner:35px}
+.story-relief-edge{display:block!important;position:absolute!important;pointer-events:none;transform-style:preserve-3d;backface-visibility:visible;opacity:var(--layer-depth,0);padding:0!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.story-relief-edge-left,.story-relief-edge-right{top:var(--piece-corner);height:calc(100% - var(--piece-corner) * 2);width:var(--piece-thickness);transform-origin:0 50%;transform:rotateY(90deg);background:linear-gradient(90deg,#d7f5ff,#71a8d5 45%,#3e6d9f)}
+.story-relief-edge-left{left:0}
+.story-relief-edge-right{left:100%;background:linear-gradient(90deg,#aacfe9,#4779aa 50%,#24476f)}
+.story-relief-edge-top,.story-relief-edge-bottom{left:var(--piece-corner);width:calc(100% - var(--piece-corner) * 2);height:var(--piece-thickness);transform-origin:50% 0;transform:rotateX(-90deg);background:linear-gradient(#f2fcff,#9ed8f4 45%,#5886b1)}
+.story-relief-edge-top{top:0}
+.story-relief-edge-bottom{top:100%;background:linear-gradient(#729bc4,#30527f)}
+/* Back faces give the existing UI a physical edge; no duplicate UI or extra canvas. */
+.story-depth-plate::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,#c5edff,#6698d5);border:1px solid #b8deff;transform:translateZ(calc(-1 * var(--piece-thickness)));box-shadow:1px 1px 0 #89b4df,2px 2px 0 #6797cd,3px 3px 0 #517fb9,6px 14px 22px #071d4f55;opacity:var(--layer-depth,0)}
+.story-flight-piece[data-story-piece="balance"]{text-shadow:1px 1px 0 #bddbff,2px 2px 0 #88b7ed,3px 3px 0 #568cd2,5px 7px 7px #123a7940!important}
+.wave-story[data-surfing=true] .story-product-heading,.wave-story[data-surfing=true] .story-receipt-row{transform-style:preserve-3d}
+.wave-story[data-surfing=true] .story-native-home .wave-fizz,.wave-story[data-surfing=true] .story-native-home .wave-surface,.wave-story[data-surfing=true] .story-native-home .wave-liquid{animation-play-state:paused!important}
+.wave-story[data-surfing=true] .story-app-theatre button{pointer-events:none}
+.wave-story[data-surfing=true] .story-guide-line,.wave-story[data-surfing=true] .story-guide-touch,.wave-story[data-surfing=true] .story-product-footnote{opacity:0}
+.story-guide{transition:transform .8s cubic-bezier(.22,.72,.25,1),opacity .25s}
+.story-guide-bob{position:relative}.story-guide-art{z-index:2}
+.wave-story[data-suspended=true] *, .wave-story[data-suspended=true] *::before, .wave-story[data-suspended=true] *::after{animation-play-state:paused!important}
+.story-perf{position:absolute;bottom:165px;right:20px;z-index:9;background:#102c59cc;color:#defaff;padding:7px 12px;border-radius:8px;font:11px monospace;pointer-events:none}
+@media(max-width:760px){.story-water-wash{inset:25% -60% 20%}.story-perf{bottom:180px;right:10px;font-size:9px}.wave-story[data-surfing=true] .story-product-window{rotate:y calc(var(--phone-bank,0deg) * .72)}}
+@media(prefers-reduced-motion:reduce){.story-water-wash{display:none}}

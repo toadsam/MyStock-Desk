@@ -113,7 +113,8 @@ class TransactionFlowIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andReturn();
 
-        assertEquals(0, new BigDecimal("100000000.00")
+        // 기록이 없으면 0 이다. 예전에는 모의투자 초기 자금 1억이 들어 있었다.
+        assertEquals(0, BigDecimal.ZERO
                 .compareTo(read(portfolio, "data", "totalAsset").decimalValue()));
     }
 

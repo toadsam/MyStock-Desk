@@ -1,0 +1,41 @@
+# 서버에 올릴 때 쓰는 프로파일. SPRING_PROFILES_ACTIVE=prod
+#
+# 비밀값은 전부 환경변수로만 받고 기본값이 없다. 하나라도 빠지면 "Could not resolve placeholder" 로 부팅이 멈춘다.
+# 그게 의도다. 기본값으로 조용히 떠서 개발용 시크릿으로 토큰을 찍는 일이 없어야 한다.
+# 부팅 뒤에는 ProductionGuard 가 H2 콘솔, mock-member, show-sql, 짧거나 개발용인 JWT 시크릿을 한 번 더 확인한다.
+#
+# 필요한 환경변수: SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD, STOCKFLOW_JWT_SECRET
+# 선택: STOCKFLOW_CORS_ALLOWED_ORIGINS(프론트를 다른 주소에 둘 때만), DART_API_KEY, OPENAI_API_KEY, SEC_USER_AGENT
+
+server:
+  port: ${PORT:8080}   # Railway 처럼 플랫폼이 PORT 를 정해 주면 그 값. compose 는 8080.
+  forward-headers-strategy: framework   # nginx 뒤에 있으므로 X-Forwarded-* 를 믿는다
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  h2:
+    console:
+      enabled: false
+  jpa:
+    hibernate:
+      # 아직 Flyway 같은 마이그레이션 도구가 없어서 첫 배포 때 테이블을 만들려면 update 가 필요하다.
+      # 마이그레이션을 들이면 validate 로 바꾸고 스키마 변경은 스크립트로만 한다.
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.MySQLDialect
+
+stockflow:
+  mock-member-id:
+  cors:
+    allowed-origins: ${STOCKFLOW_CORS_ALLOWED_ORIGINS:}
+  jwt:
+    secret: ${STOCKFLOW_JWT_SECRET}
+    expiration-seconds: ${STOCKFLOW_JWT_EXPIRATION_SECONDS:86400}

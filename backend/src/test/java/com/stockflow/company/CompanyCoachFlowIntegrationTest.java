@@ -39,7 +39,8 @@ class CompanyCoachFlowIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.stock.symbol").value("005930"))
                 .andExpect(jsonPath("$.data.metrics[0].label").exists())
-                .andExpect(jsonPath("$.data.aiSummary").exists());
+                .andExpect(jsonPath("$.data.summary").exists())
+                .andExpect(jsonPath("$.data.sourceLabel").exists());
 
         mockMvc.perform(post("/api/watchlist/{symbol}", "005930")
                         .header("Authorization", bearer(token)))
