@@ -14,7 +14,7 @@
 |---|---|
 | 기간 | 2026.05.25 ~ (첫 커밋 `주식 체계 프론트 디자인`). 2026.10 홈 재설계와 정리 |
 | 인원 | 1명. 도메인 설계, Spring Boot API, React 화면 전부 |
-| 배포 | 없음. 로컬에서만 동작합니다 (아래 "실행하기" 참고. 로그인 화면에 데모 계정 버튼이 있습니다) |
+| 배포 | 준비됨. docker compose 또는 Railway (아래 "배포하기" 참고. 로그인 화면에 데모 계정 버튼이 있습니다) |
 | 소개 | `/story`에서 84초 분량의 인터랙티브 3D 소개 (직접 체험·자막·선택적 한국어 음성, 로그인 불필요) |
 | 규모 | 백엔드 Java 243개 파일(테스트 11개 파일, 29개 별도), 엔드포인트 111개 중 MyWave가 쓰는 것 55개, 엔티티 24개 중 14개 |
 
@@ -161,6 +161,16 @@ docker compose up -d --build
 `prod` 프로파일([`application-prod.yml`](backend/src/main/resources/application-prod.yml))은 DB 접속 정보와 JWT 시크릿을 기본값 없이 환경변수로만 받아서, 하나라도 비면 부팅이 멈춥니다. 값이 있어도 개발용 시크릿이거나 32바이트보다 짧거나, H2 콘솔·`mock-member`·`show-sql`이 켜져 있으면 [`ProductionGuard`](backend/src/main/java/com/stockflow/global/config/ProductionGuard.java)가 이유를 적고 서버를 띄우지 않습니다. 개발 프로파일(`default`)에만 H2 콘솔과 개발용 시크릿이 있습니다.
 
 HTTPS는 이 compose 앞에 Caddy 같은 리버스 프록시를 두고 `WEB_PORT`를 내부 포트로 돌려서 붙입니다. 아직 Flyway 같은 마이그레이션 도구가 없어 운영도 `ddl-auto: update`로 테이블을 만듭니다("남은 과제" 참고).
+
+**Railway 에 올리기.** 서버를 직접 두지 않고 Railway 에 같은 Dockerfile 로 올릴 수 있습니다. 프로젝트 하나에 서비스 셋을 만듭니다. HTTPS 와 도메인은 Railway 가 붙여 줍니다.
+
+| 서비스 | 만드는 법 | 변수 |
+|---|---|---|
+| `MySQL` | Database → MySQL | 없음 (Railway 가 만든 값을 아래에서 참조) |
+| `backend` | GitHub 저장소, Root Directory `backend`, Config path `/backend/railway.json` | `SPRING_DATASOURCE_URL` = `jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/${{MySQL.MYSQLDATABASE}}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true`, `SPRING_DATASOURCE_USERNAME` = `${{MySQL.MYSQLUSER}}`, `SPRING_DATASOURCE_PASSWORD` = `${{MySQL.MYSQLPASSWORD}}`, `STOCKFLOW_JWT_SECRET` = 새로 만든 32바이트 이상 값, `PORT` = `8080` |
+| `frontend` | GitHub 저장소, Root Directory `frontend`, Config path `/frontend/railway.json`, Settings → Networking 에서 공개 도메인 생성 | `BACKEND_UPSTREAM` = `backend.railway.internal:8080`, `PORT` = `80` |
+
+서비스 이름은 꼭 `backend`, `frontend` 로 둡니다. 내부 주소 `backend.railway.internal` 이 서비스 이름에서 나옵니다. [`railway.json`](backend/railway.json)이 Dockerfile 빌드, 헬스체크 경로(`/api/health`), 실패 시 재시작을 정하는데, Railway 는 이 파일 경로를 저장소 루트 기준으로 받으므로 Root Directory 와 별개로 Config path 를 적어야 합니다. Railway 내부망은 IPv6 이고 백엔드 주소가 재배포마다 바뀌어서, nginx 는 `[::]` 도 듣고 `/api` 요청 때마다 백엔드 주소를 다시 찾습니다([`nginx.conf.template`](frontend/nginx.conf.template)). 백엔드 포트는 `prod` 프로파일이 `PORT` 를 따르고, `frontend` 의 공개 포트는 `PORT` 로 정합니다. 두 서비스 모두 외부에서 직접 열리는 건 `frontend` 하나이고 `/api` 는 그 뒤에서 넘어가므로 CORS 설정은 비워 둡니다. 로그인 시도 제한은 서버 메모리에 있으므로 Replicas 는 1 로 둡니다.
 
 </details>
 

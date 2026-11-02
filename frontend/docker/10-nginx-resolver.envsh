@@ -1,0 +1,13 @@
+#!/bin/sh
+# nginx 공식 이미지는 /docker-entrypoint.d/ 의 *.envsh 를 source 해서 뒤 스크립트(템플릿 치환)가 그 환경변수를 본다.
+# 컨테이너가 실제로 쓰는 DNS 서버를 /etc/resolv.conf 에서 읽어 nginx 의 resolver 로 넘긴다.
+# compose 는 127.0.0.11, Railway 는 내부망 DNS(IPv6 일 수 있어 [ ] 로 감싼다). 못 읽으면 Docker 기본 DNS 로 둔다.
+if [ -z "${NGINX_RESOLVER:-}" ]; then
+  ns=$(awk '/^nameserver/ { print $2; exit }' /etc/resolv.conf 2>/dev/null)
+  case "$ns" in
+    "") ns="127.0.0.11" ;;
+    *:*) ns="[$ns]" ;;
+  esac
+  export NGINX_RESOLVER="$ns"
+fi
+echo "nginx resolver: $NGINX_RESOLVER, backend: ${BACKEND_UPSTREAM:-?}, port: ${PORT:-?}"

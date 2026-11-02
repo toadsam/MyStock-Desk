@@ -8,7 +8,7 @@
 # 선택: STOCKFLOW_CORS_ALLOWED_ORIGINS(프론트를 다른 주소에 둘 때만), DART_API_KEY, OPENAI_API_KEY, SEC_USER_AGENT
 
 server:
-  port: 8080
+  port: ${PORT:8080}   # Railway 처럼 플랫폼이 PORT 를 정해 주면 그 값. compose 는 8080.
   forward-headers-strategy: framework   # nginx 뒤에 있으므로 X-Forwarded-* 를 믿는다
 
 spring:

@@ -19,5 +19,6 @@ USER stockflow
 ENV SPRING_PROFILES_ACTIVE=prod \
     JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -Duser.timezone=Asia/Seoul"
 EXPOSE 8080
-HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 CMD curl -fsS http://127.0.0.1:8080/api/health > /dev/null || exit 1
+# 포트는 prod 프로파일이 ${PORT:8080} 으로 읽는다. Railway 처럼 PORT 를 넣어 주는 곳에서는 그 값을 따른다.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 CMD curl -fsS http://127.0.0.1:${PORT:-8080}/api/health > /dev/null || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]

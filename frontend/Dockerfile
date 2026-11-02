@@ -10,9 +10,13 @@ COPY . .
 RUN npm run build
 
 FROM nginx:1.27-alpine
-# 백엔드 주소. compose 에서는 서비스 이름 backend 로 닿는다.
+# BACKEND_UPSTREAM: 백엔드 주소. compose 에서는 서비스 이름 backend, Railway 에서는 backend.railway.internal 로 닿는다.
+# PORT: nginx 가 듣는 포트. Railway 처럼 플랫폼이 PORT 를 넣어 주면 그 값을 따른다.
+# NGINX_RESOLVER 는 비워 두면 시작할 때 /etc/resolv.conf 에서 읽는다(docker/10-nginx-resolver.envsh).
 ENV BACKEND_UPSTREAM=backend:8080 \
-    NGINX_ENVSUBST_FILTER=^BACKEND_
+    PORT=80 \
+    NGINX_ENVSUBST_FILTER='^(BACKEND_UPSTREAM|PORT|NGINX_RESOLVER)$'
+COPY docker/10-nginx-resolver.envsh /docker-entrypoint.d/10-nginx-resolver.envsh
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
