@@ -152,7 +152,7 @@ export function TodayHome() {
   return (
     <div className="mx-auto grid max-w-[1120px] gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
       <div className="space-y-5">
-        <SodaHero today={today} templates={templates} busyId={busyId} notice={notice} splash={splash} shake={shake} onQuick={logQuick} onManual={() => navigate('/spending')} onSetBudget={() => navigate('/assets')} />
+        <SodaHero today={today} templates={templates} busyId={busyId} notice={notice} splash={splash} shake={shake} onQuick={logQuick} onManual={() => navigate('/spending/detail', { state: { focusExpenseForm: true } })} onSetBudget={() => navigate('/assets')} />
         <WeekCups today={today} />
       </div>
       <div className="space-y-5">

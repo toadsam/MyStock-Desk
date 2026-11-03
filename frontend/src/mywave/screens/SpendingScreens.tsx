@@ -1,6 +1,6 @@
 import { ChevronRight, CircleHelp, Save } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { won } from '../format'
 import { Card, ConfirmDeleteButton, Field } from '../uiKit'
 import { CashFlowCard, ExpenseImportCard, MerchantAutocomplete, QuickExpenseButtons } from '../ExpenseCapture'
@@ -491,6 +491,10 @@ function ExpenseQuickEntry() {
 }
 
 function ExpenseRecordsManager() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const formCardRef = useRef<HTMLDivElement>(null)
+  const amountInputRef = useRef<HTMLInputElement>(null)
   const [expenses, setExpenses] = useState<MyWaveExpenseResponse[]>([])
   const [summary, setSummary] = useState<MyWaveExpenseSummaryResponse | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -530,6 +534,20 @@ function ExpenseRecordsManager() {
       .catch((error) => { if (live) setMessage(error instanceof Error ? error.message : '소비 내역을 불러오지 못했습니다.') })
     return () => { live = false }
   }, [])
+
+  useEffect(() => {
+    if (!(location.state as { focusExpenseForm?: boolean } | null)?.focusExpenseForm) return
+
+    const timer = window.setTimeout(() => {
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      formCardRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+      amountInputRef.current?.focus({ preventScroll: true })
+      amountInputRef.current?.select()
+      navigate(location.pathname, { replace: true, state: null })
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [location.pathname, location.state, navigate])
 
   function editExpense(expense: MyWaveExpenseResponse) {
     setEditingId(expense.id)
@@ -614,46 +632,48 @@ function ExpenseRecordsManager() {
           ))}
         </div>
       </Card>
-      <Card title={editingId ? '소비 내역 수정' : '소비 내역 추가'}>
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="카테고리">
-              <select value={form.category} onChange={(event) => setForm((value) => ({ ...value, category: event.target.value }))} className="form-input">
-                {['배달비', '쇼핑', '식비', '카페', '교통', '구독', '기타'].map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
+      <div ref={formCardRef}>
+        <Card title={editingId ? '소비 내역 수정' : '소비 내역 추가'}>
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="카테고리">
+                <select value={form.category} onChange={(event) => setForm((value) => ({ ...value, category: event.target.value }))} className="form-input">
+                  {['배달비', '쇼핑', '식비', '카페', '교통', '구독', '기타'].map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+              </Field>
+              <Field label="사용처">
+                <MerchantAutocomplete
+                  value={form.merchant}
+                  onChange={(merchant) => setForm((value) => ({ ...value, merchant }))}
+                  onPick={(suggestion) => setForm((value) => ({
+                    ...value,
+                    merchant: suggestion.merchant,
+                    category: suggestion.category,
+                    amount: Number(suggestion.suggestedAmount),
+                  }))}
+                />
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="금액">
+                <input ref={amountInputRef} type="number" value={form.amount} onChange={(event) => setForm((value) => ({ ...value, amount: Number(event.target.value) }))} className="form-input" />
+              </Field>
+              <Field label="사용일">
+                <input type="date" max={todayDateString()} value={form.spentDate} onChange={(event) => setForm((value) => ({ ...value, spentDate: event.target.value }))} className="form-input" />
+              </Field>
+            </div>
+            <Field label="메모">
+              <input value={form.memo} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} className="form-input" />
             </Field>
-            <Field label="사용처">
-              <MerchantAutocomplete
-                value={form.merchant}
-                onChange={(merchant) => setForm((value) => ({ ...value, merchant }))}
-                onPick={(suggestion) => setForm((value) => ({
-                  ...value,
-                  merchant: suggestion.merchant,
-                  category: suggestion.category,
-                  amount: Number(suggestion.suggestedAmount),
-                }))}
-              />
-            </Field>
+            <div className="flex gap-3">
+              {editingId && <button onClick={resetExpenseForm} className="pressable h-13 flex-1 rounded-2xl font-black text-slate-600">취소</button>}
+              <button onClick={saveExpense} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
+                <Save className="inline h-5 w-5" /> {editingId ? '수정 저장' : '내역 추가'}
+              </button>
+            </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="금액">
-              <input type="number" value={form.amount} onChange={(event) => setForm((value) => ({ ...value, amount: Number(event.target.value) }))} className="form-input" />
-            </Field>
-            <Field label="사용일">
-              <input type="date" max={todayDateString()} value={form.spentDate} onChange={(event) => setForm((value) => ({ ...value, spentDate: event.target.value }))} className="form-input" />
-            </Field>
-          </div>
-          <Field label="메모">
-            <input value={form.memo} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} className="form-input" />
-          </Field>
-          <div className="flex gap-3">
-            {editingId && <button onClick={resetExpenseForm} className="pressable h-13 flex-1 rounded-2xl font-black text-slate-600">취소</button>}
-            <button onClick={saveExpense} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
-              <Save className="inline h-5 w-5" /> {editingId ? '수정 저장' : '내역 추가'}
-            </button>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }
