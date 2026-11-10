@@ -207,7 +207,7 @@ export function ProfilePage() {
   const rows = [
     ...(notificationCounts.total > 0 ? [{ icon: Bell, title: '알림', detail: '목표, 소비, 투자에서 온 알림 보기', to: '/notifications' }] : []),
     { icon: WalletCards, title: '계좌와 예산', detail: '직접 적은 계좌, 이번 달 생활비 예산', to: '/assets' },
-    { icon: CircleHelp, title: 'MyWave 쓰는 법', detail: '처음 해 볼 세 가지 다시 보기', to: '/onboarding' },
+    { icon: CircleHelp, title: 'MyWave 쓰는 법', detail: '소개 카드 네 장 다시 보기', to: '/welcome' },
   ]
 
   function syncAuthMember(updated: MyWaveMemberResponse) {

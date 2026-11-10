@@ -1,5 +1,5 @@
 import { Bell, ChevronRight, Plus, Search, UserRound } from 'lucide-react'
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useOutlet, useParams } from 'react-router-dom'
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { Ocean } from './motion'
@@ -12,6 +12,9 @@ import { BelugaTap } from './Beluga'
 import { BelugaArt } from './BelugaArt'
 import AuthPage from '../pages/AuthPage'
 import PrivacyPage from '../pages/PrivacyPage'
+import WelcomePage from './WelcomePage'
+import { hasSeenWelcome } from './welcome'
+import { TAGLINE } from './brand'
 import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { useAuth } from '../auth/useAuth'
 import { MyWaveDataContext, useMyWaveData, useMyWaveRuntimeData } from './runtime'
@@ -38,6 +41,8 @@ export default function MyWaveApp() {
       <Route path="register" element={<AuthPage />} />
       <Route path="privacy" element={<PrivacyPage />} />
       <Route element={<ProtectedRoute />}>
+        {/* 소개 카드는 메뉴 없이 화면 전체를 쓴다. 그래서 화면 틀(Shell) 밖에 둔다. */}
+        <Route path="welcome" element={<WelcomePage />} />
         <Route element={<Shell />}>
           <Route index element={<HomePage />} />
           <Route path="goals" element={<GoalsPage />} />
@@ -96,6 +101,7 @@ function Shell() {
           <Ocean />
           {/* 풀어둔 벨루가. 본문(main)이 positioned 라 그 뒤에서 헤엄치고, 틈에서만 보인다. 부르면 앞으로 나온다. */}
           <Roamer />
+          <WelcomeGate />
           <div className="flex min-h-screen lg:min-h-[calc(100vh-4rem)]">
             <Sidebar />
             <main className="relative min-w-0 flex-1 pb-24 lg:pb-0">
@@ -151,7 +157,7 @@ function Logo() {
           <path d="M0 3 Q12.5 0 25 3 T50 3 T75 3 T100 3 T125 3 T150 3 T175 3 T200 3" fill="none" stroke="#51b9ff" strokeWidth="2" />
         </svg>
       </div>
-      <div className="mt-1.5 text-xs font-medium text-slate-500 lg:mt-2 lg:text-sm">나만의 투자 흐름을 만든다.</div>
+      <div className="mt-1.5 text-xs font-medium text-slate-500 lg:mt-2 lg:text-sm">{TAGLINE}</div>
     </div>
   )
 }
@@ -218,6 +224,27 @@ function Sidebar() {
  * 전에는 로그인한 뒤 모든 화면에 "3분 만에 투자 흐름을 설계해보세요"가 떠 있었다.
  * 목표든 거래든 하나라도 적은 사람에게는 더 할 말이 없으므로 그때부터는 숨긴다.
  */
+/**
+ * 아무것도 적지 않은 사람이 홈에 처음 오면 소개 카드로 한 번 보낸다.
+ * 기록이 하나라도 있는 사람은 보내지 않는다. 다른 기기에서 로그인한 기존 사용자에게 소개가 다시 뜨면 안 된다.
+ * 홈에서만 보낸다. 다른 화면의 주소로 바로 들어온 사람의 길을 막지 않는다.
+ */
+function WelcomeGate() {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const auth = useAuth()
+  const { ready, doneCount } = useStarterSteps()
+  const memberId = auth.member?.id
+
+  useEffect(() => {
+    if (!ready || doneCount > 0 || pathname !== '/' || memberId === undefined) return
+    if (hasSeenWelcome(memberId)) return
+    navigate('/welcome', { replace: true })
+  }, [ready, doneCount, pathname, memberId, navigate])
+
+  return null
+}
+
 function StarterCard() {
   const navigate = useNavigate()
   const { ready, steps, doneCount, allDone } = useStarterSteps()

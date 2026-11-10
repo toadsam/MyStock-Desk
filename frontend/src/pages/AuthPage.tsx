@@ -7,6 +7,7 @@ import { LOGIN_NOTICE_KEY } from '../auth/loginNotice'
 import { useAuth } from '../auth/useAuth'
 import { BelugaArt } from '../mywave/BelugaArt'
 import { Ocean } from '../mywave/motion'
+import { TAGLINE } from '../mywave/brand'
 import type { AuthConfig } from '../types/auth'
 
 /** 서버에 묻기 전에는 아무 칸도 그리지 않는다. 숨겨야 할 칸이 잠깐 보였다 사라지면 안 된다. */
@@ -114,7 +115,7 @@ export default function AuthPage() {
             <BelugaArt mood="hello" className="h-full w-full drop-shadow-[0_10px_16px_rgba(10,40,140,.22)]" />
           </span>
           <span className="mt-1 text-[32px] font-black leading-none tracking-[-0.02em] text-blue-700">MyWave</span>
-          <span className="mt-2 text-[13px] font-medium text-slate-500">나만의 투자 흐름을 만든다.</span>
+          <span className="mt-2 text-[13px] font-medium text-slate-500">{TAGLINE}</span>
         </Link>
         <div className="rounded-[20px] bg-white p-6 md:p-7">
           <div className="mb-6 flex items-center justify-between">
@@ -134,9 +135,6 @@ export default function AuthPage() {
           {googleOnly && (
             <div className="space-y-4">
               {/* 처음 온 사람은 여기서 무슨 앱인지부터 알아야 한다. */}
-              <p className="text-[15px] font-semibold leading-6 text-slate-700">
-                오늘 얼마까지 써도 되는지, 목표까지 얼마나 남았는지 한눈에 보는 돈 관리 앱이에요.
-              </p>
               <ul className="space-y-2 rounded-[14px] bg-slate-50 p-4 text-[14px] font-medium leading-6 text-slate-600">
                 <li>생활비를 정하면 하루에 써도 되는 돈을 알려 드려요.</li>
                 <li>소비를 적으면 어디에 많이 쓰는지 보여 드려요.</li>
