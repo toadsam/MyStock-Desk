@@ -47,7 +47,24 @@ server {
     add_header X-Content-Type-Options nosniff always;
   }
 
+  # 자산 화면의 주소(/assets)는 빌드 결과물의 assets 폴더와 이름이 같다. 그대로 두면 nginx 가 폴더로 보고
+  # /assets/ 로 넘긴 뒤 목록을 보여 줄 수 없어 403 을 낸다. 화면 안에서 이동할 때는 괜찮지만 새로고침하거나
+  # 주소를 직접 열면 걸린다. 이 두 주소는 폴더가 아니라 화면으로 답한다. 해시 붙은 파일(/assets/이름)은 위 블록이 그대로 준다.
+  location = /assets {
+    add_header Cache-Control "no-cache" always;
+    add_header X-Content-Type-Options nosniff always;
+    try_files /index.html =404;
+  }
+
+  location = /assets/ {
+    add_header Cache-Control "no-cache" always;
+    add_header X-Content-Type-Options nosniff always;
+    try_files /index.html =404;
+  }
+
+  # 파일이 있으면 그 파일을, 없으면 화면(index.html)을 준다. 폴더($uri/)는 찾지 않는다.
+  # 화면 주소가 우연히 폴더 이름과 겹쳐도 위와 같은 403 이 나지 않게 하려는 것이다.
   location / {
-    try_files $uri $uri/ /index.html;
+    try_files $uri /index.html;
   }
 }
