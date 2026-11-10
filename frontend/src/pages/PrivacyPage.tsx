@@ -2,6 +2,9 @@ import { ChevronLeft } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+/** 문의와 삭제 요청을 받는 주소. 화면에 그대로 보인다. */
+const CONTACT_EMAIL = 'toadsam@naver.com'
+
 /**
  * 어떤 정보를 받고, 어디에 쓰고, 어떻게 지우는지.
  *
@@ -47,6 +50,15 @@ export default function PrivacyPage() {
         <Section title="지우는 방법">
           <Item>내 정보 화면 맨 아래의 계정 삭제를 누르면 계정과 모든 기록이 바로 지워져요. 되살릴 수 없어요.</Item>
           <Item>기록 하나하나는 각 화면에서 언제든 지울 수 있어요.</Item>
+          <Item>로그인할 수 없어서 직접 지우지 못할 때는 아래 주소로 알려 주세요. 가입한 구글 이메일을 적어 주시면 지워 드려요.</Item>
+        </Section>
+
+        <Section title="문의">
+          <Item>
+            궁금한 점, 불편한 점, 삭제 요청은{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-blue-700 underline underline-offset-4">{CONTACT_EMAIL}</a>
+            {' '}로 보내 주세요.
+          </Item>
         </Section>
       </div>
     </main>
