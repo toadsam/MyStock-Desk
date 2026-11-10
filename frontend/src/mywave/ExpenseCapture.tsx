@@ -33,7 +33,7 @@ import type {
 import { todayDateString, won } from './format'
 import { Amount } from './Amount'
 import { Beluga, BelugaEmpty, BelugaSays } from './Beluga'
-import { Card, ListRow, PrimaryButton } from './uiKit'
+import { Card, ListRow, NumberField, PrimaryButton } from './uiKit'
 
 const EXPENSE_CATEGORIES = ['배달비', '쇼핑', '식비', '카페', '교통', '구독', '기타']
 
@@ -319,13 +319,13 @@ function ReviewList({
                   onChange={(event) => onPatch(row.key, { merchant: event.target.value })}
                   className="form-input !h-10 !rounded-xl"
                 />
-                <input
-                  type="number"
+                <NumberField
                   min="0"
                   max="100000000"
                   value={row.amount}
-                  onChange={(event) => onPatch(row.key, { amount: Number(event.target.value) })}
+                  onChange={(amount) => onPatch(row.key, { amount })}
                   className="form-input !h-10 !rounded-xl text-right"
+                  aria-label="금액"
                 />
                 <select
                   value={row.category}
