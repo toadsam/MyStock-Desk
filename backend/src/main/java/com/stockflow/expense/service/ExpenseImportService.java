@@ -30,7 +30,8 @@ public class ExpenseImportService {
 
     /** 캡처 분석은 호출마다 비용이 든다. 한 사람이 하루에 부를 수 있는 횟수. */
     public static final int DAILY_IMAGE_LIMIT = 20;
-    private static final long MAX_IMAGE_BYTES = 10L * 1024 * 1024;
+    /** nginx 와 spring.servlet.multipart 의 한도와 같은 값이다. 여기만 크면 닿지도 못할 크기를 받는다고 말하는 셈이 된다. */
+    private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
     private static final List<String> ALLOWED_IMAGE_TYPES =
             List.of("image/png", "image/jpeg", "image/jpg", "image/webp", "image/heic");
 
@@ -160,7 +161,7 @@ public class ExpenseImportService {
             throw new IllegalArgumentException("이미지를 선택해 주세요.");
         }
         if (file.getSize() > MAX_IMAGE_BYTES) {
-            throw new IllegalArgumentException("이미지는 10MB 이하만 올릴 수 있습니다.");
+            throw new IllegalArgumentException("사진이 너무 커요. 5MB 이하로 올려 주세요.");
         }
         String contentType = file.getContentType();
         if (contentType == null || ALLOWED_IMAGE_TYPES.stream().noneMatch(contentType::equalsIgnoreCase)) {

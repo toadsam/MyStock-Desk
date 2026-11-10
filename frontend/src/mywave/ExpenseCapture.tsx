@@ -34,6 +34,8 @@ import { todayDateString, won } from './format'
 import { Amount } from './Amount'
 import { Beluga, BelugaEmpty, BelugaSays } from './Beluga'
 import { Card, ListRow, NumberField, PrimaryButton } from './uiKit'
+import { CaptureProgress } from './CaptureProgress'
+import { shrinkCapture } from './captureImage'
 
 const EXPENSE_CATEGORIES = ['배달비', '쇼핑', '식비', '카페', '교통', '구독', '기타']
 
@@ -70,6 +72,7 @@ export function ExpenseImportCard({ onSaved }: { onSaved: () => void }) {
   const [result, setResult] = useState<MyWaveParseResultResponse | null>(null)
   const [status, setStatus] = useState<MyWaveImportStatusResponse | null>(null)
   const [busy, setBusy] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   // 좋은 소식과 나쁜 소식에 같은 얼굴을 쓰지 않는다.
   const [messageTone, setMessageTone] = useState<'good' | 'bad'>('good')
@@ -119,15 +122,21 @@ export function ExpenseImportCard({ onSaved }: { onSaved: () => void }) {
   }
 
   async function runImage(file: File) {
+    // 읽는 동안 방금 올린 사진을 보여 준다. 10초쯤 걸리는 일이라 무엇을 기다리는지 보여야 한다.
+    const preview = URL.createObjectURL(file)
+    setPreviewUrl(preview)
     setBusy(true)
     setMessage('')
     try {
-      receive(await parseMyWaveExpenseImage(file))
+      // 휴대폰 캡처는 몇 MB 씩 된다. 줄여서 보내야 빨리 올라가고 서버 한도에도 걸리지 않는다.
+      receive(await parseMyWaveExpenseImage(await shrinkCapture(file)))
       setStatus(await getMyWaveImportStatus())
     } catch (error) {
       say(errorMessage(error, '캡처를 읽지 못했어요.'), 'bad')
     } finally {
       setBusy(false)
+      setPreviewUrl(null)
+      URL.revokeObjectURL(preview)
       if (fileRef.current) fileRef.current.value = ''
     }
   }
@@ -216,12 +225,14 @@ export function ExpenseImportCard({ onSaved }: { onSaved: () => void }) {
               }}
               className="hidden"
             />
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={busy || imageDisabled}
-              className="pressable grid h-36 w-full place-items-center rounded-[14px] bg-slate-100 text-blue-700 disabled:text-slate-400"
-            >
-              {busy ? <Loader2 className="h-6 w-6 animate-spin" /> : (
+            {busy ? (
+              <CaptureProgress previewUrl={previewUrl} />
+            ) : (
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={imageDisabled}
+                className="pressable grid h-36 w-full place-items-center rounded-[14px] bg-slate-100 text-blue-700 disabled:text-slate-400"
+              >
                 <span className="text-center">
                   <ImageUp className="mx-auto mb-2 h-7 w-7" />
                   <span className="block text-[15px] font-bold">결제 내역 화면 캡처 올리기</span>
@@ -229,8 +240,8 @@ export function ExpenseImportCard({ onSaved }: { onSaved: () => void }) {
                     하루치가 한 번에 등록돼요{status?.imageParsingAvailable && ` · 오늘 ${status.remainingImageQuota}장 남음`}
                   </span>
                 </span>
-              )}
-            </button>
+              </button>
+            )}
             {status && (
               <BelugaSays mood={status.imageParsingAvailable ? 'hello' : 'concern'} size="xs" tone="quiet">
                 {status.imageParsingAvailable
