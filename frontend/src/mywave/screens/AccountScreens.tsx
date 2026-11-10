@@ -304,7 +304,7 @@ export function ProfilePage() {
       <MobileTitle title="마이" />
       <Card>
         <div className="flex items-center gap-5">
-          <div className="grid h-20 w-20 place-items-center rounded-full bg-gradient-to-b from-blue-100 to-blue-50">
+          <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-gradient-to-b from-blue-100 to-blue-50">
             <UserRound className="h-11 w-11 fill-blue-500 text-blue-500" />
           </div>
           <div className="min-w-0 flex-1">
@@ -312,7 +312,8 @@ export function ProfilePage() {
               <h2 className="text-2xl font-black">{member?.name ?? auth.member?.name ?? ''}</h2>
               <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{member?.membershipGrade ?? 'Wave 사용자'}</span>
             </div>
-            <p className="mt-2 text-sm font-bold text-slate-500">{member?.email ?? auth.member?.email ?? ''}</p>
+            {/* 이메일은 띄어쓰기가 없어서 길면 카드 밖으로 나간다. 어디서든 줄을 바꿀 수 있게 한다. */}
+            <p className="mt-2 break-all text-sm font-bold text-slate-500">{member?.email ?? auth.member?.email ?? ''}</p>
           </div>
         </div>
       </Card>

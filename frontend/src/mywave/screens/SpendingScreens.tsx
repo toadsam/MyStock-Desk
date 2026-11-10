@@ -364,13 +364,14 @@ function SavingSimulation() {
   return (
     <Card title={hasGoal ? '소비 줄이면 목표 달성률이 이렇게 달라져요!' : '소비를 줄이면 한 달에 이만큼 남아요'} action={<span className="text-xs text-slate-400">시뮬레이션 기준: 월간</span>}>
       <div className="grid gap-5 lg:grid-cols-[1fr_210px]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {simulations.map(({ name, rate, setRate, unit }) => (
-            <div key={name} className="grid grid-cols-[80px_70px_1fr_80px] items-center gap-3 text-sm font-bold">
+            // 휴대폰에서는 네 칸이 한 줄에 안 들어간다. 이름과 숫자를 윗줄에, 조절 막대를 아랫줄에 꽉 채워 둔다.
+            <div key={name} className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 gap-y-2 text-sm font-bold sm:grid-cols-[80px_70px_1fr_80px]">
               <span>{name}</span>
               <span className="rounded-lg py-1 text-center text-blue-700">-{rate}%</span>
-              <input type="range" min="0" max="50" value={rate} onChange={(event) => setRate(Number(event.target.value))} aria-label={`${name} 줄이는 비율`} className="accent-blue-600" />
-              <span className="text-blue-700">-{won(Math.round(rate * unit))}</span>
+              <input type="range" min="0" max="50" value={rate} onChange={(event) => setRate(Number(event.target.value))} aria-label={`${name} 줄이는 비율`} className="order-last col-span-3 w-full min-w-0 accent-blue-600 sm:order-none sm:col-span-1" />
+              <span className="text-right text-blue-700 sm:text-left">-{won(Math.round(rate * unit))}</span>
             </div>
           ))}
         </div>

@@ -305,9 +305,10 @@ export function MobileRing({ value }: { value: number }) {
 export function MobileGoalLine({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
   void icon
   return (
-    <div className="flex items-center justify-between gap-3 py-2.5">
+    // 금액이 길어 한 줄에 안 들어가면 숫자가 다음 줄 오른쪽으로 내려간다. 카드 밖으로 나가지 않는다.
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 py-2.5">
       <span className="whitespace-nowrap text-[13px] font-medium text-slate-400">{label}</span>
-      <span className="tnum text-[15px] font-bold text-slate-900">{value}</span>
+      <span className="tnum ml-auto text-[15px] font-bold text-slate-900">{value}</span>
     </div>
   )
 }

@@ -34,13 +34,14 @@ export function CoachPage() {
   }
 
   return (
+    // 칸마다 min-w-0 을 준다. 없으면 칸이 안에 든 것의 최소 폭(질문 입력칸)만큼 넓어져서 휴대폰에서 오른쪽이 잘린다.
     <div className="grid gap-6 xl:grid-cols-[1fr_430px]">
-      <div className="reveal-stack space-y-5">
+      <div className="reveal-stack min-w-0 space-y-5">
         <MobileTitle title="AI코치" />
         <CoachBanner />
         <ChatPanel />
       </div>
-      <div className="reveal-stack space-y-5">
+      <div className="reveal-stack min-w-0 space-y-5">
         <FinanceState />
         <GoalOutlook />
         <RiskPanel />
@@ -186,7 +187,8 @@ function ChatPanel() {
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && sendMessage()}
             maxLength={500}
-            className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-slate-400"
+            // w-full: 입력칸은 글자 20자만큼의 기본 폭을 갖는다. 그 폭이 화면을 밀어내지 않게 남는 자리만 쓰게 한다.
+            className="w-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-slate-400"
             placeholder="벨루가에게 물어보세요"
             aria-label="코치에게 물어볼 말"
           />
@@ -218,17 +220,18 @@ function GoalOutlook() {
 
   return (
     <Card title="목표 달성 전망" action="자세히 보기" actionTo="/goals">
-      <div className="grid grid-cols-[120px_1fr] items-center gap-5">
+      {/* 휴대폰에서는 고리 옆에 큰 금액이 들어갈 자리가 없다. 고리를 위에, 금액을 아래에 둔다. */}
+      <div className="grid items-center justify-items-center gap-5 sm:grid-cols-[120px_1fr] sm:justify-items-stretch">
         <RingProgress value={financeSummary.goalRate} />
         {goals[0] ? (
-          <div>
+          <div className="w-full min-w-0">
             <div className="text-sm font-bold text-slate-500">{goals[0].title}</div>
             <div className="mt-2 text-3xl font-black text-slate-900">{won(financeSummary.remainingAmount)}</div>
             <div className="mt-1 text-sm font-bold text-slate-500">남은 금액 · D-{financeSummary.daysLeft}</div>
             <div className="mt-4 rounded-2xl bg-blue-50 p-3 font-black text-blue-700">하루에 모을 금액<br />{won(financeSummary.dailyTarget)}</div>
           </div>
         ) : (
-          <div className="text-sm font-bold text-slate-500">아직 목표가 없어요. 목표를 만들면 하루에 얼마씩 모으면 되는지 알려 드려요.</div>
+          <div className="w-full min-w-0 text-sm font-bold text-slate-500">아직 목표가 없어요. 목표를 만들면 하루에 얼마씩 모으면 되는지 알려 드려요.</div>
         )}
       </div>
     </Card>
