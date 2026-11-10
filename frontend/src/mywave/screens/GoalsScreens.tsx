@@ -2,7 +2,7 @@ import { CalendarDays, ChevronRight, Edit3, Info, Save, SlidersHorizontal, Walle
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { dateStringAfterDays, won } from '../format'
-import { Card, ConfirmDeleteButton, Field } from '../uiKit'
+import { Card, ConfirmDeleteButton, Field, NumberField } from '../uiKit'
 import { BelugaSays } from '../Beluga'
 import { Celebration } from '../Celebration'
 import { BubbleBurst, Notice } from '../motion'
@@ -523,10 +523,10 @@ export function GoalEditorPage() {
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="목표 금액">
-              <input type="number" min="0" max="10000000000" value={targetAmount} onChange={(event) => setTargetAmount(Number(event.target.value))} className="form-input" />
+              <NumberField min="0" max="10000000000" value={targetAmount} onChange={(next) => setTargetAmount(next)} />
             </Field>
             <Field label="현재 모은 금액">
-              <input type="number" min="0" max="10000000000" value={currentAmount} onChange={(event) => setCurrentAmount(Number(event.target.value))} className="form-input" />
+              <NumberField min="0" max="10000000000" value={currentAmount} onChange={(next) => setCurrentAmount(next)} />
             </Field>
           </div>
           <Field label="목표 날짜">
@@ -541,7 +541,7 @@ export function GoalEditorPage() {
               </select>
             </Field>
             <Field label="우선순위">
-              <input type="number" min="1" max="99" value={priority} onChange={(event) => setPriority(Number(event.target.value))} className="form-input" />
+              <NumberField min="1" max="99" value={priority} onChange={(next) => setPriority(next)} />
             </Field>
           </div>
         </div>

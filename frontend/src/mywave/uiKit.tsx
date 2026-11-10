@@ -1,6 +1,6 @@
 import { ChevronRight, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 /**
@@ -205,5 +205,57 @@ export function SubtleButton({
     >
       {children}
     </button>
+  )
+}
+
+/** 칸에 보일 글자. 0 은 빈 칸으로 둔다. 그래야 0 을 지우지 않고 바로 숫자를 칠 수 있다. */
+function numberText(value: number) {
+  return value === 0 || !Number.isFinite(value) ? '' : String(value)
+}
+
+/**
+ * 숫자를 적는 칸.
+ *
+ * 숫자 상태를 `<input type="number" value={0}>` 에 그대로 물리면, 0 이 든 칸에 355 를 쳤을 때 "0355" 로 남는다.
+ * React 는 칸의 글자와 상태가 숫자로 같으면(0355 == 355) 글자를 고치지 않기 때문이다.
+ * 그래서 칸의 글자는 여기서 따로 들고, 앞자리 0 은 치는 즉시 떼어 낸다. 밖으로는 언제나 숫자만 내보낸다.
+ * 밖에서 값이 바뀌면(폼 초기화, 불러오기, 자동완성) 그 숫자를 따라간다.
+ */
+export function NumberField({
+  value,
+  onChange,
+  className = 'form-input',
+  ref,
+  ...rest
+}: {
+  value: number
+  onChange: (value: number) => void
+  className?: string
+  ref?: Ref<HTMLInputElement>
+  min?: string
+  max?: string
+  disabled?: boolean
+  'aria-label'?: string
+}) {
+  const [text, setText] = useState(() => numberText(value))
+  // 지금 글자가 같은 숫자를 뜻하면 친 그대로 보여 주고("1.", "0" 같은 치는 중의 글자), 아니면 밖의 숫자를 따른다.
+  const shown = Number(text || 0) === value ? text : numberText(value)
+
+  return (
+    <input
+      {...rest}
+      ref={ref}
+      type="number"
+      placeholder="0"
+      value={shown}
+      onChange={(event) => {
+        // "0355" 는 "355", "00" 은 "0", "-07" 은 "-7". "0.5" 는 그대로 둔다.
+        const next = event.target.value.replace(/^(-?)0+(?=\d)/, '$1')
+        setText(next)
+        const parsed = Number(next)
+        onChange(Number.isFinite(parsed) ? parsed : 0)
+      }}
+      className={className}
+    />
   )
 }

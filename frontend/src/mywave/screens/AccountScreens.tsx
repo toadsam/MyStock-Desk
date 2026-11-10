@@ -20,7 +20,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { won } from '../format'
-import { Card, ConfirmDeleteButton, Field } from '../uiKit'
+import { Card, ConfirmDeleteButton, Field, NumberField } from '../uiKit'
 import { LivelinessPicker } from '../motion'
 import {
   createMyWaveAccount,
@@ -791,7 +791,7 @@ export function AssetDetailPage() {
                 </select>
               </Field>
               <Field label="잔액">
-                <input type="number" value={accountForm.balance} onChange={(event) => setAccountForm((value) => ({ ...value, balance: Number(event.target.value) }))} className="form-input" />
+                <NumberField value={accountForm.balance} onChange={(next) => setAccountForm((value) => ({ ...value, balance: next }))} />
               </Field>
             </div>
             <label className="flex items-center justify-between rounded-2xl p-4 text-sm font-black">
@@ -813,19 +813,19 @@ export function AssetDetailPage() {
             <input type="month" value={budgetForm.budgetMonth} onChange={(event) => setBudgetForm((value) => ({ ...value, budgetMonth: event.target.value }))} className="form-input" />
           </Field>
           <Field label="월 수입">
-            <input type="number" value={budgetForm.incomeAmount} onChange={(event) => setBudgetForm((value) => ({ ...value, incomeAmount: Number(event.target.value) }))} className="form-input" />
+            <NumberField value={budgetForm.incomeAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, incomeAmount: next }))} />
           </Field>
           <Field label="생활비 예산">
-            <input type="number" value={budgetForm.livingBudgetAmount} onChange={(event) => setBudgetForm((value) => ({ ...value, livingBudgetAmount: Number(event.target.value) }))} className="form-input" />
+            <NumberField value={budgetForm.livingBudgetAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, livingBudgetAmount: next }))} />
           </Field>
           <Field label="고정 지출">
-            <input type="number" value={budgetForm.fixedExpenseAmount} onChange={(event) => setBudgetForm((value) => ({ ...value, fixedExpenseAmount: Number(event.target.value) }))} className="form-input" />
+            <NumberField value={budgetForm.fixedExpenseAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, fixedExpenseAmount: next }))} />
           </Field>
           <Field label="목표 저축액">
-            <input type="number" value={budgetForm.plannedSavingAmount} onChange={(event) => setBudgetForm((value) => ({ ...value, plannedSavingAmount: Number(event.target.value) }))} className="form-input" />
+            <NumberField value={budgetForm.plannedSavingAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, plannedSavingAmount: next }))} />
           </Field>
           <Field label="계획 투자액">
-            <input type="number" value={budgetForm.plannedInvestmentAmount} onChange={(event) => setBudgetForm((value) => ({ ...value, plannedInvestmentAmount: Number(event.target.value) }))} className="form-input" />
+            <NumberField value={budgetForm.plannedInvestmentAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, plannedInvestmentAmount: next }))} />
           </Field>
         </div>
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 p-4">

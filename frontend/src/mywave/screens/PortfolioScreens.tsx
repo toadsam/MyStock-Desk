@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { won } from '../format'
 import { Notice } from '../motion'
 import { callBeluga } from '../roaming'
-import { Card, ConfirmDeleteButton, Field, ListRow } from '../uiKit'
+import { Card, ConfirmDeleteButton, Field, NumberField, ListRow } from '../uiKit'
 import { BelugaSays } from '../Beluga'
 import {
   createMyWaveTransaction,
@@ -485,13 +485,13 @@ function InvestmentTransactionManager({ onSaved }: { onSaved?: () => void } = {}
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <Field label="수량">
-                <input type="number" value={form.quantity} onChange={(event) => setForm((value) => ({ ...value, quantity: Number(event.target.value) }))} className="form-input" disabled={['DEPOSIT', 'WITHDRAWAL', 'DIVIDEND'].includes(form.transactionType)} />
+                <NumberField value={form.quantity} onChange={(next) => setForm((value) => ({ ...value, quantity: next }))} disabled={['DEPOSIT', 'WITHDRAWAL', 'DIVIDEND'].includes(form.transactionType)} />
               </Field>
               <Field label={['DEPOSIT', 'WITHDRAWAL', 'DIVIDEND'].includes(form.transactionType) ? '금액' : '단가'}>
-                <input type="number" value={form.price} onChange={(event) => setForm((value) => ({ ...value, price: Number(event.target.value) }))} className="form-input" />
+                <NumberField value={form.price} onChange={(next) => setForm((value) => ({ ...value, price: next }))} />
               </Field>
               <Field label="수수료">
-                <input type="number" value={form.fee} onChange={(event) => setForm((value) => ({ ...value, fee: Number(event.target.value) }))} className="form-input" />
+                <NumberField value={form.fee} onChange={(next) => setForm((value) => ({ ...value, fee: next }))} />
               </Field>
             </div>
             <Field label="투자 이유">
