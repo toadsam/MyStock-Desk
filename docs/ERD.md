@@ -29,6 +29,7 @@ erDiagram
         varchar password_hash "BCrypt"
         varchar profile_image_url
         varchar membership_grade "BASIC | VIP"
+        varchar google_subject UK "구글 계정 번호(sub). 비밀번호 가입은 null"
         bigint tokens_valid_from "이 시각(초) 전에 발급된 토큰은 무효"
         timestamp created_at
     }
@@ -210,7 +211,7 @@ erDiagram
 
 | 테이블 | 무엇을 담나 | 누가 만드나 |
 |---|---|---|
-| `member` | 회원. 이메일이 로그인 아이디. 비밀번호를 바꾸면 `tokens_valid_from`이 지금으로 당겨져 예전 토큰이 무효가 됨 | 회원가입 |
+| `member` | 회원. 이메일이 로그인 아이디이고, 구글로 가입한 회원은 `google_subject`로 찾음. 비밀번호를 바꾸면 `tokens_valid_from`이 지금으로 당겨져 예전 토큰이 무효가 됨 | 회원가입 |
 | `revoked_token` | 로그아웃한 토큰의 번호. 요청마다 대조하고, 만료가 지난 줄은 새로 적을 때 지움 | 로그아웃 |
 | `financial_account` | 직접 적어 넣는 은행, 증권 계좌와 잔액. 은행과 연결하지 않음 | 자산 화면 |
 | `monthly_budget` | 달마다 정하는 수입, 생활비, 고정비, 저축, 투자 계획 | 자산 화면의 월 예산 |

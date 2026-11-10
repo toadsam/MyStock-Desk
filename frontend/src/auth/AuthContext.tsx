@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { login as loginApi, register as registerApi } from '../api/authApi'
+import { login as loginApi, loginWithGoogle as loginWithGoogleApi, register as registerApi } from '../api/authApi'
 import type { Member } from '../types/member'
 import { AuthContext, type AuthContextValue } from './authContextCore'
 
@@ -48,6 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       register: async (request) => {
         const response = await registerApi(request)
+        persist(response.accessToken, response.member)
+      },
+      loginWithGoogle: async (credential) => {
+        const response = await loginWithGoogleApi(credential)
         persist(response.accessToken, response.member)
       },
       logout: clear,

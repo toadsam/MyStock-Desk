@@ -1,6 +1,8 @@
 package com.stockflow.auth.controller;
 
+import com.stockflow.auth.dto.AuthConfigResponse;
 import com.stockflow.auth.dto.AuthResponse;
+import com.stockflow.auth.dto.GoogleLoginRequest;
 import com.stockflow.auth.dto.LoginRequest;
 import com.stockflow.auth.dto.RegisterRequest;
 import com.stockflow.auth.service.AuthService;
@@ -8,6 +10,7 @@ import com.stockflow.global.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -25,6 +28,17 @@ public class AuthController {
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         // 운영에서는 nginx 뒤라 X-Forwarded-For 가 실제 주소다. prod 프로파일의 forward-headers-strategy 가 getRemoteAddr 에 반영한다.
         return ApiResponse.success(authService.login(request, httpRequest.getRemoteAddr()));
+    }
+
+    /** 화면이 빌드할 때가 아니라 뜰 때 물어본다. 클라이언트 ID 를 바꿔도 프론트를 다시 빌드하지 않아도 된다. */
+    @GetMapping("/config")
+    public ApiResponse<AuthConfigResponse> config() {
+        return ApiResponse.success(authService.config());
+    }
+
+    @PostMapping("/google")
+    public ApiResponse<AuthResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        return ApiResponse.success(authService.loginWithGoogle(request.credential()));
     }
 
     @PostMapping("/register")

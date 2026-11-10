@@ -35,6 +35,10 @@ stockflow:
     # 로그인 화면의 데모 버튼이 쓰는 계정. 여럿이 같이 쓰므로 이 계정의 프로필과 비밀번호는 바꿀 수 없다(DemoAccountPolicy).
     email: ${STOCKFLOW_DEMO_EMAIL:investor@stockflow.com}
   auth:
+    google:
+      # Google Cloud Console 에서 만든 OAuth 클라이언트 ID(웹 애플리케이션). 비밀이 아니다.
+      # 비워 두면 구글 로그인이 꺼지고 로그인 화면은 버튼을 그리지 않는다.
+      client-id: ${GOOGLE_CLIENT_ID:}
     login:
       # 같은 주소에서 같은 이메일로 이만큼 틀리면 lock-minutes 동안 맞는 비밀번호도 429 다(LoginAttemptLimiter).
       max-failures: ${STOCKFLOW_LOGIN_MAX_FAILURES:5}
