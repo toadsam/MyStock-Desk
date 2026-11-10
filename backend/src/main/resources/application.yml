@@ -39,6 +39,10 @@ stockflow:
       # Google Cloud Console 에서 만든 OAuth 클라이언트 ID(웹 애플리케이션). 비밀이 아니다.
       # 비워 두면 구글 로그인이 꺼지고 로그인 화면은 버튼을 그리지 않는다.
       client-id: ${GOOGLE_CLIENT_ID:}
+    password:
+      # false 면 이메일·비밀번호 가입과 로그인을 서버가 거절한다(구글 로그인만 남는다). 로그인 화면의 데모 버튼도 같이 꺼진다.
+      # 가입할 때 이메일 주인인지 확인하지 않고 비밀번호를 되찾을 방법도 없어서, 실제 사용자를 받는 동안에는 꺼 둔다.
+      enabled: ${STOCKFLOW_PASSWORD_LOGIN_ENABLED:true}
     login:
       # 같은 주소에서 같은 이메일로 이만큼 틀리면 lock-minutes 동안 맞는 비밀번호도 429 다(LoginAttemptLimiter).
       max-failures: ${STOCKFLOW_LOGIN_MAX_FAILURES:5}

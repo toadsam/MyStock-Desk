@@ -450,6 +450,11 @@ export async function changeMyWavePassword(request: {
   return unwrap(api.post<ApiResponse<void>>('/api/members/me/password', request))
 }
 
+/** 탈퇴. 계정과 모든 기록이 서버에서 지워진다. */
+export async function deleteMyWaveMember() {
+  return unwrap(api.delete<ApiResponse<void>>('/api/members/me'))
+}
+
 export async function logoutMyWaveSession() {
   return unwrap(api.post<ApiResponse<void>>('/api/auth/logout'))
 }

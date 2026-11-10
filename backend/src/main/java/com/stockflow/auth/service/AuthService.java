@@ -8,6 +8,7 @@ import com.stockflow.auth.google.GoogleIdTokenVerifier;
 import com.stockflow.auth.google.GoogleIdentity;
 import com.stockflow.auth.security.JwtProvider;
 import com.stockflow.auth.security.LoginAttemptLimiter;
+import com.stockflow.auth.security.PasswordLoginPolicy;
 import com.stockflow.auth.security.TokenRevocationService;
 import com.stockflow.member.dto.MemberDto;
 import com.stockflow.member.entity.Member;
@@ -35,6 +36,7 @@ public class AuthService {
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final TokenRevocationService tokenRevocationService;
     private final GoogleIdTokenVerifier googleIdTokenVerifier;
+    private final PasswordLoginPolicy passwordLoginPolicy;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -42,6 +44,7 @@ public class AuthService {
             "https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=160&q=80";
 
     public AuthResponse login(LoginRequest request, String clientIp) {
+        passwordLoginPolicy.requireEnabled();
         loginAttemptLimiter.checkAllowed(clientIp, request.email());
         Member member = memberRepository.findByEmail(request.email()).orElse(null);
         // 없는 이메일과 틀린 비밀번호를 같은 문장, 같은 실패 횟수로 다룬다. 어느 쪽인지 알려 주면 이메일을 골라낼 수 있다.
@@ -55,6 +58,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        passwordLoginPolicy.requireEnabled();
         if (memberRepository.existsByEmail(request.email())) {
             throw new IllegalArgumentException("이미 가입된 이메일입니다.");
         }
@@ -67,7 +71,7 @@ public class AuthService {
     }
 
     public AuthConfigResponse config() {
-        return new AuthConfigResponse(googleIdTokenVerifier.clientId());
+        return new AuthConfigResponse(googleIdTokenVerifier.clientId(), passwordLoginPolicy.isEnabled());
     }
 
     /**

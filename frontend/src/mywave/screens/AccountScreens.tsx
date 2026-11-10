@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { won } from '../format'
 import { Card, ConfirmDeleteButton, Field } from '../uiKit'
 import { LivelinessPicker } from '../motion'
@@ -37,6 +37,7 @@ import {
   saveMyWaveMonthlyBudget,
   updateMyWaveAccount,
   changeMyWavePassword,
+  deleteMyWaveMember,
   logoutMyWaveSession,
   updateMyWaveProfile,
   type MyWaveFinancialAccountResponse,
@@ -49,7 +50,7 @@ import { LOGIN_NOTICE_KEY } from '../../auth/loginNotice'
 import { useAuth } from '../../auth/useAuth'
 import { MiniStat, MobileTitle } from '../components'
 import { useMyWaveData } from '../runtime'
-import { refreshUnreadNotifications, setUnreadNotifications } from '../unreadNotifications'
+import { refreshUnreadNotifications, setUnreadNotifications, useNotificationCounts } from '../unreadNotifications'
 import { toneBg } from '../format'
 
 export function NotificationsPage() {
@@ -105,6 +106,7 @@ export function NotificationsPage() {
     } catch {
       // 백엔드가 꺼져 있어도 UI 정리 흐름은 유지합니다.
     }
+    void refreshUnreadNotifications()
   }
 
   async function markAllRead() {
@@ -189,6 +191,8 @@ export function ProfilePage() {
   const [passwordMessage, setPasswordMessage] = useState('')
   const [logoutSaving, setLogoutSaving] = useState(false)
   const [accountCount, setAccountCount] = useState<number | null>(null)
+  // 알림이 하나도 없는 계정에는 알림 줄을 보여 주지 않는다. 헤더의 종과 같은 숫자를 본다.
+  const notificationCounts = useNotificationCounts('profile')
 
   useEffect(() => {
     let live = true
@@ -199,7 +203,7 @@ export function ProfilePage() {
   }, [])
   // 실제로 있는 화면만 적는다. 2단계 인증, 푸시 알림, 고객센터 같은 없는 기능을 메뉴로 보여 주지 않는다.
   const rows = [
-    { icon: Bell, title: '알림', detail: '목표, 소비, 투자에서 온 알림 보기', to: '/notifications' },
+    ...(notificationCounts.total > 0 ? [{ icon: Bell, title: '알림', detail: '목표, 소비, 투자에서 온 알림 보기', to: '/notifications' }] : []),
     { icon: WalletCards, title: '계좌와 예산', detail: '직접 적은 계좌, 이번 달 생활비 예산', to: '/assets' },
     { icon: CircleHelp, title: 'MyWave 쓰는 법', detail: '시작 안내 3장 다시 보기', to: '/onboarding' },
   ]
@@ -375,10 +379,64 @@ export function ProfilePage() {
           })}
         </div>
       </Card>
-      <button onClick={handleLogout} disabled={logoutSaving} className="pressable flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-4 font-black text-red-500 shadow-card disabled:opacity-60">
+      <button onClick={handleLogout} disabled={logoutSaving} className="pressable flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-4 font-black text-slate-700 shadow-card disabled:opacity-60">
         <LogOut className="h-5 w-5" /> {logoutSaving ? '로그아웃 중' : '로그아웃'}
       </button>
+      <WithdrawalCard />
     </div>
+  )
+}
+
+/**
+ * 계정 삭제. 한 번 누르면 확인을 묻고, 한 번 더 눌러야 지운다.
+ * 지우고 나면 로그인 화면으로 보내면서 무슨 일이 있었는지 한마디 남긴다.
+ */
+function WithdrawalCard() {
+  const navigate = useNavigate()
+  const auth = useAuth()
+  const [armed, setArmed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function withdraw() {
+    setBusy(true)
+    setMessage('')
+    try {
+      await deleteMyWaveMember()
+      sessionStorage.setItem(LOGIN_NOTICE_KEY, '계정과 모든 기록을 지웠어요. 그동안 써 주셔서 고마워요.')
+      auth.logout()
+      navigate('/login', { replace: true })
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '계정을 지우지 못했어요. 잠시 후 다시 시도해 주세요.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card title="계정 삭제">
+      <div className="space-y-4">
+        <p className="text-sm font-bold leading-6 text-slate-500">
+          계정과 지금까지 적은 소비, 목표, 계좌, 거래 기록이 모두 바로 지워져요. 되살릴 수 없어요.{' '}
+          <Link to="/privacy" className="text-blue-700 underline underline-offset-4">받는 정보 보기</Link>
+        </p>
+        {message && <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{message}</p>}
+        {armed ? (
+          <div role="group" aria-label="계정 삭제 확인" className="space-y-3 rounded-2xl bg-red-50 p-4">
+            <p className="text-sm font-black text-red-700">정말 지울까요? 되돌릴 수 없어요.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setArmed(false)} disabled={busy} className="pressable h-12 flex-1 rounded-2xl bg-white font-black text-slate-600 disabled:opacity-60">취소</button>
+              <button onClick={withdraw} disabled={busy} className="pressable h-12 flex-[1.4] rounded-2xl bg-red-500 font-black text-white disabled:opacity-60">
+                {busy ? '지우는 중' : '모두 지우고 탈퇴'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setArmed(true)} className="pressable flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-100 font-black text-red-500">
+            <Trash2 className="h-5 w-5" /> 계정 삭제
+          </button>
+        )}
+      </div>
+    </Card>
   )
 }
 
@@ -563,8 +621,9 @@ export function AssetDetailPage() {
   const [budgetForm, setBudgetForm] = useState<BudgetFormState>(() => defaultBudgetForm())
   const [assetMetrics, setAssetMetrics] = useState({
     totalAsset: financeSummary.totalAsset,
-    accountBalance: 0,
-    investmentAsset: financeSummary.totalAsset,
+    // 자세한 숫자가 오기 전에도 세 칸의 합이 맞게 둔다. 전에는 잠깐 총자산 전체가 투자 자산으로 보였다.
+    accountBalance: financeSummary.accountBalance,
+    investmentAsset: Math.max(0, financeSummary.totalAsset - financeSummary.accountBalance),
     monthlyExpense: financeSummary.totalSpending,
     remainingLivingBudget: financeSummary.livingBudgetLeft,
     investmentAvailableAmount: financeSummary.investableAmount,

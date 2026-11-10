@@ -5,8 +5,10 @@ import com.stockflow.member.dto.MemberDto;
 import com.stockflow.member.dto.MemberProfileRequest;
 import com.stockflow.member.dto.PasswordChangeRequest;
 import com.stockflow.member.service.MemberService;
+import com.stockflow.member.service.MemberWithdrawalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MemberController {
 
     private final MemberService memberService;
+    private final MemberWithdrawalService memberWithdrawalService;
 
     @GetMapping("/me")
     public ApiResponse<MemberDto> me() {
@@ -36,6 +39,13 @@ public class MemberController {
     @PostMapping("/me/password")
     public ApiResponse<Void> changePassword(@Valid @RequestBody PasswordChangeRequest request) {
         memberService.changePassword(request);
+        return ApiResponse.success();
+    }
+
+    /** 탈퇴. 회원과 그 회원의 기록을 전부 지운다. 되돌릴 수 없다. */
+    @DeleteMapping("/me")
+    public ApiResponse<Void> withdraw() {
+        memberWithdrawalService.withdrawCurrentMember();
         return ApiResponse.success();
     }
 }

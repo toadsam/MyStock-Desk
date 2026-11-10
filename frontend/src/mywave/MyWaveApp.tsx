@@ -11,10 +11,11 @@ import { mobileNavItems, navItems } from './myWaveData'
 import { BelugaTap } from './Beluga'
 import { BelugaArt } from './BelugaArt'
 import AuthPage from '../pages/AuthPage'
+import PrivacyPage from '../pages/PrivacyPage'
 import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { useAuth } from '../auth/useAuth'
 import { MyWaveDataContext, useMyWaveData, useMyWaveRuntimeData } from './runtime'
-import { useUnreadNotifications } from './unreadNotifications'
+import { useNotificationCounts } from './unreadNotifications'
 import { AssetDetailPage, NotificationsPage, OnboardingPage, ProfilePage, SearchResultsPage } from './screens/AccountScreens'
 import { CoachPage } from './screens/CoachScreen'
 import { CompanyDetailPage } from './screens/CompanyScreen'
@@ -34,6 +35,7 @@ export default function MyWaveApp() {
       <Route path="story" element={<Suspense fallback={<div role="status" className="p-8 text-slate-600">MyWave 소개를 불러오고 있어요…</div>}><StoryPage /></Suspense>} />
       <Route path="login" element={<AuthPage />} />
       <Route path="register" element={<AuthPage />} />
+      <Route path="privacy" element={<PrivacyPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<Shell />}>
           <Route index element={<HomePage />} />
@@ -101,6 +103,7 @@ function Shell() {
               <div className="relative mx-auto w-full max-w-[1460px] px-5 py-5 sm:px-7 lg:px-10 lg:py-8">
                 <DesktopHeader />
                 <DataStatusBanner />
+                {location.pathname === '/' && <MobileStarter />}
                 {/* 이전 화면은 아래로 가라앉고, 다음 화면이 떠오른다. 홈의 목표 카드는 목표 히어로로 자라난다 (layoutId). */}
                 {/* popLayout: 나가는 화면을 흐름에서 빼 두고 그 자리에 다음 화면을 바로 세운다. 두 화면이 잠깐 같이 있어야 layoutId 가 이어진다. */}
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -238,6 +241,22 @@ function StarterCard() {
   )
 }
 
+/** 휴대폰에는 옆 메뉴가 없어서 StarterCard 가 보이지 않는다. 같은 조건으로 홈 맨 위에 한 줄로 보여 준다. */
+function MobileStarter() {
+  const navigate = useNavigate()
+  const { status, goals, holdings } = useMyWaveData()
+  if (status !== 'ready' || goals.length > 0 || holdings.length > 0) return null
+  return (
+    <button onClick={() => navigate('/onboarding')} className="pressable mb-4 flex w-full items-center gap-3 rounded-[20px] bg-white px-4 py-3.5 text-left lg:hidden">
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14px] font-black text-blue-700">처음이세요?</span>
+        <span className="mt-0.5 block text-[13px] font-medium leading-5 text-slate-500">생활비를 정하고 소비를 기록하면 홈의 잔이 차요. 쓰는 법 3장 보기</span>
+      </span>
+      <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
+    </button>
+  )
+}
+
 /** 신나게 단계의 데스크톱에서만 벨루가를 풀어둔다. 집은 Companion 이 비워 둔 자리다. */
 function Roamer() {
   const enabled = useRoamingEnabled()
@@ -348,7 +367,7 @@ function DesktopHeader() {
 
 function MobileBottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 mx-auto grid max-w-[1760px] grid-cols-5 border-t border-slate-200 bg-white px-3 pb-[calc(.55rem+env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 mx-auto grid max-w-[1760px] grid-cols-6 border-t border-slate-200 bg-white px-1.5 pb-[calc(.55rem+env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
       {mobileNavItems.map((item) => {
         const Icon = item.icon
         return (
@@ -380,11 +399,16 @@ function MobileBottomNav() {
   )
 }
 
-/** 빨간 점과 종의 흔들림은 읽지 않은 알림이 실제로 있을 때만 나온다. */
+/**
+ * 빨간 점과 종의 흔들림은 읽지 않은 알림이 실제로 있을 때만 나온다.
+ * 알림이 하나도 없는 계정에는 종을 그리지 않는다. 알림 화면은 내 정보에서도 갈 수 있다.
+ */
 function BellButton() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const unread = useUnreadNotifications(pathname)
+  const { unread, total } = useNotificationCounts(pathname)
+
+  if (total === 0 && !pathname.startsWith('/notifications')) return null
 
   return (
     <button
@@ -426,7 +450,7 @@ function pageMeta(pathname: string) {
   if (pathname.startsWith('/coach')) return { title: 'AI코치', subtitle: '총자산, 소비, 목표, 쏠림을 한 화면에. 답은 규칙으로 만들어요.', search: '검색 (예: 목표)' }
   if (pathname.startsWith('/assets')) return { title: '자산', subtitle: '계좌 잔액과 이번 달 생활비를 직접 적어요.', search: '검색 (예: 생활비 통장)' }
   if (pathname.startsWith('/notifications')) return { title: '알림', subtitle: '목표, 소비, 투자에서 챙겨 볼 소식.', search: '검색 (예: 카페)' }
-  if (pathname.startsWith('/profile')) return { title: '내 정보', subtitle: '프로필, 멤버십, 비밀번호.', search: '검색 (예: 카페)' }
+  if (pathname.startsWith('/profile')) return { title: '내 정보', subtitle: '프로필, 로그인 방식, 계정 삭제.', search: '검색 (예: 카페)' }
   if (pathname.startsWith('/search')) return { title: '검색', subtitle: '목표, 소비, 보유 종목을 한 번에 찾아요.', search: '검색 (예: 카페)' }
   if (pathname.startsWith('/company')) return { title: '기업 상세', subtitle: '시세와 재무 지표. 투자 판단이 아니라 참고 자료예요.', search: '검색 (예: 삼성전자)' }
   if (pathname.startsWith('/onboarding')) return { title: '시작하기', subtitle: 'MyWave를 어떻게 쓰면 되는지 알려 드릴게요.', search: '검색 (예: 카페)' }

@@ -78,7 +78,7 @@ function MobilePortfolioPage() {
 }
 
 function MobilePortfolioCard({ compact = false }: { compact?: boolean }) {
-  const { financeSummary, portfolioAllocation, holdings } = useMyWaveData()
+  const { portfolioAllocation, holdings } = useMyWaveData()
   const navigate = useNavigate()
 
   return (
@@ -89,8 +89,9 @@ function MobilePortfolioCard({ compact = false }: { compact?: boolean }) {
       </div>
       <div className="grid grid-cols-[150px_1fr] items-center gap-3">
         <MobileCssDonut
-          center={compact ? `총 ${portfolioAllocation.length}개` : won(financeSummary.investmentValue)}
-          label={compact ? '자산' : '총자산'}
+          // 도넛 조각에는 예수금도 들어 있다. 가운데 숫자도 조각의 합(투자 자산)이어야 조각과 맞는다.
+          center={compact ? `총 ${portfolioAllocation.length}개` : won(portfolioAllocation.reduce((sum, item) => sum + item.amount, 0))}
+          label={compact ? '자산' : '투자 자산'}
           items={portfolioAllocation}
         />
         <Legend items={portfolioAllocation} />
@@ -167,7 +168,7 @@ function PortfolioAllocationCard() {
   return (
     <Card title="포트폴리오 자산 배분">
       <div className="grid gap-5 sm:grid-cols-[220px_1fr]">
-        <Donut data={portfolioAllocation} center={won(portfolioAllocation.reduce((sum, item) => sum + item.amount, 0))} />
+        <Donut data={portfolioAllocation} center={won(portfolioAllocation.reduce((sum, item) => sum + item.amount, 0))} label="투자 자산" />
         <Legend items={portfolioAllocation} />
       </div>
       <div className="mt-4 text-sm font-medium text-slate-400">{financeSummary.month} 기록 기준</div>
@@ -586,7 +587,7 @@ export function PortfolioAllocationDetailPage() {
       <MobileTitle title="자산 배분" />
       <Card title="포트폴리오 구성">
         <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-          <Donut data={portfolioAllocation} center={won(portfolioAllocation.reduce((sum, item) => sum + item.amount, 0))} />
+          <Donut data={portfolioAllocation} center={won(portfolioAllocation.reduce((sum, item) => sum + item.amount, 0))} label="투자 자산" />
           <Legend items={portfolioAllocation} />
         </div>
       </Card>

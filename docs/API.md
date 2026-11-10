@@ -1,6 +1,6 @@
 # API 명세
 
-MyWave 화면이 실제로 부르는 엔드포인트 56개입니다. 프론트의 [`myWaveApi.ts`](../frontend/src/mywave/myWaveApi.ts)와 [`authApi.ts`](../frontend/src/api/authApi.ts)에서 호출하는 주소를 컨트롤러와 하나씩 맞춰 봤습니다(2026-10-12). 백엔드에는 이 밖에도 예전 모의투자 화면이 쓰던 엔드포인트가 50개 남짓 더 있습니다. 맨 아래에 묶어서만 적었습니다.
+MyWave 화면이 실제로 부르는 엔드포인트 57개입니다. 프론트의 [`myWaveApi.ts`](../frontend/src/mywave/myWaveApi.ts)와 [`authApi.ts`](../frontend/src/api/authApi.ts)에서 호출하는 주소를 컨트롤러와 하나씩 맞춰 봤습니다(2026-10-12). 백엔드에는 이 밖에도 예전 모의투자 화면이 쓰던 엔드포인트가 50개 남짓 더 있습니다. 맨 아래에 묶어서만 적었습니다.
 
 ## 공통
 
@@ -48,13 +48,14 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
 |---|---|---|---|
 | POST | `/api/auth/register` 🔓 | 회원가입. 가입하자마자 로그인된 상태로 토큰을 돌려줌 | `{ name, email, password }` |
 | POST | `/api/auth/login` 🔓 | 로그인 | `{ email, password }` |
-| GET | `/api/auth/config` 🔓 | 로그인 화면이 뜰 때 묻는 설정. `{ googleClientId }`. 값이 없으면 구글 로그인이 꺼져 있고 화면은 버튼을 그리지 않음 | |
+| GET | `/api/auth/config` 🔓 | 로그인 화면이 뜰 때 묻는 설정. `{ googleClientId, passwordLoginEnabled }`. `googleClientId`가 없으면 구글 로그인이 꺼져 있고, `passwordLoginEnabled`가 `false`면 화면은 이메일·비밀번호 칸과 데모 버튼을 그리지 않고 서버도 `/login`, `/register`에 403 | |
 | POST | `/api/auth/google` 🔓 | 구글 로그인. 구글 버튼이 준 ID 토큰을 서버가 직접 검증하고, 처음 온 사람은 그 자리에서 가입시킴. 응답은 로그인과 같음 | `{ credential }` |
 | POST | `/api/auth/logout` 🔓 | 로그아웃. 헤더로 온 토큰 한 장을 폐기함. 같은 계정의 다른 로그인은 그대로 | |
 | GET | `/api/health` 🔓 | 살아 있는지. DB 커넥션을 하나 빌려 확인하고 `{ status, db }`를 돌려줌. compose healthcheck와 모니터가 부름 | |
 | GET | `/api/members/me` | 내 정보 | |
 | PATCH | `/api/members/me/profile` | 이름, 이메일, 프로필 이미지 수정. 데모 계정은 403 | `{ name, email, profileImageUrl }` |
 | POST | `/api/members/me/password` | 비밀번호 변경. 성공하면 그 전에 받은 토큰이 모두 폐기됨. 데모 계정은 403 | `{ currentPassword, newPassword }` |
+| DELETE | `/api/members/me` | 탈퇴. 회원과 그 회원의 기록(`memberId` 칸이 있는 모든 표, 보유 종목, 체결)을 전부 지움. 되돌릴 수 없음. 쓰던 토큰은 그 뒤로 401. 데모 계정은 403 | |
 
 🔓 = 토큰 없이 부를 수 있음
 
