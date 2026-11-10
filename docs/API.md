@@ -1,12 +1,12 @@
 # API 명세
 
-MyWave 화면이 실제로 부르는 엔드포인트 55개입니다. 프론트의 [`myWaveApi.ts`](../frontend/src/mywave/myWaveApi.ts)와 [`authApi.ts`](../frontend/src/api/authApi.ts)에서 호출하는 주소를 컨트롤러와 하나씩 맞춰 봤습니다(2026-10-12). 백엔드에는 이 밖에도 예전 모의투자 화면이 쓰던 엔드포인트가 50개 남짓 더 있습니다. 맨 아래에 묶어서만 적었습니다.
+MyWave 화면이 실제로 부르는 엔드포인트 54개입니다. 프론트의 [`myWaveApi.ts`](../frontend/src/mywave/myWaveApi.ts)와 [`authApi.ts`](../frontend/src/api/authApi.ts)에서 호출하는 주소를 컨트롤러와 하나씩 맞춰 봤습니다(2026-10-12). 백엔드에는 이 밖에도 예전 모의투자 화면이 쓰던 엔드포인트가 50개 남짓 더 있습니다. 맨 아래에 묶어서만 적었습니다.
 
 ## 공통
 
 **주소.** 로컬 기본값은 `http://localhost:8080`입니다.
 
-**인증.** `/api/auth/**`를 뺀 모든 요청에 로그인할 때 받은 토큰을 붙입니다. 세션은 쓰지 않습니다(`STATELESS`). 토큰은 24시간 유효합니다.
+**인증.** `/api/auth/**`를 뺀 모든 요청에 로그인할 때 받은 토큰을 붙입니다. 세션은 쓰지 않습니다(`STATELESS`). 토큰은 24시간 유효합니다. 로그아웃한 토큰과, 비밀번호를 바꾸기 전에 발급된 토큰은 만료 전이라도 401입니다.
 
 ```http
 Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
@@ -21,13 +21,18 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
 
 | HTTP | `error.code` | 언제 |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | `@Valid` 검사 실패. 메시지에 `필드: 이유`가 붙습니다 |
+| 400 | `VALIDATION_ERROR` | `@Valid` 검사 실패. 우리가 적은 문장은 그대로(`금액은 1억 원 이하로 입력해 주세요.`), 라이브러리 기본 문구는 `필드: 이유`로 나갑니다 |
 | 400 | `BAD_REQUEST` | 없는 기록, 남의 기록, 잘못된 값 (`IllegalArgumentException`) |
 | 400 | `INVALID_JSON` | 요청 본문을 읽을 수 없음 |
-| 401 | | 토큰이 없거나 만료. 프론트는 토큰을 지우고 로그인 화면으로 보냅니다 |
+| 401 | | 토큰이 없거나 만료, 또는 폐기됨. 프론트는 토큰을 지우고 로그인 화면으로 보냅니다 |
+| 403 | `FORBIDDEN` | 로그인은 했지만 이 계정으로는 할 수 없는 일. 지금은 데모 계정의 프로필, 비밀번호 변경 |
+| 404 | `NOT_FOUND` | 없는 주소 |
+| 405 | `METHOD_NOT_ALLOWED` | 그 주소에서 받지 않는 메서드 |
 | 429 | `TOO_MANY_REQUESTS` | 같은 주소에서 같은 이메일로 로그인을 5번 틀림. 10분 동안 맞는 비밀번호도 막힙니다 |
 | 503 | `SERVICE_UNAVAILABLE` | `/api/health`에서 DB에 닿지 못함 |
 | 500 | `INTERNAL_SERVER_ERROR` | 그 밖의 서버 오류 |
+
+**입력 한도.** 지출 한 건은 1억 원, 목표·예산·매매 단가는 100억 원, 계좌 잔액은 ±1조 원까지입니다. 지출과 매매는 미래 날짜를, 새 목표는 과거 날짜를 받지 않습니다. 코치 질문은 500자까지입니다.
 
 **형식.** 금액은 숫자(원), 날짜는 `2026-10-12`, 달은 `2026-10`(`yyyy-MM`)입니다. `month`를 빼면 이번 달입니다. 시간대는 `Asia/Seoul`입니다.
 
@@ -41,12 +46,11 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
 |---|---|---|---|
 | POST | `/api/auth/register` 🔓 | 회원가입. 가입하자마자 로그인된 상태로 토큰을 돌려줌 | `{ name, email, password }` |
 | POST | `/api/auth/login` 🔓 | 로그인 | `{ email, password }` |
-| POST | `/api/auth/logout` 🔓 | 로그아웃 (서버는 할 일이 없고, 프론트가 토큰을 지움) | |
+| POST | `/api/auth/logout` 🔓 | 로그아웃. 헤더로 온 토큰 한 장을 폐기함. 같은 계정의 다른 로그인은 그대로 | |
 | GET | `/api/health` 🔓 | 살아 있는지. DB 커넥션을 하나 빌려 확인하고 `{ status, db }`를 돌려줌. compose healthcheck와 모니터가 부름 | |
 | GET | `/api/members/me` | 내 정보 | |
-| PATCH | `/api/members/me/profile` | 이름, 이메일, 프로필 이미지 수정 | `{ name, email, profileImageUrl }` |
-| PATCH | `/api/members/me/membership` | 멤버십 등급 변경 | `{ membershipGrade }` (`BASIC` \| `VIP`) |
-| POST | `/api/members/me/password` | 비밀번호 변경 | `{ currentPassword, newPassword }` |
+| PATCH | `/api/members/me/profile` | 이름, 이메일, 프로필 이미지 수정. 데모 계정은 403 | `{ name, email, profileImageUrl }` |
+| POST | `/api/members/me/password` | 비밀번호 변경. 성공하면 그 전에 받은 토큰이 모두 폐기됨. 데모 계정은 403 | `{ currentPassword, newPassword }` |
 
 🔓 = 토큰 없이 부를 수 있음
 

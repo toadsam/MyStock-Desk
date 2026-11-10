@@ -1,6 +1,6 @@
 # ERD
 
-MyWave 화면이 실제로 읽고 쓰는 테이블 14개입니다. 예전 모의투자 기능의 테이블(주문 `trade_order`, 체결 `execution`, 거래장부 `trade_ledger`, 시세 `price_point`, 뉴스 `news`, 실적 `earnings`, 지수 `market_index`, 섹터 `sector_performance`, 투자 메모 `investment_memo`, AI 인사이트 `ai_insight`)는 아직 DB에 만들어지지만 지금 화면에서 쓰지 않아 뺐습니다.
+MyWave 화면이 실제로 읽고 쓰는 테이블 14개와, 로그아웃을 기억하는 `revoked_token`입니다. 예전 모의투자 기능의 테이블(주문 `trade_order`, 체결 `execution`, 거래장부 `trade_ledger`, 시세 `price_point`, 뉴스 `news`, 실적 `earnings`, 지수 `market_index`, 섹터 `sector_performance`, 투자 메모 `investment_memo`, AI 인사이트 `ai_insight`)는 아직 DB에 만들어지지만 지금 화면에서 쓰지 않아 뺐습니다.
 
 컬럼과 타입은 JPA 엔티티를 읽어 적은 것이 아니라, H2로 서버를 띄웠을 때 Hibernate가 실제로 만든 DDL에서 옮겼습니다(2026-10-12).
 
@@ -29,7 +29,12 @@ erDiagram
         varchar password_hash "BCrypt"
         varchar profile_image_url
         varchar membership_grade "BASIC | VIP"
+        bigint tokens_valid_from "이 시각(초) 전에 발급된 토큰은 무효"
         timestamp created_at
+    }
+    REVOKED_TOKEN {
+        varchar token_id PK "JWT 의 jti"
+        bigint expires_at "원래 만료 시각(초)"
     }
     FINANCIAL_ACCOUNT {
         bigint id PK
@@ -205,7 +210,8 @@ erDiagram
 
 | 테이블 | 무엇을 담나 | 누가 만드나 |
 |---|---|---|
-| `member` | 회원. 이메일이 로그인 아이디 | 회원가입 |
+| `member` | 회원. 이메일이 로그인 아이디. 비밀번호를 바꾸면 `tokens_valid_from`이 지금으로 당겨져 예전 토큰이 무효가 됨 | 회원가입 |
+| `revoked_token` | 로그아웃한 토큰의 번호. 요청마다 대조하고, 만료가 지난 줄은 새로 적을 때 지움 | 로그아웃 |
 | `financial_account` | 직접 적어 넣는 은행, 증권 계좌와 잔액. 은행과 연결하지 않음 | 자산 화면 |
 | `monthly_budget` | 달마다 정하는 수입, 생활비, 고정비, 저축, 투자 계획 | 자산 화면의 월 예산 |
 | `expense` | 소비 한 건 | 직접 입력, 퀵버튼, 카드 문자 붙여넣기, 결제 캡처 |
