@@ -45,6 +45,7 @@ import {
   type MyWaveNotificationResponse,
   type MyWaveSearchResultResponse,
 } from '../myWaveApi'
+import { LOGIN_NOTICE_KEY } from '../../auth/loginNotice'
 import { useAuth } from '../../auth/useAuth'
 import { MiniStat, MobileTitle } from '../components'
 import { useMyWaveData } from '../runtime'
@@ -244,9 +245,11 @@ export function ProfilePage() {
     setPasswordMessage('')
     try {
       await changeMyWavePassword({ currentPassword, newPassword })
-      setCurrentPassword('')
-      setNewPassword('')
-      setPasswordMessage('비밀번호가 변경되었습니다.')
+      // 서버가 예전 비밀번호로 받은 토큰을 모두 버린다. 지금 쓰던 것도 포함이라, 새 비밀번호로 다시 들어오게 한다.
+      // 로그아웃하면 보호된 화면이 먼저 로그인으로 돌려보내서 이동할 때 실은 state 가 사라진다. 한마디는 따로 남긴다.
+      sessionStorage.setItem(LOGIN_NOTICE_KEY, '비밀번호를 바꿨어요. 새 비밀번호로 다시 로그인해 주세요.')
+      auth.logout()
+      navigate('/login', { replace: true })
     } catch (error) {
       setPasswordMessage(error instanceof Error ? error.message : '비밀번호 변경에 실패했습니다.')
     } finally {

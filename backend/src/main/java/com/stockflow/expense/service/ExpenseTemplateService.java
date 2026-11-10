@@ -11,6 +11,7 @@ import com.stockflow.expense.entity.ExpenseTemplate;
 import com.stockflow.expense.repository.ExpenseRepository;
 import com.stockflow.expense.repository.ExpenseTemplateRepository;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -37,6 +38,7 @@ public class ExpenseTemplateService {
     private final ExpenseTemplateRepository templateRepository;
     private final ExpenseRepository expenseRepository;
     private final CurrentMemberProvider currentMemberProvider;
+    private final Clock clock;
 
     public List<ExpenseTemplateDto> templates() {
         return templateRepository
@@ -86,7 +88,11 @@ public class ExpenseTemplateService {
         BigDecimal amount = request == null || request.amount() == null || request.amount().signum() <= 0
                 ? template.getAmount()
                 : request.amount();
-        LocalDate spentDate = request == null || request.spentDate() == null ? LocalDate.now() : request.spentDate();
+        LocalDate today = LocalDate.now(clock);
+        LocalDate spentDate = request == null || request.spentDate() == null ? today : request.spentDate();
+        if (spentDate.isAfter(today)) {
+            throw new IllegalArgumentException("미래 날짜로는 기록할 수 없어요.");
+        }
         template.markUsed();
         Expense saved = expenseRepository.save(Expense.builder()
                 .memberId(template.getMemberId())

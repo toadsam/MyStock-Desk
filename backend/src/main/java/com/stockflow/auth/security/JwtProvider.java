@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +40,8 @@ public class JwtProvider {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("sub", String.valueOf(memberId));
             payload.put("email", email);
+            // 토큰마다 다른 번호. 로그아웃한 토큰 한 장만 골라 버릴 때 쓴다.
+            payload.put("jti", UUID.randomUUID().toString());
             payload.put("iat", Instant.now().getEpochSecond());
             payload.put("exp", Instant.now().plusSeconds(expirationSeconds).getEpochSecond());
 
@@ -51,7 +54,8 @@ public class JwtProvider {
         }
     }
 
-    public Long validateAndGetMemberId(String token) {
+    /** 서명과 만료를 확인하고 내용을 꺼낸다. 폐기 여부는 {@link TokenRevocationService} 가 따로 본다. */
+    public TokenClaims parse(String token) {
         try {
             String[] parts = token.split("\\.");
             if (parts.length != 3) {
@@ -67,7 +71,12 @@ public class JwtProvider {
             if (Instant.now().getEpochSecond() > expiresAt) {
                 throw new IllegalArgumentException("만료된 토큰입니다.");
             }
-            return Long.valueOf((String) payload.get("sub"));
+            // 번호가 없는 토큰은 이 기능 전에 발급된 것이다. 버릴 수 없는 토큰은 받지 않는다(다시 로그인하면 된다).
+            if (!(payload.get("jti") instanceof String tokenId) || tokenId.isBlank()) {
+                throw new IllegalArgumentException("토큰 번호가 없습니다.");
+            }
+            long issuedAt = ((Number) payload.get("iat")).longValue();
+            return new TokenClaims(Long.valueOf((String) payload.get("sub")), tokenId, issuedAt, expiresAt);
         } catch (Exception exception) {
             throw new IllegalArgumentException("유효하지 않은 토큰입니다.", exception);
         }

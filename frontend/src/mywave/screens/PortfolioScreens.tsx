@@ -471,7 +471,7 @@ function InvestmentTransactionManager({ onSaved }: { onSaved?: () => void } = {}
                 </select>
               </Field>
               <Field label="거래일">
-                <input type="date" value={form.transactionDate} onChange={(event) => setForm((value) => ({ ...value, transactionDate: event.target.value }))} className="form-input" />
+                <input type="date" max={todayDateString()} value={form.transactionDate} onChange={(event) => setForm((value) => ({ ...value, transactionDate: event.target.value }))} className="form-input" />
               </Field>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

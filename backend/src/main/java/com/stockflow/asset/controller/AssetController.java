@@ -56,7 +56,7 @@ public class AssetController {
     }
 
     @PostMapping("/budgets/monthly")
-    public ApiResponse<MonthlyBudgetDto> upsertBudget(@RequestBody MonthlyBudgetRequest request) {
+    public ApiResponse<MonthlyBudgetDto> upsertBudget(@Valid @RequestBody MonthlyBudgetRequest request) {
         return ApiResponse.success(assetService.upsertBudget(request));
     }
 }

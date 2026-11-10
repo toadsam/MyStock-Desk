@@ -151,6 +151,7 @@ function ChatPanel() {
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && sendMessage()}
+            maxLength={500}
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-slate-400"
             placeholder="벨루가에게 물어보세요"
           />

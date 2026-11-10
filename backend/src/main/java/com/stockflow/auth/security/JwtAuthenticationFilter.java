@@ -19,9 +19,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
     private final ObjectMapper objectMapper;
+    private final TokenRevocationService tokenRevocationService;
 
-    public JwtAuthenticationFilter(JwtProvider jwtProvider, ObjectMapper objectMapper) {
+    public JwtAuthenticationFilter(JwtProvider jwtProvider, ObjectMapper objectMapper,
+            TokenRevocationService tokenRevocationService) {
         this.jwtProvider = jwtProvider;
+        this.tokenRevocationService = tokenRevocationService;
         this.objectMapper = objectMapper;
     }
 
@@ -32,7 +35,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             try {
                 String token = bearerToken.substring(7);
-                Long memberId = jwtProvider.validateAndGetMemberId(token);
+                TokenClaims claims = jwtProvider.parse(token);
+                // 서명이 맞아도 로그아웃했거나 비밀번호를 바꾸기 전의 토큰이면 받지 않는다.
+                if (tokenRevocationService.isRevoked(claims)) {
+                    throw new IllegalArgumentException("폐기된 토큰입니다.");
+                }
+                Long memberId = claims.memberId();
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(memberId, null, List.of());
                 SecurityContextHolder.getContext().setAuthentication(authentication);

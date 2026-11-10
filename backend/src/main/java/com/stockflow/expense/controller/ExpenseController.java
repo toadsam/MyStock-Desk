@@ -113,7 +113,7 @@ public class ExpenseController {
     @PostMapping("/saving-simulation")
     public ApiResponse<SavingSimulationResultDto> simulate(
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
-            @RequestBody(required = false) SavingSimulationRequest request
+            @Valid @RequestBody(required = false) SavingSimulationRequest request
     ) {
         return ApiResponse.success(expenseService.simulate(month, request));
     }

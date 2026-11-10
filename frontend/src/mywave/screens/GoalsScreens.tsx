@@ -514,10 +514,10 @@ export function GoalEditorPage() {
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="목표 금액">
-              <input type="number" value={targetAmount} onChange={(event) => setTargetAmount(Number(event.target.value))} className="form-input" />
+              <input type="number" min="0" max="10000000000" value={targetAmount} onChange={(event) => setTargetAmount(Number(event.target.value))} className="form-input" />
             </Field>
             <Field label="현재 모은 금액">
-              <input type="number" value={currentAmount} onChange={(event) => setCurrentAmount(Number(event.target.value))} className="form-input" />
+              <input type="number" min="0" max="10000000000" value={currentAmount} onChange={(event) => setCurrentAmount(Number(event.target.value))} className="form-input" />
             </Field>
           </div>
           <Field label="목표 날짜">
@@ -532,7 +532,7 @@ export function GoalEditorPage() {
               </select>
             </Field>
             <Field label="우선순위">
-              <input type="number" min="1" value={priority} onChange={(event) => setPriority(Number(event.target.value))} className="form-input" />
+              <input type="number" min="1" max="99" value={priority} onChange={(event) => setPriority(Number(event.target.value))} className="form-input" />
             </Field>
           </div>
         </div>

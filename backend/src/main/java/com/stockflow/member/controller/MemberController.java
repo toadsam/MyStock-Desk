@@ -2,7 +2,6 @@ package com.stockflow.member.controller;
 
 import com.stockflow.global.response.ApiResponse;
 import com.stockflow.member.dto.MemberDto;
-import com.stockflow.member.dto.MemberMembershipRequest;
 import com.stockflow.member.dto.MemberProfileRequest;
 import com.stockflow.member.dto.PasswordChangeRequest;
 import com.stockflow.member.service.MemberService;
@@ -27,10 +26,7 @@ public class MemberController {
         return ApiResponse.success(memberService.getCurrentMember());
     }
 
-    @PatchMapping("/me/membership")
-    public ApiResponse<MemberDto> updateMembership(@Valid @RequestBody MemberMembershipRequest request) {
-        return ApiResponse.success(memberService.updateMembership(request));
-    }
+    // 등급을 스스로 바꾸는 주소는 없앴다. 결제가 없는데 요청 한 번으로 VIP 가 되면 등급에 뜻이 없다.
 
     @PatchMapping("/me/profile")
     public ApiResponse<MemberDto> updateProfile(@Valid @RequestBody MemberProfileRequest request) {

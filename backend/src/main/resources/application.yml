@@ -31,6 +31,9 @@ stockflow:
   # 인증 없이 들어온 요청을 어느 회원으로 볼지. 비워 두면(기본) 로그인 없는 요청은 401 이다.
   # SecurityConfig 가 /api/auth 밖의 모든 요청에 로그인을 요구하므로 평소에는 쓰이지 않는다. 개발 중 잠깐 열 때만 쓴다.
   mock-member-id: ${STOCKFLOW_MOCK_MEMBER_ID:}
+  demo:
+    # 로그인 화면의 데모 버튼이 쓰는 계정. 여럿이 같이 쓰므로 이 계정의 프로필과 비밀번호는 바꿀 수 없다(DemoAccountPolicy).
+    email: ${STOCKFLOW_DEMO_EMAIL:investor@stockflow.com}
   auth:
     login:
       # 같은 주소에서 같은 이메일로 이만큼 틀리면 lock-minutes 동안 맞는 비밀번호도 429 다(LoginAttemptLimiter).

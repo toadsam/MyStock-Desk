@@ -59,7 +59,7 @@ public class ExpenseTemplateController {
     @PostMapping("/{id}/log")
     public ApiResponse<ExpenseDto> log(
             @PathVariable Long id,
-            @RequestBody(required = false) TemplateLogRequest request) {
+            @Valid @RequestBody(required = false) TemplateLogRequest request) {
         return ApiResponse.success(expenseTemplateService.log(id, request));
     }
 }

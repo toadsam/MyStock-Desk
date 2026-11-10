@@ -73,6 +73,7 @@ public class GoalService {
 
     @Transactional
     public SavingGoalDto create(SavingGoalRequest request) {
+        requireNotPast(request.targetDate());
         SavingGoal saved = goalRepository.save(SavingGoal.builder()
                 .memberId(currentMemberProvider.currentMemberId())
                 .title(request.title())
@@ -90,6 +91,10 @@ public class GoalService {
     @Transactional
     public SavingGoalDto update(Long id, SavingGoalRequest request) {
         SavingGoal goal = findOwnedGoal(id);
+        // 이미 날짜가 지난 목표를 완료로 바꾸거나 이름을 고치는 건 된다. 날짜를 새로 과거로 옮기는 것만 막는다.
+        if (!request.targetDate().equals(goal.getTargetDate())) {
+            requireNotPast(request.targetDate());
+        }
         goal.update(
                 request.title(),
                 request.targetAmount(),
@@ -151,6 +156,12 @@ public class GoalService {
                             share);
                 })
                 .toList();
+    }
+
+    private void requireNotPast(LocalDate targetDate) {
+        if (targetDate.isBefore(LocalDate.now(clock))) {
+            throw new IllegalArgumentException("목표 날짜는 오늘이나 그 뒤로 정해 주세요.");
+        }
     }
 
     private SavingGoal findOwnedGoal(Long id) {

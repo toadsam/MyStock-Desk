@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { api } from '../api/axios'
 
 type ApiResponse<T> = {
@@ -300,7 +301,16 @@ export type MyWaveCompanyAnalysisResponse = {
 }
 
 async function unwrap<T>(request: Promise<{ data: ApiResponse<T> }>): Promise<T> {
-  const response = await request
+  let response: { data: ApiResponse<T> }
+  try {
+    response = await request
+  } catch (error) {
+    // 4xx 는 axios 가 던진다. 그대로 두면 화면에 "Request failed with status code 400" 이 뜨므로 서버가 적어 준 문장을 꺼낸다.
+    if (axios.isAxiosError<ApiResponse<unknown>>(error)) {
+      throw new Error(error.response?.data?.error?.message ?? error.message, { cause: error })
+    }
+    throw error
+  }
   if (!response.data.success) {
     throw new Error(response.data.error?.message ?? 'API 요청 실패')
   }
@@ -422,10 +432,6 @@ export async function deleteMyWaveExpense(id: number) {
 
 export async function getMyWaveMember() {
   return unwrap(api.get<ApiResponse<MyWaveMemberResponse>>('/api/members/me'))
-}
-
-export async function updateMyWaveMembership(membershipGrade: string) {
-  return unwrap(api.patch<ApiResponse<MyWaveMemberResponse>>('/api/members/me/membership', { membershipGrade }))
 }
 
 export async function updateMyWaveProfile(request: {

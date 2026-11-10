@@ -30,7 +30,7 @@ import type {
   MyWaveParseResultResponse,
   MyWaveTemplateSuggestionResponse,
 } from './myWaveApi'
-import { won } from './format'
+import { todayDateString, won } from './format'
 import { Amount } from './Amount'
 import { Beluga, BelugaEmpty, BelugaSays } from './Beluga'
 import { Card, ListRow, PrimaryButton } from './uiKit'
@@ -316,6 +316,8 @@ function ReviewList({
                 />
                 <input
                   type="number"
+                  min="0"
+                  max="100000000"
                   value={row.amount}
                   onChange={(event) => onPatch(row.key, { amount: Number(event.target.value) })}
                   className="form-input !h-10 !rounded-xl text-right"
@@ -329,6 +331,7 @@ function ReviewList({
                 </select>
                 <input
                   type="date"
+                  max={todayDateString()}
                   value={row.spentDate}
                   onChange={(event) => onPatch(row.key, { spentDate: event.target.value })}
                   className="form-input !h-10 !rounded-xl"

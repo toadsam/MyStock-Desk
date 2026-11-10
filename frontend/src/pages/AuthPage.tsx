@@ -1,6 +1,7 @@
 import { LockKeyhole, LogIn, UserPlus } from 'lucide-react'
-import { type FormEvent, useMemo, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { LOGIN_NOTICE_KEY } from '../auth/loginNotice'
 import { useAuth } from '../auth/useAuth'
 import { BelugaArt } from '../mywave/BelugaArt'
 import { Ocean } from '../mywave/motion'
@@ -18,6 +19,11 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null)
 
   const title = useMemo(() => (isRegister ? '회원가입' : '로그인'), [isRegister])
+  // 비밀번호를 바꾼 뒤처럼, 다른 화면이 이리로 보내면서 남긴 한마디. 한 번 보여 주면 지운다.
+  const [notice] = useState(() => sessionStorage.getItem(LOGIN_NOTICE_KEY))
+  useEffect(() => {
+    sessionStorage.removeItem(LOGIN_NOTICE_KEY)
+  }, [])
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -111,6 +117,12 @@ export default function AuthPage() {
                 autoComplete={isRegister ? 'new-password' : 'current-password'}
               />
             </label>
+
+            {notice && !error && (
+              <div role="status" className="rounded-[12px] bg-blue-50 px-4 py-3 text-[13px] font-semibold text-blue-700">
+                {notice}
+              </div>
+            )}
 
             {error && (
               <div className="rounded-[12px] bg-red-50 px-4 py-3 text-[13px] font-semibold text-red-700">

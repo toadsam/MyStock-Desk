@@ -26,6 +26,10 @@ import org.springframework.test.web.servlet.MvcResult;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class GoalFlowIntegrationTest {
 
+    // 날짜를 박아 두면 그날이 지난 뒤부터 깨진다. 지난 날짜의 목표는 만들 수 없기 때문이다.
+    private static final String TARGET_DATE =
+            java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).plusMonths(6).toString();
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -43,7 +47,7 @@ class GoalFlowIntegrationTest {
                                 "title", "노트북 구입 자금",
                                 "targetAmount", 2000000,
                                 "currentAmount", 300000,
-                                "targetDate", "2026-09-30",
+                                "targetDate", TARGET_DATE,
                                 "status", "ACTIVE",
                                 "priority", 1
                         ))))
@@ -61,7 +65,7 @@ class GoalFlowIntegrationTest {
                                 "title", "노트북 구입 자금",
                                 "targetAmount", 2000000,
                                 "currentAmount", 2000000,
-                                "targetDate", "2026-09-30",
+                                "targetDate", TARGET_DATE,
                                 "status", "COMPLETED",
                                 "priority", 1
                         ))))

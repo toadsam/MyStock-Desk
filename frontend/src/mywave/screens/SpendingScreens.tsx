@@ -608,7 +608,7 @@ function ExpenseRecordsManager() {
               <input type="number" value={form.amount} onChange={(event) => setForm((value) => ({ ...value, amount: Number(event.target.value) }))} className="form-input" />
             </Field>
             <Field label="사용일">
-              <input type="date" value={form.spentDate} onChange={(event) => setForm((value) => ({ ...value, spentDate: event.target.value }))} className="form-input" />
+              <input type="date" max={todayDateString()} value={form.spentDate} onChange={(event) => setForm((value) => ({ ...value, spentDate: event.target.value }))} className="form-input" />
             </Field>
           </div>
           <Field label="메모">

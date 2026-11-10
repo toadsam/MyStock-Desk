@@ -5,6 +5,7 @@ import com.stockflow.auth.dto.LoginRequest;
 import com.stockflow.auth.dto.RegisterRequest;
 import com.stockflow.auth.security.JwtProvider;
 import com.stockflow.auth.security.LoginAttemptLimiter;
+import com.stockflow.auth.security.TokenRevocationService;
 import com.stockflow.member.dto.MemberDto;
 import com.stockflow.member.entity.Member;
 import com.stockflow.member.repository.MemberRepository;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final LoginAttemptLimiter loginAttemptLimiter;
+    private final TokenRevocationService tokenRevocationService;
 
     public AuthResponse login(LoginRequest request, String clientIp) {
         loginAttemptLimiter.checkAllowed(clientIp, request.email());
@@ -65,6 +68,21 @@ public class AuthService {
                 .dailyReturnRate(BigDecimal.ZERO)
                 .build());
         return toAuthResponse(member);
+    }
+
+    /**
+     * 지금 쓰던 토큰 한 장을 버린다. 헤더가 없거나 이미 못 쓰는 토큰이면 할 일이 없다.
+     * 화면은 어느 쪽이든 로그인 정보를 지우므로 실패로 돌려주지 않는다.
+     */
+    public void logout(String authorizationHeader) {
+        if (!StringUtils.hasText(authorizationHeader) || !authorizationHeader.startsWith("Bearer ")) {
+            return;
+        }
+        try {
+            tokenRevocationService.revoke(jwtProvider.parse(authorizationHeader.substring(7)));
+        } catch (IllegalArgumentException ignored) {
+            // 만료됐거나 서명이 틀린 토큰이다. 버릴 것이 없다.
+        }
     }
 
     private AuthResponse toAuthResponse(Member member) {

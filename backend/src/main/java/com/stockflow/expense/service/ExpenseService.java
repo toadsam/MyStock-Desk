@@ -79,6 +79,7 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseDto create(ExpenseRequest request) {
+        requireNotFuture(request.spentDate());
         Expense saved = expenseRepository.save(Expense.builder()
                 .memberId(currentMemberProvider.currentMemberId())
                 .category(request.category())
@@ -97,6 +98,7 @@ public class ExpenseService {
     public List<ExpenseDto> createBulk(List<ExpenseRequest> requests) {
         Long memberId = currentMemberProvider.currentMemberId();
         LocalDateTime now = LocalDateTime.now();
+        requests.forEach(request -> requireNotFuture(request.spentDate()));
         List<Expense> saved = expenseRepository.saveAll(requests.stream()
                 .map(request -> Expense.builder()
                         .memberId(memberId)
@@ -154,6 +156,7 @@ public class ExpenseService {
     @Transactional
     public ExpenseDto update(Long id, ExpenseRequest request) {
         Expense expense = findOwnedExpense(id);
+        requireNotFuture(request.spentDate());
         expense.update(request.category(), request.merchant(), request.amount(), request.spentDate(), request.memo());
         return ExpenseDto.from(expense);
     }
@@ -191,6 +194,13 @@ public class ExpenseService {
                         .divide(mainGoal.targetAmount(), 1, RoundingMode.HALF_UP)
                         .min(BigDecimal.valueOf(100));
         return new SavingSimulationResultDto(currentRate, expectedRate, totalSaving, savings);
+    }
+
+    /** 아직 오지 않은 날의 지출은 받지 않는다. 오늘은 한국 날짜 기준이다. */
+    private void requireNotFuture(LocalDate spentDate) {
+        if (spentDate.isAfter(LocalDate.now(clock))) {
+            throw new IllegalArgumentException("미래 날짜로는 기록할 수 없어요.");
+        }
     }
 
     private Expense findOwnedExpense(Long id) {

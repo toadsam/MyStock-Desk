@@ -35,6 +35,9 @@ public class Member {
     private String membershipGrade;
     private LocalDateTime createdAt;
 
+    /** 이 시각(초)보다 먼저 발급된 토큰은 받지 않는다. 비밀번호를 바꿀 때 지금으로 당긴다. 비어 있으면 제한이 없다. */
+    private Long tokensValidFrom;
+
     public void updateMembershipGrade(String membershipGrade) {
         this.membershipGrade = membershipGrade;
     }
@@ -47,5 +50,9 @@ public class Member {
 
     public void updatePasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public void invalidateTokensIssuedBefore(long epochSecond) {
+        this.tokensValidFrom = epochSecond;
     }
 }

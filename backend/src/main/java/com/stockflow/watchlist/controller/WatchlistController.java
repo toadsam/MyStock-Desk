@@ -4,6 +4,7 @@ import com.stockflow.global.response.ApiResponse;
 import com.stockflow.watchlist.dto.WatchlistDto;
 import com.stockflow.watchlist.dto.WatchlistMemoRequest;
 import com.stockflow.watchlist.service.WatchlistService;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -33,7 +34,7 @@ public class WatchlistController {
     }
 
     @PatchMapping("/{symbol}")
-    public ApiResponse<WatchlistDto> updateMemo(@PathVariable String symbol, @RequestBody WatchlistMemoRequest request) {
+    public ApiResponse<WatchlistDto> updateMemo(@PathVariable String symbol, @Valid @RequestBody WatchlistMemoRequest request) {
         return ApiResponse.success(watchlistService.updateMemo(symbol, request));
     }
 

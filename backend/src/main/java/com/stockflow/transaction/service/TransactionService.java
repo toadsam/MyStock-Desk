@@ -78,6 +78,7 @@ public class TransactionService {
 
     @Transactional
     public InvestmentTransactionDto create(TransactionRequest request) {
+        requireNotFuture(request.transactionDate());
         Long memberId = currentMemberProvider.currentMemberId();
         Stock stock = findStock(request.symbol(), request.stockName());
         Portfolio portfolio = findPortfolio(memberId);
@@ -112,6 +113,7 @@ public class TransactionService {
     @Transactional
     public InvestmentTransactionDto update(Long id, TransactionRequest request) {
         InvestmentTransaction transaction = findOwnedTransaction(id);
+        requireNotFuture(request.transactionDate());
         Stock stock = findStock(request.symbol(), request.stockName());
         Integer quantity = normalizedQuantity(request);
         BigDecimal price = normalizedMoney(request.price());
@@ -377,6 +379,13 @@ public class TransactionService {
     private Portfolio findPortfolio(Long memberId) {
         return portfolioRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("포트폴리오를 찾을 수 없습니다."));
+    }
+
+    /** 아직 일어나지 않은 거래는 받지 않는다. 화면 입력과 CSV 가 모두 여기를 지난다. */
+    private void requireNotFuture(LocalDate transactionDate) {
+        if (transactionDate != null && transactionDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("미래 날짜의 거래는 기록할 수 없어요.");
+        }
     }
 
     private void requireStock(Stock stock) {
