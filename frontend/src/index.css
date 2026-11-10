@@ -1589,3 +1589,21 @@ html[data-liveliness="quiet"] .hero-swimmer {
     animation: none !important;
   }
 }
+
+/* 캡처를 읽는 동안 사진 위를 오르내리는 선. */
+.capture-scan {
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0) 0%, rgba(37, 99, 235, 0.35) 70%, rgba(37, 99, 235, 0.75) 100%);
+  animation: capture-scan 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes capture-scan {
+  from { transform: translateY(-2rem); }
+  to { transform: translateY(7rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capture-scan {
+    animation: none;
+    transform: translateY(2.5rem);
+  }
+}
