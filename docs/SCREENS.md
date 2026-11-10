@@ -28,7 +28,8 @@
 | AI 코치 | `/coach` | 이번 달 상태 요약, 목표 전망, 대화 | `POST /api/ai/financial-coach/chat` |
 | 자산 | `/assets` | 총자산, 계좌 등록과 수정, 월 예산 | `GET /api/assets/summary`, `/api/assets/accounts` 4개, `POST /api/assets/budgets/monthly` |
 | 알림 | `/notifications` | 알림 목록, 분류 필터, 읽음, 삭제 | `/api/notifications` 5개 |
-| 프로필 | `/profile` | 내 정보, 멤버십, 계좌 수, 비밀번호 변경, 로그아웃 | `GET /api/members/me`, `PATCH .../profile`, `PATCH .../membership`, `POST .../password`, `GET /api/assets/accounts`, `POST /api/auth/logout` |
+| 프로필 | `/profile` | 내 정보, 계좌 수, 비밀번호 변경(구글 계정은 안내 문구), 로그아웃, 계정 삭제 | `GET /api/members/me`, `PATCH .../profile`, `POST .../password`, `DELETE /api/members/me`, `GET /api/assets/accounts`, `POST /api/auth/logout` |
+| 개인정보 안내 | `/privacy` | 받는 정보, 쓰는 곳, 밖으로 나가는 것, 지우는 방법. 로그인 없이 볼 수 있음 | 없음 |
 | 시작하기 | `/onboarding` | 처음 쓰는 사람을 위한 안내 3장 | |
 | 검색 | `/search?q=` | 목표, 소비, 보유 종목, 종목 검색 | `GET /api/search` |
 

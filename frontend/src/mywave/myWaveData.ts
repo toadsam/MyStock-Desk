@@ -41,7 +41,8 @@ export const navItems: NavItem[] = [
   { label: 'AI코치', path: '/coach', icon: MessageCircle },
 ]
 
-export const mobileNavItems = navItems.filter((item) => item.path !== '/reports')
+/** 휴대폰 하단 메뉴. 데스크톱과 같은 여섯 곳을 다 보여 준다. 리포트만 빠져 있으면 휴대폰에서는 갈 길이 없다. */
+export const mobileNavItems = navItems
 
 const CATEGORY_STYLES: Array<{ keys: string[]; icon: Icon; color: string }> = [
   { keys: ['식비', '식사', '학식', '편의점'], icon: Utensils, color: '#2f6df6' },

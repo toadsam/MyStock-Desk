@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { getAuthConfig } from '../api/authApi'
+import { useEffect, useRef } from 'react'
 
 type CredentialResponse = { credential?: string }
 
@@ -49,33 +48,17 @@ function loadGoogleScript() {
  * 그래야 이 화면의 코드가 사용자의 구글 계정에 손댈 수 없기 때문이다. 우리가 받는 것은 구글이 서명한 토큰 한 줄뿐이고,
  * 그 토큰이 진짜인지는 서버가 확인한다.
  *
- * 서버에 클라이언트 ID 가 없으면 아무것도 그리지 않는다.
+ * 클라이언트 ID 는 로그인 화면이 서버에서 받아 넘겨준다. 위에 다른 로그인 방법이 있을 때만 "또는" 줄을 긋는다.
  */
-export function GoogleSignInButton({ onCredential }: { onCredential: (credential: string) => void }) {
+export function GoogleSignInButton({ clientId, onCredential, divider = false }: { clientId: string; onCredential: (credential: string) => void; divider?: boolean }) {
   const slotRef = useRef<HTMLDivElement>(null)
   const callbackRef = useRef(onCredential)
-  const [clientId, setClientId] = useState<string | null>(null)
 
   useEffect(() => {
     callbackRef.current = onCredential
   }, [onCredential])
 
   useEffect(() => {
-    let ignore = false
-    getAuthConfig()
-      .then((config) => {
-        if (!ignore) setClientId(config.googleClientId ?? null)
-      })
-      .catch(() => {
-        // 설정을 못 읽으면 버튼 없이 간다. 이메일 로그인은 그대로 된다.
-      })
-    return () => {
-      ignore = true
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!clientId) return
     let ignore = false
     loadGoogleScript()
       .then(() => {
@@ -110,15 +93,15 @@ export function GoogleSignInButton({ onCredential }: { onCredential: (credential
     }
   }, [clientId])
 
-  if (!clientId) return null
-
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 text-[13px] font-semibold text-slate-400" aria-hidden="true">
-        <span className="h-px flex-1 bg-slate-200" />
-        또는
-        <span className="h-px flex-1 bg-slate-200" />
-      </div>
+      {divider && (
+        <div className="flex items-center gap-3 text-[13px] font-semibold text-slate-400" aria-hidden="true">
+          <span className="h-px flex-1 bg-slate-200" />
+          또는
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+      )}
       <div ref={slotRef} className="flex min-h-[44px] justify-center" />
     </div>
   )

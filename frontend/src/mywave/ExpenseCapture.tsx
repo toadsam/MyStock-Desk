@@ -170,23 +170,28 @@ export function ExpenseImportCard({ onSaved }: { onSaved: () => void }) {
   }
 
   const imageDisabled = !status?.imageParsingAvailable || (status?.remainingImageQuota ?? 0) <= 0
+  // 캡처 읽기가 서버에서 꺼져 있으면 탭 자체를 내놓지 않는다. 눌러도 안 되는 것을 보여 주지 않는다.
+  const imageOffered = status?.imageParsingAvailable === true
+  const activeMode = imageOffered ? mode : 'sms'
 
   return (
     <Card title="간편 입력">
       <div className="space-y-4">
-        <div className="flex gap-1 rounded-[14px] bg-slate-100 p-1">
-          {([['sms', ClipboardPaste, '카드 문자'], ['image', ImageUp, '내역 캡처']] as const).map(([key, Icon, label]) => (
-            <button
-              key={key}
-              onClick={() => setMode(key)}
-              className={`pressable flex flex-1 items-center justify-center gap-1.5 rounded-[11px] py-2.5 text-[14px] font-bold ${mode === key ? 'bg-white text-slate-900' : 'text-slate-400'}`}
-            >
-              <Icon className="h-4 w-4" />{label}
-            </button>
-          ))}
-        </div>
+        {imageOffered && (
+          <div className="flex gap-1 rounded-[14px] bg-slate-100 p-1">
+            {([['sms', ClipboardPaste, '카드 문자'], ['image', ImageUp, '내역 캡처']] as const).map(([key, Icon, label]) => (
+              <button
+                key={key}
+                onClick={() => setMode(key)}
+                className={`pressable flex flex-1 items-center justify-center gap-1.5 rounded-[11px] py-2.5 text-[14px] font-bold ${activeMode === key ? 'bg-white text-slate-900' : 'text-slate-400'}`}
+              >
+                <Icon className="h-4 w-4" />{label}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {mode === 'sms' ? (
+        {activeMode === 'sms' ? (
           <div className="space-y-3">
             <textarea
               value={text}

@@ -142,7 +142,9 @@ class AccountSafetyIntegrationTest {
         // 이 테스트 묶음은 클라이언트 ID 없이 뜬다. 운영에 변수를 넣기 전의 상태와 같다.
         mockMvc.perform(get("/api/auth/config"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.googleClientId").isEmpty());
+                .andExpect(jsonPath("$.data.googleClientId").isEmpty())
+                // 비밀번호 로그인은 끄라고 하기 전까지 켜져 있다.
+                .andExpect(jsonPath("$.data.passwordLoginEnabled").value(true));
         mockMvc.perform(post("/api/auth/google")
                         .contentType("application/json")
                         .content(json(Map.of("credential", "anything"))))
