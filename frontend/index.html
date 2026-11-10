@@ -3,14 +3,155 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="description" content="오늘 써도 되는 돈을 알려 주는 가계부, MyWave" />
+    <link rel="preload" as="image" href="/splash-beluga.webp" type="image/webp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Jua&display=swap" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" crossorigin="anonymous" />
     <title>MyWave</title>
+    <!--
+      첫 화면(스플래시). 화면 코드를 받는 동안 흰 화면 대신 보인다.
+      스크립트보다 먼저 떠야 해서 React 가 아니라 여기에 직접 적는다. 앱이 그려지면 main.tsx 가 걷어 낸다.
+      아래 한 줄 문구는 src/mywave/brand.ts 의 TAGLINE 과 같아야 한다.
+    -->
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        color: #fff;
+        background: linear-gradient(180deg, #3b82f6 0%, #2563eb 48%, #1d4ed8 100%);
+        font-family: 'Pretendard Variable', Pretendard, system-ui, -apple-system, 'Segoe UI', sans-serif;
+        transition: opacity 0.4s ease, visibility 0.4s;
+      }
+      #splash.splash-out {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .splash-inner {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+        text-align: center;
+        transform: translateY(-6vh);
+      }
+      .splash-beluga {
+        width: 136px;
+        height: auto;
+        filter: drop-shadow(0 14px 18px rgba(10, 40, 140, 0.35));
+        animation: splash-rise 0.9s cubic-bezier(0.2, 0.9, 0.2, 1) both, splash-bob 2.8s ease-in-out 0.9s infinite;
+      }
+      .splash-logo {
+        margin-top: 12px;
+        font-size: 42px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        animation: splash-fade 0.6s ease 0.2s both;
+      }
+      .splash-tag {
+        margin-top: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        animation: splash-fade 0.6s ease 0.38s both;
+      }
+      .splash-slow {
+        margin-top: 18px;
+        font-size: 13px;
+        font-weight: 600;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+      }
+      #splash.splash-is-slow .splash-slow {
+        opacity: 0.9;
+      }
+      .splash-wave {
+        position: absolute;
+        left: 0;
+        bottom: -2px;
+        z-index: 1;
+        width: 200%;
+        height: 26vh;
+        min-height: 150px;
+        animation: splash-drift 10s linear infinite;
+      }
+      .splash-wave-back {
+        height: 31vh;
+        min-height: 178px;
+        opacity: 0.45;
+        animation-duration: 16s;
+        animation-direction: reverse;
+      }
+      .splash-bubble {
+        position: absolute;
+        bottom: -24px;
+        z-index: 1;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.28);
+        animation: splash-float 5s ease-in infinite;
+      }
+      @keyframes splash-rise {
+        from { opacity: 0; transform: translateY(46px) scale(0.92); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes splash-bob {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-8px) rotate(-2deg); }
+      }
+      @keyframes splash-fade {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes splash-drift {
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
+      }
+      @keyframes splash-float {
+        0% { opacity: 0; transform: translateY(0) scale(0.6); }
+        15% { opacity: 1; }
+        100% { opacity: 0; transform: translateY(-72vh) scale(1.1); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash, #splash * { animation: none !important; transition: none !important; }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" role="status" aria-label="MyWave를 여는 중이에요">
+      <span class="splash-bubble" style="left: 14%; width: 12px; height: 12px; animation-delay: 0.2s"></span>
+      <span class="splash-bubble" style="left: 31%; width: 7px; height: 7px; animation-delay: 1.6s"></span>
+      <span class="splash-bubble" style="left: 68%; width: 10px; height: 10px; animation-delay: 0.9s"></span>
+      <span class="splash-bubble" style="left: 84%; width: 6px; height: 6px; animation-delay: 2.4s"></span>
+      <div class="splash-inner" aria-hidden="true">
+        <img class="splash-beluga" src="/splash-beluga.webp" width="303" height="320" alt="" />
+        <div class="splash-logo">MyWave</div>
+        <div class="splash-tag">오늘 써도 되는 돈을 알려 주는 가계부</div>
+        <div class="splash-slow">연결이 느려요. 조금만 기다려 주세요.</div>
+      </div>
+      <svg class="splash-wave splash-wave-back" viewBox="0 0 2880 200" preserveAspectRatio="none" aria-hidden="true">
+        <path fill="#ffffff" fill-opacity="0.5" d="M0 70 C240 20 480 120 720 70 S1200 20 1440 70 S1920 120 2160 70 S2640 20 2880 70 V200 H0 Z" />
+      </svg>
+      <svg class="splash-wave" viewBox="0 0 2880 200" preserveAspectRatio="none" aria-hidden="true">
+        <path fill="#ffffff" fill-opacity="0.22" d="M0 90 C240 140 480 40 720 90 S1200 140 1440 90 S1920 40 2160 90 S2640 140 2880 90 V200 H0 Z" />
+      </svg>
+    </div>
+    <script>
+      // 한참 지나도 앱이 안 뜨면(느린 연결) 가만히 있지 않고 한마디 한다.
+      setTimeout(function () {
+        var splash = document.getElementById('splash')
+        if (splash) splash.classList.add('splash-is-slow')
+      }, 6000)
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
