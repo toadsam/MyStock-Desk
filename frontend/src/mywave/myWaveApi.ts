@@ -182,6 +182,7 @@ export type MyWaveMemberResponse = {
   email: string
   profileImageUrl?: string | null
   membershipGrade?: string | null
+  loginProvider?: string | null
 }
 
 export type MyWaveFinancialAccountResponse = {

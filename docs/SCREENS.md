@@ -12,7 +12,7 @@
 
 | 화면 | 주소 | 하는 일 | 따로 부르는 API |
 |---|---|---|---|
-| 로그인 | `/login`, `/register` | 로그인, 회원가입, 데모 계정으로 바로 들어가기 | `POST /api/auth/login`, `POST /api/auth/register` |
+| 로그인 | `/login`, `/register` | 로그인, 회원가입, 데모 계정으로 바로 들어가기, 구글 계정으로 계속하기(서버에 클라이언트 ID가 있을 때만 버튼이 보임) | `POST /api/auth/login`, `POST /api/auth/register`, `GET /api/auth/config`, `POST /api/auth/google` |
 | **홈** | `/` | 오늘 더 써도 되는 돈, 하루 예산 잔, 퀵버튼, 이번 주 일곱 잔, 오늘 기록, 목표, 투자 요약 | `GET /api/dashboard/today`, `GET /api/expense-templates`, `POST /api/expense-templates/{id}/log`, `DELETE /api/expenses/{id}` |
 | 목표 | `/goals` | 메인 목표, 추천 행동, 다른 목표들, 목표 수정과 삭제 | `PATCH /api/goals/{id}`, `DELETE /api/goals/{id}` |
 | 목표 만들기 | `/goals/new` (`?id=`면 수정) | 목표 만들기, 고치기 | `POST /api/goals`, `PATCH /api/goals/{id}` |

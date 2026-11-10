@@ -1,6 +1,7 @@
 package com.stockflow.member.service;
 
 import com.stockflow.auth.security.CurrentMemberProvider;
+import com.stockflow.global.exception.ForbiddenException;
 import com.stockflow.member.dto.MemberDto;
 import com.stockflow.member.dto.MemberProfileRequest;
 import com.stockflow.member.dto.PasswordChangeRequest;
@@ -52,6 +53,9 @@ public class MemberService {
         Member member = memberRepository.findById(currentMemberProvider.currentMemberId())
                 .orElseThrow(() -> new IllegalArgumentException("기본 사용자를 찾을 수 없습니다."));
         demoAccountPolicy.requireEditable(member);
+        if (member.usesGoogleLogin()) {
+            throw new ForbiddenException("구글로 로그인하는 계정은 비밀번호가 없어요.");
+        }
         if (!passwordEncoder.matches(request.currentPassword(), member.getPasswordHash())) {
             throw new IllegalArgumentException("현재 비밀번호가 올바르지 않습니다.");
         }

@@ -137,6 +137,19 @@ class AccountSafetyIntegrationTest {
                 .andExpect(jsonPath("$.data.membershipGrade").value("BASIC"));
     }
 
+    @Test
+    void googleLoginStaysOffUntilAClientIdIsConfigured() throws Exception {
+        // 이 테스트 묶음은 클라이언트 ID 없이 뜬다. 운영에 변수를 넣기 전의 상태와 같다.
+        mockMvc.perform(get("/api/auth/config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.googleClientId").isEmpty());
+        mockMvc.perform(post("/api/auth/google")
+                        .contentType("application/json")
+                        .content(json(Map.of("credential", "anything"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.message").value("구글 로그인이 아직 설정되지 않았어요."));
+    }
+
     private String uniqueEmail(String prefix) {
         return prefix + "-" + System.nanoTime() + "@test.com";
     }

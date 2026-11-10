@@ -1,6 +1,7 @@
 import { LockKeyhole, LogIn, UserPlus } from 'lucide-react'
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { GoogleSignInButton } from '../auth/GoogleSignInButton'
 import { LOGIN_NOTICE_KEY } from '../auth/loginNotice'
 import { useAuth } from '../auth/useAuth'
 import { BelugaArt } from '../mywave/BelugaArt'
@@ -57,6 +58,22 @@ export default function AuthPage() {
       navigate(from, { replace: true })
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : '데모 계정 로그인에 실패했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const loginGoogle = async (credential: string) => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      await auth.loginWithGoogle(credential)
+      const from = typeof location.state === 'object' && location.state && 'from' in location.state
+        ? String(location.state.from)
+        : '/'
+      navigate(from, { replace: true })
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : '구글 로그인에 실패했습니다.')
     } finally {
       setSubmitting(false)
     }
@@ -148,6 +165,8 @@ export default function AuthPage() {
                 데모 계정으로 로그인
               </button>
             )}
+            {/* 처음 오는 사람은 가입 화면에서도 구글로 바로 시작할 수 있다. 서버에 설정이 없으면 아무것도 그리지 않는다. */}
+            <GoogleSignInButton onCredential={loginGoogle} />
           </form>
 
           <div className="mt-6 pt-5 text-center text-[14px]">

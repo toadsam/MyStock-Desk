@@ -23,7 +23,7 @@
 | 문서 | 내용 |
 |---|---|
 | [ERD](docs/ERD.md) | MyWave가 쓰는 테이블 14개와 관계, 아직 고치지 않은 스키마 문제 |
-| [API 명세](docs/API.md) | 화면이 부르는 엔드포인트 54개, 요청과 응답 모양, 오류 코드 |
+| [API 명세](docs/API.md) | 화면이 부르는 엔드포인트 56개, 요청과 응답 모양, 오류 코드 |
 | [계산 규칙](docs/RULES.md) | 하루 예산, 투자 가능 금액, 목표 달성률 같은 숫자가 나오는 식과 실제 예시 |
 | [시스템 구조](docs/ARCHITECTURE.md) | React, Spring Boot, DB, 외부 연동이 이어지는 모양, 요청 하나의 흐름, 폴더 |
 | [화면 목록](docs/SCREENS.md) | 화면 19개의 캡처, 하는 일, 부르는 API |
@@ -168,8 +168,10 @@ HTTPS는 이 compose 앞에 Caddy 같은 리버스 프록시를 두고 `WEB_PORT
 | 서비스 | 만드는 법 | 변수 |
 |---|---|---|
 | `MySQL` | Database → MySQL | 없음 (Railway 가 만든 값을 아래에서 참조) |
-| `backend` | GitHub 저장소, Settings → Root Directory `backend`, Healthcheck Path `/api/health` | `SPRING_DATASOURCE_URL` = `jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/${{MySQL.MYSQLDATABASE}}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true`, `SPRING_DATASOURCE_USERNAME` = `${{MySQL.MYSQLUSER}}`, `SPRING_DATASOURCE_PASSWORD` = `${{MySQL.MYSQLPASSWORD}}`, `STOCKFLOW_JWT_SECRET` = 새로 만든 32바이트 이상 값, `PORT` = `8080` |
+| `backend` | GitHub 저장소, Settings → Root Directory `backend`, Healthcheck Path `/api/health` | `SPRING_DATASOURCE_URL` = `jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/${{MySQL.MYSQLDATABASE}}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true`, `SPRING_DATASOURCE_USERNAME` = `${{MySQL.MYSQLUSER}}`, `SPRING_DATASOURCE_PASSWORD` = `${{MySQL.MYSQLPASSWORD}}`, `STOCKFLOW_JWT_SECRET` = 새로 만든 32바이트 이상 값, `PORT` = `8080`, (선택) `GOOGLE_CLIENT_ID` |
 | `frontend` | GitHub 저장소, Settings → Root Directory `frontend`, Healthcheck Path `/`, Networking 에서 공개 도메인 생성(포트 80) | `BACKEND_UPSTREAM` = `${{backend.RAILWAY_PRIVATE_DOMAIN}}:8080`, `PORT` = `80` |
+
+**구글 로그인 켜기.** Google Cloud Console → API 및 서비스 → 사용자 인증 정보에서 OAuth 클라이언트 ID(웹 애플리케이션)를 만들고, 승인된 JavaScript 원본에 화면 주소(`https://mywave.day`, `https://www.mywave.day`, 개발용 `http://localhost:5173`)를 넣습니다. 리디렉션 URI는 쓰지 않습니다. 만든 ID를 백엔드의 `GOOGLE_CLIENT_ID`에 넣으면 로그인 화면에 버튼이 뜹니다. 프론트는 이 값을 빌드할 때가 아니라 뜰 때 서버에 묻기 때문에(`GET /api/auth/config`) 다시 빌드할 필요가 없습니다. 클라이언트 보안 비밀은 쓰지 않습니다. 화면이 받은 ID 토큰을 서버가 구글 공개키로 직접 검증합니다.
 
 서비스 이름은 `backend`, `frontend` 로 둡니다. 백엔드 내부 주소는 이름을 적지 않고 `${{backend.RAILWAY_PRIVATE_DOMAIN}}` 참조로 받습니다. 내부 주소는 서비스를 처음 만들 때 이름으로 정해지고 나중에 이름을 바꿔도 따라오지 않아서, 참조로 받아야 안 틀립니다. Root Directory 안에 Dockerfile 이 있으면 Railway 가 그걸로 빌드하므로 빌더 설정은 따로 없습니다. 헬스체크 경로와 실패 시 재시작은 서비스 Settings 에서 정합니다(예전의 `railway.json` 설정 파일은 Railway 가 더 이상 받지 않습니다). Railway 내부망은 IPv6 이고 백엔드 주소가 재배포마다 바뀌어서, nginx 는 `[::]` 도 듣고 `/api` 요청 때마다 백엔드 주소를 다시 찾습니다([`nginx.conf.template`](frontend/nginx.conf.template)). 백엔드 포트는 `prod` 프로파일이 `PORT` 를 따르고, `frontend` 의 공개 포트는 `PORT` 로 정합니다. 두 서비스 모두 외부에서 직접 열리는 건 `frontend` 하나이고 `/api` 는 그 뒤에서 넘어가므로 CORS 설정은 비워 둡니다. 로그인 시도 제한은 서버 메모리에 있으므로 Replicas 는 1 로 둡니다.
 

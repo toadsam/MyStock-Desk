@@ -1,6 +1,6 @@
 # API 명세
 
-MyWave 화면이 실제로 부르는 엔드포인트 54개입니다. 프론트의 [`myWaveApi.ts`](../frontend/src/mywave/myWaveApi.ts)와 [`authApi.ts`](../frontend/src/api/authApi.ts)에서 호출하는 주소를 컨트롤러와 하나씩 맞춰 봤습니다(2026-10-12). 백엔드에는 이 밖에도 예전 모의투자 화면이 쓰던 엔드포인트가 50개 남짓 더 있습니다. 맨 아래에 묶어서만 적었습니다.
+MyWave 화면이 실제로 부르는 엔드포인트 56개입니다. 프론트의 [`myWaveApi.ts`](../frontend/src/mywave/myWaveApi.ts)와 [`authApi.ts`](../frontend/src/api/authApi.ts)에서 호출하는 주소를 컨트롤러와 하나씩 맞춰 봤습니다(2026-10-12). 백엔드에는 이 밖에도 예전 모의투자 화면이 쓰던 엔드포인트가 50개 남짓 더 있습니다. 맨 아래에 묶어서만 적었습니다.
 
 ## 공통
 
@@ -32,6 +32,8 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
 | 503 | `SERVICE_UNAVAILABLE` | `/api/health`에서 DB에 닿지 못함 |
 | 500 | `INTERNAL_SERVER_ERROR` | 그 밖의 서버 오류 |
 
+**구글 로그인.** 화면은 이름과 이메일을 보내지 않습니다. 구글이 서명한 ID 토큰만 보내고, 서버가 서명, 발급자, 대상(우리 클라이언트 ID), 만료를 확인한 뒤 토큰 안의 값을 씁니다([`JwksGoogleIdTokenVerifier`](../backend/src/main/java/com/stockflow/auth/google/JwksGoogleIdTokenVerifier.java)). 회원은 이메일이 아니라 구글 계정 번호(`sub`)로 찾습니다. 같은 이메일로 이미 비밀번호 가입이 돼 있으면 합치지 않고 400으로 거절합니다. 구글로 만든 계정은 `member.loginProvider`가 `GOOGLE`이고, 비밀번호 변경은 403입니다.
+
 **입력 한도.** 지출 한 건은 1억 원, 목표·예산·매매 단가는 100억 원, 계좌 잔액은 ±1조 원까지입니다. 지출과 매매는 미래 날짜를, 새 목표는 과거 날짜를 받지 않습니다. 코치 질문은 500자까지입니다.
 
 **형식.** 금액은 숫자(원), 날짜는 `2026-10-12`, 달은 `2026-10`(`yyyy-MM`)입니다. `month`를 빼면 이번 달입니다. 시간대는 `Asia/Seoul`입니다.
@@ -46,6 +48,8 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
 |---|---|---|---|
 | POST | `/api/auth/register` 🔓 | 회원가입. 가입하자마자 로그인된 상태로 토큰을 돌려줌 | `{ name, email, password }` |
 | POST | `/api/auth/login` 🔓 | 로그인 | `{ email, password }` |
+| GET | `/api/auth/config` 🔓 | 로그인 화면이 뜰 때 묻는 설정. `{ googleClientId }`. 값이 없으면 구글 로그인이 꺼져 있고 화면은 버튼을 그리지 않음 | |
+| POST | `/api/auth/google` 🔓 | 구글 로그인. 구글 버튼이 준 ID 토큰을 서버가 직접 검증하고, 처음 온 사람은 그 자리에서 가입시킴. 응답은 로그인과 같음 | `{ credential }` |
 | POST | `/api/auth/logout` 🔓 | 로그아웃. 헤더로 온 토큰 한 장을 폐기함. 같은 계정의 다른 로그인은 그대로 | |
 | GET | `/api/health` 🔓 | 살아 있는지. DB 커넥션을 하나 빌려 확인하고 `{ status, db }`를 돌려줌. compose healthcheck와 모니터가 부름 | |
 | GET | `/api/members/me` | 내 정보 | |

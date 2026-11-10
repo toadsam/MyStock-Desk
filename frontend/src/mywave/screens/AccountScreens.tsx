@@ -329,6 +329,13 @@ export function ProfilePage() {
             </button>
           </div>
         </Card>
+        {member?.loginProvider === 'GOOGLE' ? (
+          <Card title="로그인 방식">
+            <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-600">
+              구글 계정으로 로그인하고 있어요. 이 계정에는 비밀번호가 없어서 바꿀 것도 없어요.
+            </p>
+          </Card>
+        ) : (
         <Card title="비밀번호 변경">
           <div className="space-y-4">
             <Field label="현재 비밀번호">
@@ -343,6 +350,7 @@ export function ProfilePage() {
             </button>
           </div>
         </Card>
+        )}
       </div>
       <Card>
         <div className="divide-y divide-slate-100">
