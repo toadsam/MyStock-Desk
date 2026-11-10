@@ -114,6 +114,9 @@ function MobileSpendingCategories() {
 function MobileTopSpending() {
   const { spendingBlockers } = useMyWaveData()
 
+  // 소비 기록이 없으면 순위도 없다. 제목만 남기지 않는다.
+  if (spendingBlockers.length === 0) return null
+
   return (
     <MobileCard>
       <h2 className="mb-1 text-lg font-black">목표 달성을 방해하는 소비 TOP 3</h2>
@@ -143,10 +146,22 @@ function MobileSavingBox() {
   const { financeSummary } = useMyWaveData()
   const navigate = useNavigate()
   const [amount, setAmount] = useState(10000)
+  const hasGoal = financeSummary.targetAmount > 0
   // 이 금액이 그대로 가장 가까운 목표에 더해진다고 보고 다시 계산한다.
-  const expectedRate = financeSummary.targetAmount > 0
+  const expectedRate = hasGoal
     ? Math.min(100, Math.round(((financeSummary.savedAmount + amount) / financeSummary.targetAmount) * 1000) / 10)
     : financeSummary.goalRate
+
+  // 목표가 없으면 오를 달성률도 없다. 계산하는 척하지 않고 목표부터 만들게 한다.
+  if (!hasGoal) {
+    return (
+      <MobileCard>
+        <h2 className="text-lg font-black">저축 시뮬레이션</h2>
+        <p className="mt-3 text-sm font-bold text-slate-500">목표를 만들면 얼마를 더 모을 때 달성률이 얼마나 오르는지 보여 드려요.</p>
+        <button onClick={() => navigate('/goals/new')} className="pressable mt-4 w-full rounded-2xl bg-blue-700 py-3 text-sm font-black text-white">목표 만들기</button>
+      </MobileCard>
+    )
+  }
 
   return (
     <MobileCard>
@@ -160,7 +175,14 @@ function MobileSavingBox() {
         <button onClick={() => setAmount((value) => value + 10000)} className="pressable grid h-10 w-10 place-items-center rounded-full text-2xl">+</button>
       </div>
       <div className="mt-4 rounded-2xl bg-blue-50 p-3 text-sm font-black text-blue-700">
-        이 금액을 저축하면 목표 달성률이 {financeSummary.goalRate}% → <span className="text-2xl">{expectedRate}%</span>로 올라요.
+        {expectedRate > financeSummary.goalRate ? (
+          <>이 금액을 저축하면 목표 달성률이 {financeSummary.goalRate}% → <span className="text-2xl">{expectedRate}%</span>로 올라요.</>
+        ) : financeSummary.goalRate >= 100 ? (
+          <>목표 금액을 이미 다 모았어요.</>
+        ) : (
+          // 0원이거나, 목표에 비해 너무 작아서 소수 첫째 자리까지는 차이가 안 나는 경우.
+          <>이 금액으로는 목표 달성률이 {financeSummary.goalRate}%에서 거의 그대로예요.</>
+        )}
       </div>
       <button onClick={() => navigate('/spending/simulation')} className="mt-4 w-full rounded-2xl bg-blue-700 py-3 text-sm font-black text-white">자세히 조정하기</button>
     </MobileCard>
@@ -339,8 +361,10 @@ function SavingSimulation() {
     )
   }
 
+  const hasGoal = financeSummary.targetAmount > 0
+
   return (
-    <Card title="소비 줄이면 목표 달성률이 이렇게 달라져요!" action={<span className="text-xs text-slate-400">시뮬레이션 기준: 월간</span>}>
+    <Card title={hasGoal ? '소비 줄이면 목표 달성률이 이렇게 달라져요!' : '소비를 줄이면 한 달에 이만큼 남아요'} action={<span className="text-xs text-slate-400">시뮬레이션 기준: 월간</span>}>
       <div className="grid gap-5 lg:grid-cols-[1fr_210px]">
         <div className="space-y-4">
           {simulations.map(({ name, rate, setRate, unit }) => (
@@ -355,9 +379,16 @@ function SavingSimulation() {
         <div className="rounded-[20px] p-5">
           <div className="text-sm font-bold text-slate-500">예상 월 절약 금액</div>
           <div className="mt-2 text-3xl font-black text-blue-700">{won(displaySavingAmount)}</div>
-          <div className="mt-5 text-sm font-bold text-slate-500">목표 달성률 개선</div>
-          <div className="mt-2 text-3xl font-black text-emerald-500">{financeSummary.goalRate}% → {displayImprovedRate}%</div>
-          <button onClick={applySimulation} className="mt-5 w-full rounded-2xl bg-blue-700 py-3 font-black text-white">{applied ? '적용 완료' : '이대로 적용해보기'}</button>
+          {hasGoal ? (
+            <>
+              <div className="mt-5 text-sm font-bold text-slate-500">목표 달성률 개선</div>
+              <div className="mt-2 text-3xl font-black text-emerald-500">{financeSummary.goalRate}% → {displayImprovedRate}%</div>
+              <button onClick={applySimulation} className="mt-5 w-full rounded-2xl bg-blue-700 py-3 font-black text-white">{applied ? '적용 완료' : '이대로 적용해보기'}</button>
+            </>
+          ) : (
+            // 목표가 없으면 달성률은 0% 에서 0% 다. 그 숫자를 "개선"이라고 보여 주지 않는다.
+            <p className="mt-5 text-sm font-bold leading-6 text-slate-500">목표를 만들면 이 돈으로 달성률이 얼마나 오르는지도 보여 드려요.</p>
+          )}
         </div>
       </div>
     </Card>
@@ -392,6 +423,7 @@ export function SpendingDetailPage() {
           </div>
         </Card>
         <Card title="목표 달성을 방해하는 소비 TOP 3" action="조정하기" actionTo="/spending/simulation">
+          {spendingBlockers.length === 0 && <p className="text-sm font-bold text-slate-500">이번 달 소비 기록이 아직 없어요.</p>}
           <div className="space-y-3">
             {spendingBlockers.map((item, index) => (
               <div key={item.name} className="flex items-center gap-3 rounded-2xl bg-orange-50 p-4">

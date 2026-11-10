@@ -14,6 +14,7 @@ import AuthPage from '../pages/AuthPage'
 import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { useAuth } from '../auth/useAuth'
 import { MyWaveDataContext, useMyWaveData, useMyWaveRuntimeData } from './runtime'
+import { useUnreadNotifications } from './unreadNotifications'
 import { AssetDetailPage, NotificationsPage, OnboardingPage, ProfilePage, SearchResultsPage } from './screens/AccountScreens'
 import { CoachPage } from './screens/CoachScreen'
 import { CompanyDetailPage } from './screens/CompanyScreen'
@@ -379,13 +380,20 @@ function MobileBottomNav() {
   )
 }
 
+/** 빨간 점과 종의 흔들림은 읽지 않은 알림이 실제로 있을 때만 나온다. */
 function BellButton() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const unread = useUnreadNotifications(pathname)
 
   return (
-    <button onClick={() => navigate('/notifications')} className="pressable relative grid h-9 w-9 place-items-center rounded-full bg-white text-slate-900 lg:h-10 lg:w-10">
-      <Bell className="bell-swing h-5 w-5 lg:h-6 lg:w-6" />
-      <span className="notification-dot absolute right-2 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+    <button
+      onClick={() => navigate('/notifications')}
+      aria-label={unread > 0 ? `알림, 읽지 않은 알림 ${unread}개` : '알림'}
+      className="pressable relative grid h-9 w-9 place-items-center rounded-full bg-white text-slate-900 lg:h-10 lg:w-10"
+    >
+      <Bell aria-hidden="true" className={`${unread > 0 ? 'bell-swing ' : ''}h-5 w-5 lg:h-6 lg:w-6`} />
+      {unread > 0 && <span aria-hidden="true" className="notification-dot absolute right-2 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />}
     </button>
   )
 }
@@ -394,7 +402,7 @@ function Avatar() {
   const navigate = useNavigate()
 
   return (
-    <button onClick={() => navigate('/profile')} className="pressable grid h-10 w-10 place-items-center rounded-full bg-gradient-to-b from-blue-100 to-blue-50 lg:h-12 lg:w-12">
+    <button onClick={() => navigate('/profile')} aria-label="내 정보" className="pressable grid h-10 w-10 place-items-center rounded-full bg-gradient-to-b from-blue-100 to-blue-50 lg:h-12 lg:w-12">
       <UserRound className="h-6 w-6 fill-blue-500 text-blue-500 lg:h-7 lg:w-7" />
     </button>
   )

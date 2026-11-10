@@ -37,17 +37,13 @@ function CoachBanner() {
   // 숫자가 오기 전에는 0 을 그리지 않는다. 0 은 "기록이 없다"는 뜻이라 아직 모를 때 쓰면 안 된다.
   const { financeSummary, status } = useMyWaveData()
   const pending = status === 'loading'
-  const behind = financeSummary.goalRate < 50
+  const opening = coachOpening(status, financeSummary.targetAmount > 0, financeSummary.goalRate)
 
   return (
     <Card>
       <div className="space-y-6">
-        <BelugaSays mood={behind ? 'concern' : 'calm'} size="lg">
-          <Typewriter
-            text={behind
-              ? '이번 달은 목표 페이스가 조금 느려요. 어디를 조정할 수 있을지 같이 볼까요?'
-              : '이번 달 흐름을 정리해뒀어요. 아래 숫자부터 같이 볼까요?'}
-          />
+        <BelugaSays mood={opening.mood} size="lg">
+          <Typewriter text={opening.text} />
         </BelugaSays>
 
         <div className="grid gap-3 sm:grid-cols-3">
@@ -58,6 +54,20 @@ function CoachBanner() {
       </div>
     </Card>
   )
+}
+
+/**
+ * 벨루가의 첫 마디. 아는 만큼만 말한다.
+ *
+ * 숫자가 오기 전의 0 과 목표가 없어서 0 인 것을 "목표가 느리다"로 읽으면 안 된다.
+ * 느리다는 말은 목표가 실제로 있고 달성률이 절반에 못 미칠 때만 한다.
+ */
+function coachOpening(status: 'loading' | 'ready' | 'error', hasGoal: boolean, goalRate: number): { mood: 'hello' | 'calm' | 'concern'; text: string } {
+  if (status === 'loading') return { mood: 'calm', text: '이번 달 숫자를 가져오고 있어요.' }
+  if (status === 'error') return { mood: 'calm', text: '지금은 숫자를 불러오지 못했어요. 잠시 후 다시 열어 주세요.' }
+  if (!hasGoal) return { mood: 'hello', text: '아직 목표가 없어요. 목표를 하나 정하면 어디까지 왔는지 같이 봐 드릴게요.' }
+  if (goalRate < 50) return { mood: 'concern', text: '이번 달은 목표 페이스가 조금 느려요. 어디를 조정할 수 있을지 같이 볼까요?' }
+  return { mood: 'calm', text: '이번 달 흐름을 정리해뒀어요. 아래 숫자부터 같이 볼까요?' }
 }
 
 /** 라벨은 작게, 숫자는 크게. 값이 바뀌면 새로 세어 올린다. */

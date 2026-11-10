@@ -49,6 +49,7 @@ import { LOGIN_NOTICE_KEY } from '../../auth/loginNotice'
 import { useAuth } from '../../auth/useAuth'
 import { MiniStat, MobileTitle } from '../components'
 import { useMyWaveData } from '../runtime'
+import { refreshUnreadNotifications, setUnreadNotifications } from '../unreadNotifications'
 import { toneBg } from '../format'
 
 export function NotificationsPage() {
@@ -63,6 +64,8 @@ export function NotificationsPage() {
       if (ignore) return
       setItems(summary.notifications)
       setUnreadCount(summary.unreadCount)
+      // 위쪽 종의 빨간 점도 같은 숫자를 본다.
+      setUnreadNotifications(summary.unreadCount)
     }).catch(() => {
       if (ignore) return
       setItems([])
@@ -91,6 +94,8 @@ export function NotificationsPage() {
     } catch {
       // 백엔드가 꺼져 있어도 UI 삭제 흐름은 유지합니다.
     }
+    // 읽지 않은 알림을 지웠을 수 있으니 종의 숫자를 다시 센다.
+    void refreshUnreadNotifications()
   }
 
   async function clearReadNotifications() {
@@ -105,6 +110,7 @@ export function NotificationsPage() {
   async function markAllRead() {
     setItems((current) => current.map((notice) => ({ ...notice, read: true })))
     setUnreadCount(0)
+    setUnreadNotifications(0)
     try {
       await markAllMyWaveNotificationsRead()
     } catch {

@@ -111,6 +111,9 @@ function MobileActionCards() {
   const { recommendedActions } = useMyWaveData()
   const navigate = useNavigate()
 
+  // 추천할 것이 없으면 제목도 내지 않는다.
+  if (recommendedActions.length === 0) return null
+
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
@@ -137,6 +140,9 @@ function MobileActionCards() {
 
 function MobileOtherGoals() {
   const { goals } = useMyWaveData()
+
+  // 목표가 하나뿐이거나 없으면 "다른 목표"는 없다.
+  if (goals.length <= 1) return null
 
   return (
     <section>
@@ -293,6 +299,9 @@ export function ActionPanel() {
 
 function GoalsList() {
   const { goals } = useMyWaveData()
+
+  // 목표가 하나뿐이거나 없으면 "다른 목표"는 없다.
+  if (goals.length <= 1) return null
 
   return (
     <Card title="나의 다른 목표">
