@@ -1,7 +1,8 @@
 import { Plus, SendHorizontal } from 'lucide-react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { won } from '../format'
-import { Card } from '../uiKit'
+import { Card, EmptyGuide } from '../uiKit'
 import { Beluga, BelugaSays } from '../Beluga'
 import { Typewriter } from '../motion'
 import { Amount } from '../Amount'
@@ -11,6 +12,27 @@ import { useMyWaveData, type RuntimeCoachMessage } from '../runtime'
 import { RiskPanel } from './PortfolioScreens'
 
 export function CoachPage() {
+  const navigate = useNavigate()
+  const { status, financeSummary, goals, holdings } = useMyWaveData()
+  // 기록이 하나도 없으면 코치가 볼 숫자도 없다. 0 으로 채운 카드 대신 첫 기록으로 가는 길을 보여 준다.
+  const nothingYet = status === 'ready' && goals.length === 0 && holdings.length === 0
+    && financeSummary.totalSpending === 0 && financeSummary.totalAsset === 0 && financeSummary.livingBudget === 0
+
+  if (nothingYet) {
+    return (
+      <div className="reveal-stack mx-auto max-w-3xl space-y-5">
+        <MobileTitle title="AI코치" />
+        <CoachBanner showStats={false} />
+        <EmptyGuide
+          title="기록이 쌓이면 여기서 정리해 드려요"
+          body="생활비와 소비, 목표를 적어 두면 이번 달에 얼마나 썼는지, 목표까지 얼마나 남았는지 물어볼 수 있어요. 답은 적어 둔 숫자로만 만들어요."
+          actionLabel="처음 해 볼 세 가지 보기"
+          onAction={() => navigate('/onboarding')}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_430px]">
       <div className="reveal-stack space-y-5">
@@ -33,7 +55,7 @@ export function CoachPage() {
  * 벨루가가 상황을 한 줄로 말하고, 숫자는 그 아래에서 숫자대로 선다.
  * 둘을 한 문장에 섞지 않는 것이 이 화면의 규칙이다.
  */
-function CoachBanner() {
+function CoachBanner({ showStats = true }: { showStats?: boolean }) {
   // 숫자가 오기 전에는 0 을 그리지 않는다. 0 은 "기록이 없다"는 뜻이라 아직 모를 때 쓰면 안 된다.
   const { financeSummary, status } = useMyWaveData()
   const pending = status === 'loading'
@@ -46,11 +68,13 @@ function CoachBanner() {
           <Typewriter text={opening.text} />
         </BelugaSays>
 
+        {showStats && (
         <div className="grid gap-3 sm:grid-cols-3">
           <CoachStat label="목표 달성률" value={financeSummary.goalRate} suffix="%" highlight pending={pending} />
           <CoachStat label="남은 목표 금액" value={financeSummary.remainingAmount} currency pending={pending} />
           <CoachStat label="바로 투자 가능" value={financeSummary.investableAmount} currency pending={pending} />
         </div>
+        )}
       </div>
     </Card>
   )
@@ -164,8 +188,9 @@ function ChatPanel() {
             maxLength={500}
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-slate-400"
             placeholder="벨루가에게 물어보세요"
+            aria-label="코치에게 물어볼 말"
           />
-          <button type="button" onClick={() => sendMessage()} className="pressable grid h-11 w-11 place-items-center rounded-full bg-blue-700 text-white disabled:bg-slate-200" disabled={sending}>
+          <button type="button" onClick={() => sendMessage()} aria-label="질문 보내기" className="pressable grid h-11 w-11 place-items-center rounded-full bg-blue-700 text-white disabled:bg-slate-200" disabled={sending}>
             <SendHorizontal className="h-5 w-5" />
           </button>
         </label>

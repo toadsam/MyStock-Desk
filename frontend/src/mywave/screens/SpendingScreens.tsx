@@ -8,11 +8,9 @@ import {
   createMyWaveExpense,
   deleteMyWaveExpense,
   getMyWaveExpenses,
-  getMyWaveExpenseSummary,
   simulateMyWaveSaving,
   updateMyWaveExpense,
   type MyWaveExpenseResponse,
-  type MyWaveExpenseSummaryResponse,
 } from '../myWaveApi'
 import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
@@ -22,7 +20,6 @@ import {
   Donut,
   InlineAction,
   Legend,
-  MiniStat,
   MobileBlueSummary,
   MobileCard,
   MobileCssDonut,
@@ -35,6 +32,7 @@ import { signed, signedWon, useMyWaveData } from '../runtime'
 import { LiveDot, Notice } from '../motion'
 import { ActionPanel } from './GoalsScreens'
 import { todayDateString } from '../format'
+import { categoryStyle } from '../myWaveData'
 
 export function SpendingPage() {
   return (
@@ -371,7 +369,7 @@ function SavingSimulation() {
             <div key={name} className="grid grid-cols-[80px_70px_1fr_80px] items-center gap-3 text-sm font-bold">
               <span>{name}</span>
               <span className="rounded-lg py-1 text-center text-blue-700">-{rate}%</span>
-              <input type="range" min="0" max="50" value={rate} onChange={(event) => setRate(Number(event.target.value))} className="accent-blue-600" />
+              <input type="range" min="0" max="50" value={rate} onChange={(event) => setRate(Number(event.target.value))} aria-label={`${name} 줄이는 비율`} className="accent-blue-600" />
               <span className="text-blue-700">-{won(Math.round(rate * unit))}</span>
             </div>
           ))}
@@ -395,14 +393,17 @@ function SavingSimulation() {
   )
 }
 
+/** 손으로 적는 화면. 들어오자마자 적을 수 있게 입력을 맨 위에 두고, 통계는 그 아래로 내린다. */
 export function SpendingDetailPage() {
-  const { spendingCategories, spendingBlockers, financeSummary } = useMyWaveData()
+  const { spendingCategories, spendingBlockers } = useMyWaveData()
   return (
     <div className="space-y-5">
-      <MobileTitle title="소비 상세" />
+      <MobileTitle title="소비 기록" />
+      <ExpenseRecordsManager />
       <SpendingHero />
       <div className="grid gap-5 xl:grid-cols-[1fr_.9fr]">
         <Card title="카테고리별 지출">
+          {spendingCategories.length === 0 && <p className="text-sm font-bold text-slate-500">이번 달 소비 기록이 아직 없어요.</p>}
           <div className="space-y-3">
             {spendingCategories.map((item) => {
               const Icon = item.icon
@@ -422,38 +423,23 @@ export function SpendingDetailPage() {
             })}
           </div>
         </Card>
-        <Card title="목표 달성을 방해하는 소비 TOP 3" action="조정하기" actionTo="/spending/simulation">
-          {spendingBlockers.length === 0 && <p className="text-sm font-bold text-slate-500">이번 달 소비 기록이 아직 없어요.</p>}
-          <div className="space-y-3">
-            {spendingBlockers.map((item, index) => (
-              <div key={item.name} className="flex items-center gap-3 rounded-2xl bg-orange-50 p-4">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-orange-600 text-sm font-black text-white">{index + 1}</span>
-                <div className="flex-1">
-                  <div className="font-black">{item.name}</div>
-                  <div className="text-sm font-bold text-slate-500">{item.count}건 · 소비의 {Math.round(item.rate)}%</div>
+        {spendingBlockers.length > 0 && (
+          <Card title="목표 달성을 방해하는 소비 TOP 3" action="조정하기" actionTo="/spending/simulation">
+            <div className="space-y-3">
+              {spendingBlockers.map((item, index) => (
+                <div key={item.name} className="flex items-center gap-3 rounded-2xl bg-orange-50 p-4">
+                  <span className="grid h-8 w-8 place-items-center rounded-full bg-orange-600 text-sm font-black text-white">{index + 1}</span>
+                  <div className="flex-1">
+                    <div className="font-black">{item.name}</div>
+                    <div className="text-sm font-bold text-slate-500">{item.count}건 · 소비의 {Math.round(item.rate)}%</div>
+                  </div>
+                  <div className="font-black">{won(item.amount)}</div>
                 </div>
-                <div className="font-black">{won(item.amount)}</div>
-              </div>
-            ))}
-          </div>
-        </Card>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
-      <Card title="이번 달 소비 판단">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <MiniStat
-            label="총 소비"
-            value={won(financeSummary.totalSpending)}
-            change={financeSummary.previousSpending > 0 ? `지난 달 같은 기간 대비 ${signed(financeSummary.spendingChangeRate)}` : '지난 달 기록 없음'}
-          />
-          <MiniStat label="일평균 소비" value={won(financeSummary.dailySpending)} />
-          <MiniStat
-            label="예산 대비"
-            value={financeSummary.budgetRate === null ? '예산 없음' : `${financeSummary.budgetRate}%`}
-            change={financeSummary.budgetRate === null ? '생활비 예산을 정해 주세요' : financeSummary.budgetRate > 100 ? '예산을 넘었어요' : `예산 안에서 쓰는 중`}
-          />
-        </div>
-      </Card>
-      <ExpenseRecordsManager />
     </div>
   )
 }
@@ -465,6 +451,10 @@ type ExpenseFormState = {
   spentDate: string
   memo: string
 }
+
+/** 손으로 고르는 카테고리. 자주 쓰는 순서다. */
+const EXPENSE_CATEGORIES = ['식비', '카페', '배달비', '교통', '쇼핑', '구독', '기타']
+const DEFAULT_EXPENSE_CATEGORY = EXPENSE_CATEGORIES[0]
 
 function monthStringFromDate(value: string) {
   return value.slice(0, 7)
@@ -490,16 +480,21 @@ function ExpenseQuickEntry() {
   )
 }
 
+/**
+ * 소비 한 건을 적는 폼과 이번 달 내역.
+ *
+ * 폼이 먼저다. 묻는 순서는 사람이 떠올리는 순서대로다: 얼마를, 어디서, 무엇에. 날짜는 오늘로 채워 두고 메모는 접어 둔다.
+ * 저장하면 내역과 위아래 카드가 저절로 다시 불러와진다. 그래서 새로고침 버튼은 없다.
+ */
 function ExpenseRecordsManager() {
   const location = useLocation()
   const navigate = useNavigate()
   const formCardRef = useRef<HTMLDivElement>(null)
   const amountInputRef = useRef<HTMLInputElement>(null)
   const [expenses, setExpenses] = useState<MyWaveExpenseResponse[]>([])
-  const [summary, setSummary] = useState<MyWaveExpenseSummaryResponse | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<ExpenseFormState>({
-    category: '배달비',
+    category: DEFAULT_EXPENSE_CATEGORY,
     merchant: '',
     amount: 0,
     spentDate: todayDateString(),
@@ -511,12 +506,7 @@ function ExpenseRecordsManager() {
 
   async function loadExpenses(month = monthStringFromDate(form.spentDate)) {
     try {
-      const [items, monthlySummary] = await Promise.all([
-        getMyWaveExpenses(month),
-        getMyWaveExpenseSummary(month),
-      ])
-      setExpenses(items)
-      setSummary(monthlySummary)
+      setExpenses(await getMyWaveExpenses(month))
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '소비 내역을 불러오지 못했습니다.')
     }
@@ -524,13 +514,8 @@ function ExpenseRecordsManager() {
 
   useEffect(() => {
     let live = true
-    const month = monthStringFromDate(todayDateString())
-    Promise.all([getMyWaveExpenses(month), getMyWaveExpenseSummary(month)])
-      .then(([items, monthlySummary]) => {
-        if (!live) return
-        setExpenses(items)
-        setSummary(monthlySummary)
-      })
+    getMyWaveExpenses(monthStringFromDate(todayDateString()))
+      .then((items) => { if (live) setExpenses(items) })
       .catch((error) => { if (live) setMessage(error instanceof Error ? error.message : '소비 내역을 불러오지 못했습니다.') })
     return () => { live = false }
   }, [])
@@ -559,25 +544,32 @@ function ExpenseRecordsManager() {
       memo: expense.memo ?? '',
     })
     setMessage('')
+    // 폼은 내역 위에 있다. 고칠 기록을 눌렀으면 폼이 보이는 곳으로 데려간다.
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    formCardRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
   }
 
   function resetExpenseForm() {
     setEditingId(null)
-    setForm({ category: '배달비', merchant: '', amount: 0, spentDate: todayDateString(), memo: '' })
+    setForm({ category: DEFAULT_EXPENSE_CATEGORY, merchant: '', amount: 0, spentDate: todayDateString(), memo: '' })
   }
 
   async function saveExpense() {
-    if (!form.category.trim() || !form.merchant.trim() || form.amount <= 0) {
-      setMessage('카테고리, 사용처, 금액을 입력해주세요.')
+    if (form.amount <= 0) {
+      setMessage('금액을 적어 주세요.')
+      return
+    }
+    if (!form.merchant.trim()) {
+      setMessage('어디서 썼는지 적어 주세요.')
       return
     }
     try {
       if (editingId) {
         await updateMyWaveExpense(editingId, form)
-        setMessage('소비 내역이 수정되었습니다.')
+        setMessage('고친 내용을 저장했어요.')
       } else {
         await createMyWaveExpense(form)
-        setMessage('소비 내역이 추가되었습니다.')
+        setMessage(`${form.merchant.trim()} ${won(form.amount)} 기록했어요.`)
       }
       const month = monthStringFromDate(form.spentDate)
       resetExpenseForm()
@@ -592,7 +584,7 @@ function ExpenseRecordsManager() {
     try {
       await deleteMyWaveExpense(id)
       if (editingId === id) resetExpenseForm()
-      setMessage('소비 내역이 삭제되었습니다.')
+      setMessage('기록을 지웠어요.')
       await loadExpenses()
       reload()
     } catch (error) {
@@ -600,24 +592,75 @@ function ExpenseRecordsManager() {
     }
   }
 
+  // 이미 저장된 기록에 목록에 없는 카테고리가 있을 수 있다(문자·캡처로 들어온 것). 고칠 때 그 이름도 고를 수 있게 한다.
+  const categories = EXPENSE_CATEGORIES.includes(form.category) ? EXPENSE_CATEGORIES : [form.category, ...EXPENSE_CATEGORIES]
+
   return (
-    <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
-      <Card
-        title="소비 내역"
-        action={<button onClick={() => loadExpenses()} className="pressable rounded-full px-3 py-1.5 text-xs font-black text-blue-700">새로고침</button>}
-      >
-        {summary && (
-          <div className="mb-4 grid gap-3 sm:grid-cols-3">
-            <MiniStat label="월 총 지출" value={won(Number(summary.totalAmount))} />
-            <MiniStat label="전월 대비" value={`${Number(summary.changeRate).toFixed(1)}%`} />
-            <MiniStat label="일평균" value={won(Number(summary.dailyAverageAmount))} />
+    <div className="grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
+      <div ref={formCardRef} className="scroll-mt-4">
+        <Card title={editingId ? '소비 기록 고치기' : '소비 기록하기'}>
+          <div className="space-y-4">
+            <Field label="얼마를 썼나요">
+              <NumberField ref={amountInputRef} money quick={[1000, 5000, 10000, 50000]} value={form.amount} onChange={(next) => setForm((value) => ({ ...value, amount: next }))} />
+            </Field>
+            <Field label="어디서 썼나요">
+              <MerchantAutocomplete
+                value={form.merchant}
+                onChange={(merchant) => setForm((value) => ({ ...value, merchant }))}
+                onPick={(suggestion) => setForm((value) => ({
+                  ...value,
+                  merchant: suggestion.merchant,
+                  category: suggestion.category,
+                  amount: Number(suggestion.suggestedAmount),
+                }))}
+              />
+            </Field>
+            <div>
+              <div id="expense-category-label" className="mb-2 text-sm font-black text-slate-600">무엇에 썼나요</div>
+              <div role="radiogroup" aria-labelledby="expense-category-label" className="flex flex-wrap gap-2">
+                {categories.map((name) => {
+                  const { icon: Icon, color } = categoryStyle(name)
+                  const selected = form.category === name
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setForm((value) => ({ ...value, category: name }))}
+                      className={`pressable flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold ${selected ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'}`}
+                    >
+                      <Icon className="h-4 w-4" style={{ color: selected ? '#ffffff' : color }} />
+                      {name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <Field label="언제 썼나요">
+              <input type="date" max={todayDateString()} value={form.spentDate} onChange={(event) => setForm((value) => ({ ...value, spentDate: event.target.value }))} className="form-input" />
+            </Field>
+            {/* 메모는 대부분 적지 않는다. 적어 둔 기록을 고칠 때만 펼쳐 둔다. */}
+            <details key={editingId ?? 'new'} open={form.memo !== ''}>
+              <summary className="cursor-pointer text-sm font-black text-slate-500">메모 남기기</summary>
+              <input value={form.memo} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} maxLength={200} aria-label="메모" className="form-input mt-3" />
+            </details>
+            {message && <Notice text={message} />}
+            <div className="flex gap-3">
+              {editingId && <button onClick={resetExpenseForm} className="pressable h-13 flex-1 rounded-2xl font-black text-slate-600">취소</button>}
+              <button onClick={saveExpense} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
+                <Save className="inline h-5 w-5" /> {editingId ? '고친 내용 저장' : '기록하기'}
+              </button>
+            </div>
           </div>
-        )}
-        {message && <Notice text={message} className="mb-4" />}
+        </Card>
+      </div>
+      <Card title="이번 달 내역">
+        {expenses.length === 0 && <p className="text-sm font-bold text-slate-500">아직 기록이 없어요. 위에서 첫 기록을 남겨 보세요.</p>}
         <div className="space-y-3">
           {expenses.map((expense) => (
             <div key={expense.id} className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
-              <button onClick={() => editExpense(expense)} className="pressable min-w-0 text-left">
+              <button onClick={() => editExpense(expense)} aria-label={`${expense.merchant} ${won(Number(expense.amount))} 기록 고치기`} className="pressable min-w-0 text-left">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-blue-700">{expense.category}</span>
                   <span className="text-base font-black">{expense.merchant}</span>
@@ -632,48 +675,6 @@ function ExpenseRecordsManager() {
           ))}
         </div>
       </Card>
-      <div ref={formCardRef}>
-        <Card title={editingId ? '소비 내역 수정' : '소비 내역 추가'}>
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="카테고리">
-                <select value={form.category} onChange={(event) => setForm((value) => ({ ...value, category: event.target.value }))} className="form-input">
-                  {['배달비', '쇼핑', '식비', '카페', '교통', '구독', '기타'].map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
-              </Field>
-              <Field label="사용처">
-                <MerchantAutocomplete
-                  value={form.merchant}
-                  onChange={(merchant) => setForm((value) => ({ ...value, merchant }))}
-                  onPick={(suggestion) => setForm((value) => ({
-                    ...value,
-                    merchant: suggestion.merchant,
-                    category: suggestion.category,
-                    amount: Number(suggestion.suggestedAmount),
-                  }))}
-                />
-              </Field>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="금액">
-                <NumberField ref={amountInputRef} min="0" max="100000000" value={form.amount} onChange={(next) => setForm((value) => ({ ...value, amount: next }))} />
-              </Field>
-              <Field label="사용일">
-                <input type="date" max={todayDateString()} value={form.spentDate} onChange={(event) => setForm((value) => ({ ...value, spentDate: event.target.value }))} className="form-input" />
-              </Field>
-            </div>
-            <Field label="메모">
-              <input value={form.memo} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} className="form-input" />
-            </Field>
-            <div className="flex gap-3">
-              {editingId && <button onClick={resetExpenseForm} className="pressable h-13 flex-1 rounded-2xl font-black text-slate-600">취소</button>}
-              <button onClick={saveExpense} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
-                <Save className="inline h-5 w-5" /> {editingId ? '수정 저장' : '내역 추가'}
-              </button>
-            </div>
-          </div>
-        </Card>
-      </div>
     </div>
   )
 }

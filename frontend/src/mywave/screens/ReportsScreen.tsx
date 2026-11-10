@@ -2,7 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { won } from '../format'
 import { LiveDot } from '../motion'
-import { Card } from '../uiKit'
+import { Card, EmptyGuide } from '../uiKit'
 import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { BlueCard, BlueMetric, HeroAmount, MobileTitle } from '../components'
 import { signed, useMyWaveData } from '../runtime'
@@ -13,9 +13,26 @@ import { signed, useMyWaveData } from '../runtime'
  * 보유 종목의 실제 공시·재무 화면(기업 상세)으로 가는 길만 둔다.
  */
 export function ReportsPage() {
-  const { financeSummary, spendingTrend, spendingCategories, holdings } = useMyWaveData()
+  const { financeSummary, spendingTrend, spendingCategories, holdings, status } = useMyWaveData()
   const navigate = useNavigate()
   const topCategory = [...spendingCategories].sort((a, b) => b.amount - a.amount)[0]
+
+  // 정리할 기록이 하나도 없으면 0원짜리 리포트 대신 무엇을 하면 되는지 말한다.
+  const nothingYet = status === 'ready' && financeSummary.totalSpending === 0 && financeSummary.previousSpending === 0
+    && holdings.length === 0 && spendingTrend.every((point) => !point.amount)
+  if (nothingYet) {
+    return (
+      <div className="reveal-stack space-y-5">
+        <MobileTitle title="리포트" />
+        <EmptyGuide
+          title="아직 리포트로 정리할 기록이 없어요"
+          body="소비를 적어 두면 이번 달에 얼마를 썼는지, 어디에 가장 많이 썼는지, 지난달보다 늘었는지 정리해 드려요."
+          actionLabel="소비 기록하기"
+          onAction={() => navigate('/spending/detail', { state: { focusExpenseForm: true } })}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="reveal-stack space-y-5">

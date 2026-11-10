@@ -1,7 +1,8 @@
 import { ChevronRight, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode, Ref } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { wonInWords } from './format'
 
 /**
  * MyWave 화면들이 공유하는 조각들.
@@ -163,6 +164,21 @@ export function ListRow({
   return <div className="flex items-center gap-3 py-3">{body}</div>
 }
 
+/**
+ * 기록이 하나도 없을 때의 화면. 0 으로 채운 카드 여러 장 대신, 무엇을 하면 무엇이 보이는지 한 장으로 말하고 버튼 하나를 준다.
+ */
+export function EmptyGuide({ title, body, actionLabel, onAction }: { title: string; body: string; actionLabel: string; onAction: () => void }) {
+  return (
+    <Card>
+      <div className="flex flex-col items-start gap-3 py-2">
+        <h2 className="text-[20px] font-bold tracking-[-0.02em] text-slate-900">{title}</h2>
+        <p className="text-sm font-medium leading-6 text-slate-500">{body}</p>
+        <button onClick={onAction} className="pressable mt-1 rounded-full bg-blue-700 px-5 py-2.5 text-sm font-black text-white">{actionLabel}</button>
+      </div>
+    </Card>
+  )
+}
+
 /** 화면의 주 액션. 한 화면에 하나만 둔다. */
 export function PrimaryButton({
   children,
@@ -208,54 +224,160 @@ export function SubtleButton({
   )
 }
 
-/** 칸에 보일 글자. 0 은 빈 칸으로 둔다. 그래야 0 을 지우지 않고 바로 숫자를 칠 수 있다. */
+/** 칸에 보일 글자(쉼표 없이). 0 은 빈 칸으로 둔다. 그래야 0 을 지우지 않고 바로 숫자를 칠 수 있다. */
 function numberText(value: number) {
   return value === 0 || !Number.isFinite(value) ? '' : String(value)
+}
+
+/** 치는 중의 글자("-", "12." 같은 것)도 숫자로 읽는다. 아직 숫자가 아니면 0 이다. */
+function parseNumberText(text: string) {
+  const parsed = Number(text)
+  return text === '' || !Number.isFinite(parsed) ? 0 : parsed
+}
+
+/** 사람이 친 글자에서 숫자만 남긴다. "0355" 는 "355", "00" 은 "0", "0.5" 는 그대로. */
+function cleanNumberText(raw: string, decimal: boolean, allowNegative: boolean) {
+  const negative = allowNegative && raw.trim().startsWith('-')
+  let digits = raw.replace(decimal ? /[^\d.]/g : /\D/g, '')
+  if (decimal) {
+    const dot = digits.indexOf('.')
+    if (dot >= 0) digits = digits.slice(0, dot + 1) + digits.slice(dot + 1).replace(/\./g, '')
+  }
+  digits = digits.replace(/^0+(?=\d)/, '').slice(0, 15)
+  return (negative ? '-' : '') + digits
+}
+
+/** 세 자리마다 쉼표. "1234567.5" 는 "1,234,567.5". */
+function groupNumberText(text: string) {
+  const negative = text.startsWith('-')
+  const body = negative ? text.slice(1) : text
+  const dot = body.indexOf('.')
+  const whole = (dot >= 0 ? body.slice(0, dot) : body).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return (negative ? '-' : '') + whole + (dot >= 0 ? body.slice(dot) : '')
+}
+
+/** 빠른 금액 버튼의 글자. 10000 은 "+1만", 5000 은 "+5천". */
+function quickLabel(amount: number) {
+  if (amount >= 10000) return `+${new Intl.NumberFormat('ko-KR').format(amount / 10000)}만`
+  return `+${amount / 1000}천`
 }
 
 /**
  * 숫자를 적는 칸.
  *
- * 숫자 상태를 `<input type="number" value={0}>` 에 그대로 물리면, 0 이 든 칸에 355 를 쳤을 때 "0355" 로 남는다.
- * React 는 칸의 글자와 상태가 숫자로 같으면(0355 == 355) 글자를 고치지 않기 때문이다.
- * 그래서 칸의 글자는 여기서 따로 들고, 앞자리 0 은 치는 즉시 떼어 낸다. 밖으로는 언제나 숫자만 내보낸다.
- * 밖에서 값이 바뀌면(폼 초기화, 불러오기, 자동완성) 그 숫자를 따라간다.
+ * 칸의 글자는 여기서 따로 들고, 밖으로는 언제나 숫자만 내보낸다.
+ * - 앞자리 0 은 치는 즉시 뗀다. 숫자 상태를 `type="number"` 칸에 그대로 물리면 0 이 든 칸에 355 를 쳤을 때 "0355" 로 남는다.
+ * - 세 자리마다 쉼표를 찍는다. 5000000 은 자릿수를 세어야 읽히지만 5,000,000 은 바로 읽힌다.
+ * - `money` 면 칸 아래에 "500만원"처럼 읽는 법을 보여 준다. `quick` 을 주면 그만큼 더하는 버튼이 붙는다.
+ * - 밖에서 값이 바뀌면(폼 초기화, 불러오기, 자동완성) 그 숫자를 따라간다.
+ *
+ * 쉼표를 찍으려고 글자 칸(type="text")을 쓴다. 휴대폰에서는 inputMode 로 숫자 자판이 뜬다.
  */
 export function NumberField({
   value,
   onChange,
   className = 'form-input',
   ref,
-  ...rest
+  money = false,
+  quick,
+  decimal = false,
+  allowNegative = false,
+  disabled,
+  'aria-label': ariaLabel,
 }: {
   value: number
   onChange: (value: number) => void
   className?: string
   ref?: Ref<HTMLInputElement>
-  min?: string
-  max?: string
+  /** 금액 칸. 아래에 읽는 법을 보여 준다. */
+  money?: boolean
+  /** 누르면 그만큼 더해지는 금액들. */
+  quick?: number[]
+  /** 소수점을 받는다(해외 주식 단가). */
+  decimal?: boolean
+  /** 음수를 받는다(마이너스 통장 잔액). */
+  allowNegative?: boolean
   disabled?: boolean
   'aria-label'?: string
 }) {
   const [text, setText] = useState(() => numberText(value))
-  // 지금 글자가 같은 숫자를 뜻하면 친 그대로 보여 주고("1.", "0" 같은 치는 중의 글자), 아니면 밖의 숫자를 따른다.
-  const shown = Number(text || 0) === value ? text : numberText(value)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  // 쉼표가 끼어들면 커서가 맨 뒤로 튄다. 커서 앞에 숫자가 몇 글자 있었는지 기억했다가 그 자리로 돌려놓는다.
+  const caretRef = useRef<number | null>(null)
+  // 지금 글자가 같은 숫자를 뜻하면 친 그대로 보여 주고("12.", "-" 같은 치는 중의 글자), 아니면 밖의 숫자를 따른다.
+  const plain = parseNumberText(text) === value ? text : numberText(value)
+  const shown = groupNumberText(plain)
 
-  return (
+  useLayoutEffect(() => {
+    const input = inputRef.current
+    const significant = caretRef.current
+    if (!input || significant === null) return
+    caretRef.current = null
+    let position = 0
+    let seen = 0
+    while (position < shown.length && seen < significant) {
+      if (shown[position] !== ',') seen += 1
+      position += 1
+    }
+    input.setSelectionRange(position, position)
+  }, [shown])
+
+  function emit(next: string) {
+    setText(next)
+    onChange(parseNumberText(next))
+  }
+
+  const input = (
     <input
-      {...rest}
-      ref={ref}
-      type="number"
+      ref={(node) => {
+        inputRef.current = node
+        if (typeof ref === 'function') ref(node)
+        else if (ref) ref.current = node
+      }}
+      type="text"
+      inputMode={decimal ? 'decimal' : 'numeric'}
+      autoComplete="off"
       placeholder="0"
       value={shown}
+      disabled={disabled}
+      aria-label={ariaLabel}
       onChange={(event) => {
-        // "0355" 는 "355", "00" 은 "0", "-07" 은 "-7". "0.5" 는 그대로 둔다.
-        const next = event.target.value.replace(/^(-?)0+(?=\d)/, '$1')
-        setText(next)
-        const parsed = Number(next)
-        onChange(Number.isFinite(parsed) ? parsed : 0)
+        const raw = event.target.value
+        const caret = event.target.selectionStart ?? raw.length
+        caretRef.current = cleanNumberText(raw.slice(0, caret), decimal, allowNegative).length
+        emit(cleanNumberText(raw, decimal, allowNegative))
       }}
       className={className}
     />
+  )
+
+  if (!money && !quick) return input
+
+  return (
+    <div className="space-y-2">
+      {input}
+      {quick && (
+        <div className="flex flex-wrap gap-1.5">
+          {quick.map((amount) => (
+            <button
+              key={amount}
+              type="button"
+              disabled={disabled}
+              onClick={() => emit(numberText(value + amount))}
+              className="pressable rounded-full bg-slate-100 px-3 py-1.5 text-[13px] font-bold text-slate-600 disabled:opacity-50"
+            >
+              {quickLabel(amount)}
+            </button>
+          ))}
+          {value !== 0 && (
+            <button type="button" disabled={disabled} onClick={() => emit('')} className="pressable rounded-full px-3 py-1.5 text-[13px] font-bold text-slate-400 disabled:opacity-50">
+              지우기
+            </button>
+          )}
+        </div>
+      )}
+      {/* 큰 숫자는 읽는 법을 같이 보여 준다. 자릿수를 잘못 넣는 실수를 여기서 잡는다. */}
+      {money && Math.abs(value) >= 10000 && <p className="tnum text-[13px] font-semibold text-blue-700">{wonInWords(value)}</p>}
+    </div>
   )
 }

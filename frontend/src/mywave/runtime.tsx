@@ -385,7 +385,7 @@ export function gainClass(value: number) {
  * 무엇을 사라고 하지 않고, 확인해 볼 점만 짚는다.
  */
 export function portfolioInsightLine(allocation: RuntimeAllocation[], holdings: RuntimeHolding[]) {
-  if (holdings.length === 0) return '아직 보유 종목이 없어요. 거래 기록을 넣으면 구성과 쏠림을 정리해 드려요.'
+  if (holdings.length === 0) return '아직 보유 종목이 없어요. 거래를 적으면 어디에 얼마나 들어 있는지 정리해 드려요.'
   const top = [...holdings].sort((a, b) => b.weight - a.weight)[0]
   if (top && top.weight >= 50) return `${top.name} 한 종목이 절반 이상을 차지해요. 한쪽에 몰려 있지 않은지 확인해 볼 만해요.`
   const topGroup = [...allocation].sort((a, b) => b.rate - a.rate)[0]

@@ -11,6 +11,7 @@ import { useCursorTilt } from './useCursorTilt'
 import { rememberHandoff } from './handoff'
 import { callBeluga } from './roaming'
 import { useMyWaveData } from './runtime'
+import { LivingBudgetSheet } from './LivingBudgetSheet'
 import {
   deleteMyWaveExpense,
   getMyWaveExpenseTemplates,
@@ -53,6 +54,8 @@ export function TodayHome() {
   const [shake, setShake] = useState(0)
   const [toast, setToast] = useState<{ id: number | null; text: string } | null>(null)
   const toastTimer = useRef<number | undefined>(undefined)
+  // 생활비는 홈에서 바로 정한다. 긴 자산 화면으로 보내지 않는다.
+  const [budgetOpen, setBudgetOpen] = useState(false)
 
   useEffect(() => () => window.clearTimeout(toastTimer.current), [])
 
@@ -152,7 +155,7 @@ export function TodayHome() {
   return (
     <div className="mx-auto grid max-w-[1120px] gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
       <div className="space-y-5">
-        <SodaHero today={today} templates={templates} busyId={busyId} notice={notice} splash={splash} shake={shake} onQuick={logQuick} onManual={() => navigate('/spending/detail', { state: { focusExpenseForm: true } })} onSetBudget={() => navigate('/assets')} />
+        <SodaHero today={today} templates={templates} busyId={busyId} notice={notice} splash={splash} shake={shake} onQuick={logQuick} onManual={() => navigate('/spending/detail', { state: { focusExpenseForm: true } })} onSetBudget={() => setBudgetOpen(true)} />
         <WeekCups today={today} />
       </div>
       <div className="space-y-5">
@@ -161,6 +164,17 @@ export function TodayHome() {
         <GoalGlance today={today} onCreate={() => navigate('/goals/new')} onOpen={() => navigate('/goals')} />
         <InvestGlance today={today} onOpen={() => navigate('/portfolio')} />
       </div>
+      {budgetOpen && (
+        <LivingBudgetSheet
+          onClose={() => setBudgetOpen(false)}
+          onSaved={(amount) => {
+            setBudgetOpen(false)
+            showToast({ id: null, text: `이번 달 생활비를 ${fmt(amount)}원으로 정했어요` })
+            void load()
+            reload()
+          }}
+        />
+      )}
       {toast && (
         <div role="status" className="toast-in fixed bottom-24 left-1/2 z-50 flex items-center gap-3 rounded-full bg-slate-900 py-2.5 pl-4 pr-2.5 text-[14px] font-semibold text-white shadow-[0_12px_30px_rgba(25,31,40,.3)] lg:bottom-8">
           {toast.id !== null && (

@@ -82,7 +82,7 @@ export function CompanyDetailPage() {
             <div className="mt-1 text-xs font-bold text-slate-400">출처 {analysis.sourceLabel}{analysis.period ? ` · ${analysis.period}` : ''}{analysis.estimated ? ' · 추정치' : ''}</div>
             <div className="mt-4 text-2xl font-black">{company.price} <span className={company.change.startsWith('+') ? 'text-red-500' : 'text-blue-700'}>{company.change}</span></div>
           </div>
-          <button onClick={toggleWatch} className={`pressable grid h-11 w-11 place-items-center rounded-full ${watched ? 'bg-blue-700 text-white' : 'bg-blue-50 text-blue-700'}`}>
+          <button onClick={toggleWatch} aria-label={watched ? '관심 종목에서 빼기' : '관심 종목에 담기'} aria-pressed={watched} className={`pressable grid h-11 w-11 place-items-center rounded-full ${watched ? 'bg-blue-700 text-white' : 'bg-blue-50 text-blue-700'}`}>
             <Save className="h-5 w-5" />
           </button>
         </div>

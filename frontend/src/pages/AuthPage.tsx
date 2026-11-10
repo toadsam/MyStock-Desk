@@ -133,8 +133,17 @@ export default function AuthPage() {
 
           {googleOnly && (
             <div className="space-y-4">
-              <p className="text-[14px] font-medium leading-6 text-slate-500">
-                구글 계정 하나로 가입과 로그인을 같이 해요. 처음이면 누르는 순간 계정이 만들어져요.
+              {/* 처음 온 사람은 여기서 무슨 앱인지부터 알아야 한다. */}
+              <p className="text-[15px] font-semibold leading-6 text-slate-700">
+                오늘 얼마까지 써도 되는지, 목표까지 얼마나 남았는지 한눈에 보는 돈 관리 앱이에요.
+              </p>
+              <ul className="space-y-2 rounded-[14px] bg-slate-50 p-4 text-[14px] font-medium leading-6 text-slate-600">
+                <li>생활비를 정하면 하루에 써도 되는 돈을 알려 드려요.</li>
+                <li>소비를 적으면 어디에 많이 쓰는지 보여 드려요.</li>
+                <li>목표를 정하면 하루에 얼마씩 모으면 되는지 계산해 드려요.</li>
+              </ul>
+              <p className="text-[13px] font-medium leading-5 text-slate-400">
+                구글 계정 하나로 가입과 로그인을 같이 해요. 은행이나 카드사에는 연결하지 않아요.
               </p>
               {messages}
               {googleClientId ? (

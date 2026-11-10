@@ -50,6 +50,8 @@ import { LOGIN_NOTICE_KEY } from '../../auth/loginNotice'
 import { useAuth } from '../../auth/useAuth'
 import { MiniStat, MobileTitle } from '../components'
 import { useMyWaveData } from '../runtime'
+import { LivingBudgetSheet } from '../LivingBudgetSheet'
+import { useStarterSteps, type StarterStepKey } from '../starter'
 import { refreshUnreadNotifications, setUnreadNotifications, useNotificationCounts } from '../unreadNotifications'
 import { toneBg } from '../format'
 
@@ -205,7 +207,7 @@ export function ProfilePage() {
   const rows = [
     ...(notificationCounts.total > 0 ? [{ icon: Bell, title: '알림', detail: '목표, 소비, 투자에서 온 알림 보기', to: '/notifications' }] : []),
     { icon: WalletCards, title: '계좌와 예산', detail: '직접 적은 계좌, 이번 달 생활비 예산', to: '/assets' },
-    { icon: CircleHelp, title: 'MyWave 쓰는 법', detail: '시작 안내 3장 다시 보기', to: '/onboarding' },
+    { icon: CircleHelp, title: 'MyWave 쓰는 법', detail: '처음 해 볼 세 가지 다시 보기', to: '/onboarding' },
   ]
 
   function syncAuthMember(updated: MyWaveMemberResponse) {
@@ -440,38 +442,64 @@ function WithdrawalCard() {
   )
 }
 
+/**
+ * 시작 안내. 기능 소개가 아니라 처음 해 볼 세 가지다.
+ * 한 것은 체크로 바뀐다. 생활비는 이 화면에서 바로 정하고, 나머지 둘은 그 일을 하는 화면으로 보낸다.
+ */
 export function OnboardingPage() {
   const navigate = useNavigate()
-  const [step, setStep] = useState(0)
-  const steps = [
-    { title: '모든 금융을 하나의 흐름으로', body: '계좌, 소비, 투자, 목표를 연결해 현재 돈 상태를 한눈에 확인합니다.', icon: WalletCards },
-    { title: '목표 달성 가능성을 계산해요', body: '목표 금액과 남은 기간을 기준으로 필요한 저축액과 줄일 소비를 보여줍니다.', icon: Target },
-    { title: 'AI 코치가 다음 행동을 제안해요', body: '투자 추천이 아니라 판단에 필요한 정보를 쉽게 정리해줍니다.', icon: MessageCircle },
-  ]
-  const CurrentIcon = steps[step].icon
+  const { reload } = useMyWaveData()
+  const { ready, steps, doneCount, allDone } = useStarterSteps()
+  const [budgetOpen, setBudgetOpen] = useState(false)
+
+  function start(key: StarterStepKey) {
+    if (key === 'budget') setBudgetOpen(true)
+    else if (key === 'expense') navigate('/spending/detail', { state: { focusExpenseForm: true } })
+    else navigate('/goals/new')
+  }
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-3xl flex-col justify-center">
+    <div className="mx-auto max-w-2xl space-y-5">
+      <MobileTitle title="시작하기" />
       <Card>
-        <div className="text-center">
-          <div className="mx-auto grid h-24 w-24 place-items-center rounded-[28px] bg-blue-50 text-blue-700">
-            <CurrentIcon className="h-12 w-12" />
-          </div>
-          <h1 className="mt-8 text-3xl font-black tracking-[-0.04em] lg:text-5xl">{steps[step].title}</h1>
-          <p className="mx-auto mt-4 max-w-xl text-base font-bold leading-7 text-slate-500 lg:text-lg">{steps[step].body}</p>
-        </div>
-        <div className="mt-10 flex items-center justify-center gap-2">
-          {steps.map((item, index) => <span key={item.title} className={`h-2 rounded-full ${index === step ? 'w-8 bg-blue-700' : 'w-2 bg-slate-200'}`} />)}
-        </div>
-        <div className="mt-10 flex gap-3">
-          <button onClick={() => step === 0 ? navigate('/') : setStep((value) => value - 1)} className="pressable h-14 flex-1 rounded-2xl font-black text-slate-600">
-            이전
-          </button>
-          <button onClick={() => step === steps.length - 1 ? navigate('/') : setStep((value) => value + 1)} className="pressable h-14 flex-[1.4] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
-            {step === steps.length - 1 ? '시작하기' : '다음'} <ChevronRight className="inline h-5 w-5" />
-          </button>
-        </div>
+        <h2 className="text-[24px] font-black tracking-[-0.03em] text-slate-900">{allDone ? '준비가 끝났어요' : '세 가지만 하면 준비 끝'}</h2>
+        <p className="mt-2 text-sm font-bold leading-6 text-slate-500">
+          {allDone
+            ? '이제 홈에서 오늘 써도 되는 돈과 목표까지 남은 금액을 볼 수 있어요.'
+            : 'MyWave는 직접 적은 숫자로 계산해요. 은행이나 카드사에 연결하지 않아요.'}
+        </p>
+        {ready && <p className="mt-4 text-sm font-black text-blue-700" aria-live="polite">{steps.length}개 중 {doneCount}개 했어요</p>}
+        <ol className="mt-3 space-y-3">
+          {steps.map((step, index) => (
+            <li key={step.key} className={`flex items-center gap-3 rounded-2xl p-4 ${step.done ? 'bg-emerald-50' : 'bg-slate-50'}`}>
+              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black ${step.done ? 'bg-emerald-500 text-white' : 'bg-white text-slate-500'}`}>
+                {step.done ? <CheckCircle2 className="h-5 w-5" aria-hidden="true" /> : index + 1}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-black text-slate-900">{step.title}</span>
+                <span className="mt-0.5 block text-sm font-bold text-slate-500">{step.done ? '했어요' : step.body}</span>
+              </span>
+              {!step.done && (
+                <button onClick={() => start(step.key)} className="pressable shrink-0 rounded-full bg-blue-700 px-4 py-2 text-sm font-black text-white">
+                  {step.action}
+                </button>
+              )}
+            </li>
+          ))}
+        </ol>
+        <button onClick={() => navigate('/')} className="pressable mt-5 h-13 w-full rounded-2xl bg-slate-100 font-black text-slate-700">
+          홈으로 <ChevronRight className="inline h-5 w-5" aria-hidden="true" />
+        </button>
       </Card>
+      {budgetOpen && (
+        <LivingBudgetSheet
+          onClose={() => setBudgetOpen(false)}
+          onSaved={() => {
+            setBudgetOpen(false)
+            reload()
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -594,11 +622,12 @@ function defaultBudgetForm(): BudgetFormState {
   const now = new Date()
   return {
     budgetMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
-    incomeAmount: 850_000,
-    livingBudgetAmount: 550_000,
-    fixedExpenseAmount: 120_000,
-    plannedSavingAmount: 100_000,
-    plannedInvestmentAmount: 30_000,
+    // 서버 값이 오기 전에 남의 숫자처럼 보이는 기본값을 두지 않는다. 비어 있으면 빈 칸이다.
+    incomeAmount: 0,
+    livingBudgetAmount: 0,
+    fixedExpenseAmount: 0,
+    plannedSavingAmount: 0,
+    plannedInvestmentAmount: 0,
   }
 }
 
@@ -682,7 +711,7 @@ export function AssetDetailPage() {
 
   async function saveAccount() {
     if (!accountForm.name.trim() || !accountForm.institutionName.trim()) {
-      setStatusMessage('계좌명과 금융기관을 입력해주세요.')
+      setStatusMessage('통장 이름과 은행 이름을 적어 주세요.')
       return
     }
     try {
@@ -691,7 +720,7 @@ export function AssetDetailPage() {
         setStatusMessage('계좌가 수정되었습니다.')
       } else {
         await createMyWaveAccount(accountForm)
-        setStatusMessage('새 계좌가 연결되었습니다.')
+        setStatusMessage('계좌를 추가했어요.')
       }
       resetAccountForm()
       await refreshAssets()
@@ -724,34 +753,54 @@ export function AssetDetailPage() {
     }
   }
 
-  async function loadAccountsOnly() {
-    try {
-      const result = await getMyWaveAccounts()
-      setAccounts(result)
-      setStatusMessage('계좌 목록을 새로고침했습니다.')
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : '계좌 목록 새로고침에 실패했습니다.')
-    }
-  }
-
   return (
     <div className="space-y-5">
       <MobileTitle title="자산" />
       <Card title="이번 달 재무 상태">
         <div className="grid gap-4 sm:grid-cols-4">
           <MiniStat label="총 자산" value={won(assetMetrics.totalAsset)} change="계좌+투자" />
-          <MiniStat label="계좌 잔액" value={won(assetMetrics.accountBalance)} change={`${accounts.length}개 연결`} />
+          <MiniStat label="계좌 잔액" value={won(assetMetrics.accountBalance)} change={`직접 적은 계좌 ${accounts.length}개`} />
           <MiniStat label="남은 생활비" value={won(assetMetrics.remainingLivingBudget)} change={`저축률 ${assetMetrics.savingRate}%`} />
           <MiniStat label="투자 가능 금액" value={won(assetMetrics.investmentAvailableAmount)} />
         </div>
       </Card>
       {statusMessage && <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-700">{statusMessage}</div>}
+      <Card title="이번 달 예산">
+        <div className="space-y-4">
+          <Field label="생활비 예산">
+            <NumberField money quick={[100000, 500000]} value={budgetForm.livingBudgetAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, livingBudgetAmount: next }))} />
+          </Field>
+          <p className="text-sm font-medium leading-6 text-slate-500">식비, 교통비, 카페처럼 그때그때 쓰는 돈이에요. 남은 날짜로 나눠 하루에 써도 되는 돈을 알려 드려요.</p>
+          {/* 처음에는 생활비 한 칸이면 충분하다. 나머지는 원하는 사람만 펼쳐서 적는다. */}
+          <details className="rounded-2xl bg-slate-50 p-4">
+            <summary className="cursor-pointer text-sm font-black text-slate-600">더 자세히 적기 (수입, 정해진 지출, 저축과 투자 계획)</summary>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Field label="어느 달 예산인가요">
+                <input type="month" value={budgetForm.budgetMonth} onChange={(event) => setBudgetForm((value) => ({ ...value, budgetMonth: event.target.value }))} className="form-input" />
+              </Field>
+              <Field label="한 달 수입">
+                <NumberField money value={budgetForm.incomeAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, incomeAmount: next }))} />
+              </Field>
+              <Field label="정해진 지출 (월세, 통신비 등)">
+                <NumberField money value={budgetForm.fixedExpenseAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, fixedExpenseAmount: next }))} />
+              </Field>
+              <Field label="이번 달 저축할 돈">
+                <NumberField money value={budgetForm.plannedSavingAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, plannedSavingAmount: next }))} />
+              </Field>
+              <Field label="이번 달 투자할 돈">
+                <NumberField money value={budgetForm.plannedInvestmentAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, plannedInvestmentAmount: next }))} />
+              </Field>
+            </div>
+          </details>
+          <button onClick={saveBudget} className="pressable h-13 w-full rounded-2xl bg-blue-700 font-black text-white shadow-blue">
+            <Save className="inline h-5 w-5" /> 예산 저장
+          </button>
+        </div>
+      </Card>
       <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
-        <Card
-          title="연결 계좌"
-          action={<button onClick={loadAccountsOnly} className="pressable rounded-full px-3 py-1.5 text-xs font-black text-blue-700">새로고침</button>}
-        >
+        <Card title="내 계좌">
           <div className="space-y-3">
+            {accounts.length === 0 && <p className="text-sm font-bold text-slate-500">아직 적은 계좌가 없어요. 통장 잔액을 적어 두면 총 자산에 더해져요.</p>}
             {accounts.map((account) => (
               <div key={account.id} className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
                 <button onClick={() => editAccount(account)} className="pressable flex min-w-0 items-center gap-3 text-left">
@@ -773,16 +822,18 @@ export function AssetDetailPage() {
             ))}
           </div>
         </Card>
-        <Card title={editingAccountId ? '계좌 수정' : '새 계좌 연결'}>
+        <Card title={editingAccountId ? '계좌 수정' : '계좌 추가'}>
           <div className="space-y-4">
-            <Field label="계좌명">
-              <input value={accountForm.name} onChange={(event) => setAccountForm((value) => ({ ...value, name: event.target.value }))} className="form-input" />
+            {/* 은행에 연결하는 기능이 아니다. 그렇게 읽히지 않게 먼저 말해 둔다. */}
+            <p className="text-sm font-medium leading-6 text-slate-500">은행에 연결하지 않아요. 통장 이름과 지금 잔액을 직접 적으면 돼요.</p>
+            <Field label="통장 이름">
+              <input value={accountForm.name} onChange={(event) => setAccountForm((value) => ({ ...value, name: event.target.value }))} placeholder="예: 생활비 통장" className="form-input" />
             </Field>
-            <Field label="금융기관">
-              <input value={accountForm.institutionName} onChange={(event) => setAccountForm((value) => ({ ...value, institutionName: event.target.value }))} className="form-input" />
+            <Field label="은행이나 증권사">
+              <input value={accountForm.institutionName} onChange={(event) => setAccountForm((value) => ({ ...value, institutionName: event.target.value }))} placeholder="예: 카카오뱅크" className="form-input" />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="계좌 유형">
+              <Field label="종류">
                 <select value={accountForm.accountType} onChange={(event) => setAccountForm((value) => ({ ...value, accountType: event.target.value }))} className="form-input">
                   <option value="BANK">입출금</option>
                   <option value="SAVINGS">저축</option>
@@ -790,51 +841,23 @@ export function AssetDetailPage() {
                   <option value="CASH">현금</option>
                 </select>
               </Field>
-              <Field label="잔액">
-                <NumberField value={accountForm.balance} onChange={(next) => setAccountForm((value) => ({ ...value, balance: next }))} />
+              <Field label="지금 잔액">
+                <NumberField money allowNegative value={accountForm.balance} onChange={(next) => setAccountForm((value) => ({ ...value, balance: next }))} />
               </Field>
             </div>
             <label className="flex items-center justify-between rounded-2xl p-4 text-sm font-black">
-              총자산 계산에 포함
+              총 자산에 더하기
               <input type="checkbox" checked={accountForm.includedInAssets} onChange={(event) => setAccountForm((value) => ({ ...value, includedInAssets: event.target.checked }))} className="h-5 w-5 accent-blue-700" />
             </label>
             <div className="flex gap-3">
               {editingAccountId && <button onClick={resetAccountForm} className="pressable h-13 flex-1 rounded-2xl font-black text-slate-600">취소</button>}
               <button onClick={saveAccount} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue">
-                <Save className="inline h-5 w-5" /> {editingAccountId ? '수정 저장' : '계좌 연결'}
+                <Save className="inline h-5 w-5" /> {editingAccountId ? '수정 저장' : '계좌 추가'}
               </button>
             </div>
           </div>
         </Card>
       </div>
-      <Card title="월 예산 설정">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="기준 월">
-            <input type="month" value={budgetForm.budgetMonth} onChange={(event) => setBudgetForm((value) => ({ ...value, budgetMonth: event.target.value }))} className="form-input" />
-          </Field>
-          <Field label="월 수입">
-            <NumberField value={budgetForm.incomeAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, incomeAmount: next }))} />
-          </Field>
-          <Field label="생활비 예산">
-            <NumberField value={budgetForm.livingBudgetAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, livingBudgetAmount: next }))} />
-          </Field>
-          <Field label="고정 지출">
-            <NumberField value={budgetForm.fixedExpenseAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, fixedExpenseAmount: next }))} />
-          </Field>
-          <Field label="목표 저축액">
-            <NumberField value={budgetForm.plannedSavingAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, plannedSavingAmount: next }))} />
-          </Field>
-          <Field label="계획 투자액">
-            <NumberField value={budgetForm.plannedInvestmentAmount} onChange={(next) => setBudgetForm((value) => ({ ...value, plannedInvestmentAmount: next }))} />
-          </Field>
-        </div>
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 p-4">
-          <div className="text-sm font-bold text-slate-500">예산 저장 후 남은 생활비와 투자 가능 금액이 다시 계산됩니다.</div>
-          <button onClick={saveBudget} className="pressable rounded-2xl bg-blue-700 px-5 py-3 font-black text-white shadow-blue">
-            <Save className="inline h-5 w-5" /> 예산 저장
-          </button>
-        </div>
-      </Card>
       <Card title="최근 활동">
         <div className="divide-y divide-slate-100">
           {activities.length === 0 && <p className="py-4 text-sm font-bold text-slate-500">이번 달 기록이 아직 없어요.</p>}

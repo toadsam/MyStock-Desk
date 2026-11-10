@@ -35,7 +35,7 @@ export function Odometer({ value, className = '' }: { value: string; className?:
   }
 
   return (
-    <span className={`inline-flex items-baseline whitespace-nowrap ${className}`} role="text" aria-label={value}>
+    <span className={`inline-flex items-baseline whitespace-nowrap ${className}`} role="img" aria-label={value}>
       {items.map((item) => (item.isDigit
         ? <Digit key={item.key} digit={Number(item.char)} place={item.place} reduce={!!reduce} />
         : <span key={item.key} aria-hidden="true">{item.char}</span>))}
