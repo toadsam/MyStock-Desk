@@ -5,6 +5,20 @@ export function won(value: number) {
   return `₩${new Intl.NumberFormat('ko-KR').format(Math.round(value))}`
 }
 
+/**
+ * 금액을 읽는 법으로. 5000000 은 "500만원", 123456789 는 "1억 2,345만 6,789원".
+ * 입력 칸 아래에 보여 줘서 자릿수를 잘못 넣은 것을 눈으로 잡게 한다.
+ */
+export function wonInWords(value: number) {
+  const format = (n: number) => new Intl.NumberFormat('ko-KR').format(n)
+  const amount = Math.round(Math.abs(value))
+  const eok = Math.floor(amount / 100000000)
+  const man = Math.floor((amount % 100000000) / 10000)
+  const rest = amount % 10000
+  const parts = [eok > 0 ? `${format(eok)}억` : '', man > 0 ? `${format(man)}만` : '', rest > 0 || amount === 0 ? format(rest) : ''].filter(Boolean)
+  return `${value < 0 ? '-' : ''}${parts.join(' ')}원`
+}
+
 /** 오늘 날짜를 yyyy-MM-dd 로. 입력 폼의 기본 날짜에 쓴다. */
 export function todayDateString() {
   return dateStringAfterDays(0)

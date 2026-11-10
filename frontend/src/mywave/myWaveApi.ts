@@ -388,6 +388,18 @@ export async function deleteReadMyWaveNotifications() {
   return unwrap(api.delete<ApiResponse<void>>('/api/notifications/read'))
 }
 
+/** MyWave 가 시세를 아는 종목. 거래를 적을 때 이름으로 찾는 데 쓴다. */
+export type MyWaveStockResponse = {
+  symbol: string
+  name: string
+  market: string
+  currentPrice: number
+}
+
+export async function getMyWaveStocks() {
+  return unwrap(api.get<ApiResponse<MyWaveStockResponse[]>>('/api/stocks'))
+}
+
 export async function searchMyWave(query: string) {
   return unwrap(api.get<ApiResponse<MyWaveSearchResultResponse[]>>('/api/search', { params: { query } }))
 }

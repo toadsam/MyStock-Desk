@@ -1,7 +1,7 @@
 import { CalendarDays, ChevronRight, Edit3, Info, Save, SlidersHorizontal, WalletCards } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { dateStringAfterDays, won } from '../format'
+import { dateStringAfterDays, todayDateString, won } from '../format'
 import { Card, ConfirmDeleteButton, Field, NumberField } from '../uiKit'
 import { BelugaSays } from '../Beluga'
 import { Celebration } from '../Celebration'
@@ -18,8 +18,7 @@ import {
   BlueCard,
   BlueMetric,
   FlagIcon,
-  HeroAmount,
-  MiniStat,
+  HeroAmount,
   MobileCard,
   MobileGoalLine,
   MobileRing,
@@ -458,7 +457,7 @@ export function GoalEditorPage() {
   const { reload } = useMyWaveData()
   const [searchParams] = useSearchParams()
   const editingId = Number(searchParams.get('id') ?? 0)
-  const [title, setTitle] = useState('새 저축 목표')
+  const [title, setTitle] = useState('')
   const [targetAmount, setTargetAmount] = useState(0)
   const [currentAmount, setCurrentAmount] = useState(0)
   // 기본 목표일은 한 달 뒤. 고정 날짜를 두면 언젠가 과거가 되어 "남은 날 0일"로 시작한다.
@@ -493,6 +492,14 @@ export function GoalEditorPage() {
   }, [editingId])
 
   async function submit() {
+    if (!title.trim()) {
+      setMessage('목표 이름을 적어 주세요.')
+      return
+    }
+    if (targetAmount <= 0) {
+      setMessage('모을 금액을 적어 주세요.')
+      return
+    }
     setStatus('saving')
     setMessage('')
     try {
@@ -512,51 +519,67 @@ export function GoalEditorPage() {
     window.setTimeout(() => navigate('/goals'), 500)
   }
 
+  // 하루에 모을 돈은 남은 날짜로 나눈다. 전에는 날짜와 상관없이 30 으로 나눴다.
+  const remaining = Math.max(targetAmount - currentAmount, 0)
+  const daysLeft = Math.max(1, Math.ceil((new Date(`${targetDate}T00:00:00`).getTime() - new Date(`${todayDateString()}T00:00:00`).getTime()) / 86_400_000))
+  const dateChoices: Array<[string, number]> = [['1달 뒤', 30], ['3달 뒤', 91], ['6달 뒤', 182], ['1년 뒤', 365]]
+
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <MobileTitle title={editingId ? '목표 수정' : '새 목표 만들기'} />
-      {message && <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-500">{message}</div>}
-      <Card title="목표 정보">
+      <Card title={editingId ? '목표 고치기' : '무엇을 위해 모으나요'}>
         <div className="space-y-4">
           <Field label="목표 이름">
-            <input value={title} onChange={(event) => setTitle(event.target.value)} className="form-input" />
+            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="예: 여행 자금, 노트북" maxLength={60} className="form-input" />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="목표 금액">
-              <NumberField min="0" max="10000000000" value={targetAmount} onChange={(next) => setTargetAmount(next)} />
-            </Field>
-            <Field label="현재 모은 금액">
-              <NumberField min="0" max="10000000000" value={currentAmount} onChange={(next) => setCurrentAmount(next)} />
-            </Field>
-          </div>
-          <Field label="목표 날짜">
-            <input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} className="form-input" />
+          <Field label="얼마를 모을까요">
+            <NumberField money quick={[100000, 1000000]} value={targetAmount} onChange={(next) => setTargetAmount(next)} />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="상태">
-              <select value={goalStatus} onChange={(event) => setGoalStatus(event.target.value)} className="form-input">
-                <option value="ACTIVE">진행 중</option>
-                <option value="PAUSED">일시정지</option>
-                <option value="COMPLETED">완료</option>
-              </select>
-            </Field>
-            <Field label="우선순위">
-              <NumberField min="1" max="99" value={priority} onChange={(next) => setPriority(next)} />
-            </Field>
+          <Field label="언제까지 모을까요">
+            <input type="date" min={editingId ? undefined : todayDateString()} value={targetDate} onChange={(event) => setTargetDate(event.target.value)} className="form-input" />
+          </Field>
+          <div className="flex flex-wrap gap-1.5">
+            {dateChoices.map(([label, days]) => (
+              <button key={label} type="button" onClick={() => setTargetDate(dateStringAfterDays(days))} className="pressable rounded-full bg-slate-100 px-3 py-1.5 text-[13px] font-bold text-slate-600">
+                {label}
+              </button>
+            ))}
           </div>
-        </div>
-      </Card>
-      <Card title="예상 결과">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <MiniStat label="달성률" value={`${Math.round((currentAmount / Math.max(targetAmount, 1)) * 100)}%`} />
-          <MiniStat label="남은 금액" value={won(Math.max(targetAmount - currentAmount, 0))} />
-          <MiniStat label="하루 목표" value={won(Math.max(targetAmount - currentAmount, 0) / 30)} />
+          {/* 새 목표에 꼭 필요한 것은 위의 세 칸뿐이다. 나머지는 고칠 때나 필요해서 접어 둔다. */}
+          <details open={editingId > 0} className="rounded-2xl bg-slate-50 p-4">
+            <summary className="cursor-pointer text-sm font-black text-slate-600">더 자세히 (이미 모은 돈, 상태, 순서)</summary>
+            <div className="mt-4 space-y-4">
+              <Field label="이미 모은 돈">
+                <NumberField money value={currentAmount} onChange={(next) => setCurrentAmount(next)} />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="상태">
+                  <select value={goalStatus} onChange={(event) => setGoalStatus(event.target.value)} className="form-input">
+                    <option value="ACTIVE">진행 중</option>
+                    <option value="PAUSED">일시정지</option>
+                    <option value="COMPLETED">완료</option>
+                  </select>
+                </Field>
+                <Field label="순서 (1이 가장 먼저)">
+                  <NumberField value={priority} onChange={(next) => setPriority(next)} />
+                </Field>
+              </div>
+            </div>
+          </details>
+          {targetAmount > 0 && goalStatus === 'ACTIVE' && (
+            <p className="rounded-2xl bg-blue-50 px-4 py-3 text-sm font-bold leading-6 text-blue-700">
+              {remaining > 0
+                ? `남은 ${daysLeft}일 동안 하루에 ${won(Math.ceil(remaining / daysLeft))}씩 모으면 돼요.`
+                : '목표 금액을 이미 다 모았어요.'}
+            </p>
+          )}
+          {message && <div role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-500">{message}</div>}
         </div>
       </Card>
       <div className="flex gap-3">
         <button onClick={() => navigate('/goals')} className="pressable h-13 flex-1 rounded-2xl font-black text-slate-600">취소</button>
         <button onClick={submit} disabled={status === 'saving'} className="pressable h-13 flex-[1.5] rounded-2xl bg-blue-700 font-black text-white shadow-blue disabled:opacity-60">
-          <Save className="inline h-5 w-5" /> {status === 'saving' ? '저장 중' : status === 'saved' ? '저장 완료' : editingId ? '수정 저장' : '저장하기'}
+          <Save className="inline h-5 w-5" /> {status === 'saving' ? '저장 중' : status === 'saved' ? '저장 완료' : editingId ? '고친 내용 저장' : '목표 만들기'}
         </button>
       </div>
     </div>

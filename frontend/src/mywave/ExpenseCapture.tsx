@@ -320,8 +320,6 @@ function ReviewList({
                   className="form-input !h-10 !rounded-xl"
                 />
                 <NumberField
-                  min="0"
-                  max="100000000"
                   value={row.amount}
                   onChange={(amount) => onPatch(row.key, { amount })}
                   className="form-input !h-10 !rounded-xl text-right"

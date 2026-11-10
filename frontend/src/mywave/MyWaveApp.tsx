@@ -1,4 +1,4 @@
-import { Bell, ChevronRight, Search, UserRound } from 'lucide-react'
+import { Bell, ChevronRight, Plus, Search, UserRound } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useOutlet, useParams } from 'react-router-dom'
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
@@ -16,6 +16,7 @@ import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { useAuth } from '../auth/useAuth'
 import { MyWaveDataContext, useMyWaveData, useMyWaveRuntimeData } from './runtime'
 import { useNotificationCounts } from './unreadNotifications'
+import { useStarterSteps } from './starter'
 import { AssetDetailPage, NotificationsPage, OnboardingPage, ProfilePage, SearchResultsPage } from './screens/AccountScreens'
 import { CoachPage } from './screens/CoachScreen'
 import { CompanyDetailPage } from './screens/CompanyScreen'
@@ -95,8 +96,7 @@ function Shell() {
           <Ocean />
           {/* 풀어둔 벨루가. 본문(main)이 positioned 라 그 뒤에서 헤엄치고, 틈에서만 보인다. 부르면 앞으로 나온다. */}
           <Roamer />
-          <WindowBar />
-          <div className="flex min-h-screen lg:min-h-[calc(100vh-7rem)]">
+          <div className="flex min-h-screen lg:min-h-[calc(100vh-4rem)]">
             <Sidebar />
             <main className="relative min-w-0 flex-1 pb-24 lg:pb-0">
               <MobileTop />
@@ -119,6 +119,7 @@ function Shell() {
               </div>
             </main>
           </div>
+          <RecordButton />
           <MobileBottomNav />
         </div>
       </div>
@@ -136,16 +137,6 @@ function DataStatusBanner() {
     <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[20px] bg-red-50 px-5 py-4 text-sm font-bold text-red-700">
       <span>서버에서 숫자를 불러오지 못했어요. 화면의 금액은 실제 기록이 아닐 수 있어요.</span>
       <button onClick={reload} className="pressable rounded-full bg-white px-4 py-2 text-red-700">다시 불러오기</button>
-    </div>
-  )
-}
-
-function WindowBar() {
-  return (
-    <div className="hidden h-14 items-center gap-2 border-b border-slate-200 px-6 lg:flex">
-      <span className="h-3.5 w-3.5 rounded-full bg-[#ff5f57]" />
-      <span className="h-3.5 w-3.5 rounded-full bg-[#ffbd2e]" />
-      <span className="h-3.5 w-3.5 rounded-full bg-[#28c840]" />
     </div>
   )
 }
@@ -229,13 +220,13 @@ function Sidebar() {
  */
 function StarterCard() {
   const navigate = useNavigate()
-  const { status, goals, holdings } = useMyWaveData()
-  if (status !== 'ready' || goals.length > 0 || holdings.length > 0) return null
+  const { ready, steps, doneCount, allDone } = useStarterSteps()
+  if (!ready || allDone) return null
   return (
     <div className="mt-10 rounded-[20px] bg-white p-5">
       <div className="font-black text-blue-700">처음이세요?</div>
-      <p className="mt-3 text-sm leading-6 text-slate-500">생활비를 정하고 소비를 기록하면 홈의 잔이 차요. 어떻게 쓰는지 짧게 알려 드려요.</p>
-      <button onClick={() => navigate('/onboarding')} className="pressable mt-4 rounded-full border border-blue-600 px-4 py-2 text-sm font-bold text-blue-700">둘러보기 <ChevronRight className="inline h-4 w-4" /></button>
+      <p className="mt-3 text-sm leading-6 text-slate-500">세 가지만 하면 준비가 끝나요. 지금 {steps.length}개 중 {doneCount}개 했어요.</p>
+      <button onClick={() => navigate('/onboarding')} className="pressable mt-4 rounded-full border border-blue-600 px-4 py-2 text-sm font-bold text-blue-700">이어서 하기 <ChevronRight className="inline h-4 w-4" /></button>
       <div className="beluga-breathe ml-auto mt-2 h-24 w-24"><BelugaArt mood="hello" className="h-full w-full" /></div>
     </div>
   )
@@ -244,13 +235,13 @@ function StarterCard() {
 /** 휴대폰에는 옆 메뉴가 없어서 StarterCard 가 보이지 않는다. 같은 조건으로 홈 맨 위에 한 줄로 보여 준다. */
 function MobileStarter() {
   const navigate = useNavigate()
-  const { status, goals, holdings } = useMyWaveData()
-  if (status !== 'ready' || goals.length > 0 || holdings.length > 0) return null
+  const { ready, steps, doneCount, allDone } = useStarterSteps()
+  if (!ready || allDone) return null
   return (
     <button onClick={() => navigate('/onboarding')} className="pressable mb-4 flex w-full items-center gap-3 rounded-[20px] bg-white px-4 py-3.5 text-left lg:hidden">
       <span className="min-w-0 flex-1">
-        <span className="block text-[14px] font-black text-blue-700">처음이세요?</span>
-        <span className="mt-0.5 block text-[13px] font-medium leading-5 text-slate-500">생활비를 정하고 소비를 기록하면 홈의 잔이 차요. 쓰는 법 3장 보기</span>
+        <span className="block text-[14px] font-black text-blue-700">처음이세요? 세 가지만 하면 준비 끝</span>
+        <span className="mt-0.5 block text-[13px] font-medium leading-5 text-slate-500">{steps.length}개 중 {doneCount}개 했어요. 이어서 하기</span>
       </span>
       <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
     </button>
@@ -365,6 +356,28 @@ function DesktopHeader() {
   )
 }
 
+/** 이미 적는 화면이거나, 다른 것을 적고 있는 화면. 여기서는 기록 버튼을 띄우지 않는다. */
+const NO_RECORD_BUTTON = ['/spending/detail', '/onboarding', '/goals/new', '/assets', '/portfolio/detail']
+
+/**
+ * 휴대폰에서 어느 화면에 있든 누르면 소비를 적는 칸으로 가는 버튼.
+ * 이 앱에서 가장 자주 하는 일이 기록인데, 전에는 홈이나 소비 화면까지 가서 버튼을 찾아야 했다.
+ */
+function RecordButton() {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  if (NO_RECORD_BUTTON.some((path) => pathname.startsWith(path))) return null
+  return (
+    <button
+      onClick={() => navigate('/spending/detail', { state: { focusExpenseForm: true } })}
+      aria-label="소비 기록하기"
+      className="pressable fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-12 items-center gap-1.5 rounded-full bg-blue-700 pl-4 pr-5 text-[15px] font-black text-white shadow-[0_10px_24px_rgba(37,99,235,.35)] lg:hidden"
+    >
+      <Plus className="h-5 w-5" aria-hidden="true" /> 기록
+    </button>
+  )
+}
+
 function MobileBottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 mx-auto grid max-w-[1760px] grid-cols-6 border-t border-slate-200 bg-white px-1.5 pb-[calc(.55rem+env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
@@ -447,12 +460,12 @@ function pageMeta(pathname: string) {
   if (pathname.startsWith('/spending')) return { title: '소비', subtitle: '이번 달 쓴 돈을 지난달 같은 날짜까지와 비교해요.', search: '검색 (예: 배달비)' }
   if (pathname.startsWith('/portfolio')) return { title: '투자', subtitle: '직접 적은 매매 기록으로 계산한 평균단가와 수익률.', search: '검색 (예: 삼성전자)' }
   if (pathname.startsWith('/reports')) return { title: '리포트', subtitle: '월별 소비와 생활비 예산, 보유 종목의 공시와 재무.', search: '검색 (예: 삼성전자)' }
-  if (pathname.startsWith('/coach')) return { title: 'AI코치', subtitle: '총자산, 소비, 목표, 쏠림을 한 화면에. 답은 규칙으로 만들어요.', search: '검색 (예: 목표)' }
+  if (pathname.startsWith('/coach')) return { title: 'AI코치', subtitle: '총 자산, 소비, 목표를 한 화면에. 답은 규칙으로 만들어요.', search: '검색 (예: 목표)' }
   if (pathname.startsWith('/assets')) return { title: '자산', subtitle: '계좌 잔액과 이번 달 생활비를 직접 적어요.', search: '검색 (예: 생활비 통장)' }
   if (pathname.startsWith('/notifications')) return { title: '알림', subtitle: '목표, 소비, 투자에서 챙겨 볼 소식.', search: '검색 (예: 카페)' }
   if (pathname.startsWith('/profile')) return { title: '내 정보', subtitle: '프로필, 로그인 방식, 계정 삭제.', search: '검색 (예: 카페)' }
   if (pathname.startsWith('/search')) return { title: '검색', subtitle: '목표, 소비, 보유 종목을 한 번에 찾아요.', search: '검색 (예: 카페)' }
   if (pathname.startsWith('/company')) return { title: '기업 상세', subtitle: '시세와 재무 지표. 투자 판단이 아니라 참고 자료예요.', search: '검색 (예: 삼성전자)' }
-  if (pathname.startsWith('/onboarding')) return { title: '시작하기', subtitle: 'MyWave를 어떻게 쓰면 되는지 알려 드릴게요.', search: '검색 (예: 카페)' }
+  if (pathname.startsWith('/onboarding')) return { title: '시작하기', subtitle: '처음 해 볼 세 가지.', search: '검색 (예: 카페)' }
   return { title: '홈', subtitle: '오늘 더 써도 되는 돈, 목표, 투자.', search: '검색 (예: 카페)' }
 }
