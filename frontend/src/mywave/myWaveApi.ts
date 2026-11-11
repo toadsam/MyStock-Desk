@@ -100,6 +100,16 @@ export type MyWaveCoachChatResponse = {
   answer: MyWaveCoachMessageResponse
   suggestedQuestions: string[]
   context: MyWaveDashboardResponse
+  /** AI: 모델이 쓴 답. RULE: 정해진 문장으로 만든 답. */
+  source?: 'AI' | 'RULE'
+  /** 오늘 남은 AI 답변 횟수. AI 가 꺼져 있으면 null. */
+  remainingToday?: number | null
+}
+
+export type MyWaveCoachStatusResponse = {
+  aiEnabled: boolean
+  remainingToday: number | null
+  dailyLimit: number
 }
 
 export type MyWaveNotificationResponse = {
@@ -362,6 +372,10 @@ export async function updateMyWaveGoal(id: number, request: {
 
 export async function deleteMyWaveGoal(id: number) {
   return unwrap(api.delete<ApiResponse<void>>(`/api/goals/${id}`))
+}
+
+export async function getMyWaveCoachStatus() {
+  return unwrap(api.get<ApiResponse<MyWaveCoachStatusResponse>>('/api/ai/financial-coach/status'))
 }
 
 export async function chatWithMyWaveCoach(message: string) {

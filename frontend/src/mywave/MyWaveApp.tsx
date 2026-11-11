@@ -483,7 +483,7 @@ function pageMeta(pathname: string) {
   if (pathname.startsWith('/spending')) return { title: '소비', subtitle: '이번 달 쓴 돈을 지난달 같은 날짜까지와 비교해요.', search: '검색 (예: 배달비)' }
   if (pathname.startsWith('/portfolio')) return { title: '투자', subtitle: '직접 적은 매매 기록으로 계산한 평균단가와 수익률.', search: '검색 (예: 삼성전자)' }
   if (pathname.startsWith('/reports')) return { title: '리포트', subtitle: '월별 소비와 생활비 예산, 보유 종목의 공시와 재무.', search: '검색 (예: 삼성전자)' }
-  if (pathname.startsWith('/coach')) return { title: 'AI코치', subtitle: '총 자산, 소비, 목표를 한 화면에. 답은 규칙으로 만들어요.', search: '검색 (예: 목표)' }
+  if (pathname.startsWith('/coach')) return { title: 'AI코치', subtitle: '총 자산, 소비, 목표를 한 화면에. 답은 적어 둔 숫자로만 만들어요.', search: '검색 (예: 목표)' }
   if (pathname.startsWith('/assets')) return { title: '자산', subtitle: '계좌 잔액과 이번 달 생활비를 직접 적어요.', search: '검색 (예: 생활비 통장)' }
   if (pathname.startsWith('/notifications')) return { title: '알림', subtitle: '목표, 소비, 투자에서 챙겨 볼 소식.', search: '검색 (예: 카페)' }
   if (pathname.startsWith('/profile')) return { title: '내 정보', subtitle: '프로필, 로그인 방식, 계정 삭제.', search: '검색 (예: 카페)' }

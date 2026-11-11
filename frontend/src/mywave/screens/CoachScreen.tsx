@@ -1,12 +1,12 @@
 import { Plus, SendHorizontal } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { won } from '../format'
 import { Card, EmptyGuide } from '../uiKit'
 import { Beluga, BelugaSays } from '../Beluga'
 import { Typewriter } from '../motion'
 import { Amount } from '../Amount'
-import { chatWithMyWaveCoach } from '../myWaveApi'
+import { chatWithMyWaveCoach, getMyWaveCoachStatus } from '../myWaveApi'
 import { MiniStat, MobileTitle, RingProgress, SummaryLine } from '../components'
 import { useMyWaveData, type RuntimeCoachMessage } from '../runtime'
 import { RiskPanel } from './PortfolioScreens'
@@ -118,6 +118,16 @@ function ChatPanel() {
   ]
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
+  // 모델이 답을 쓰는지와 오늘 남은 횟수. 모르는 동안에는 아무 말도 하지 않는다.
+  const [ai, setAi] = useState<{ enabled: boolean; remaining: number | null } | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    getMyWaveCoachStatus()
+      .then((status) => { if (alive) setAi({ enabled: status.aiEnabled, remaining: status.remainingToday }) })
+      .catch(() => { /* 상태를 못 읽어도 질문은 할 수 있다. 안내만 빠진다. */ })
+    return () => { alive = false }
+  }, [])
 
   const sendMessage = async (text = draft) => {
     const message = text.trim()
@@ -128,6 +138,9 @@ function ChatPanel() {
     try {
       const response = await chatWithMyWaveCoach(message)
       setSent((items) => [...items, { from: 'bot', text: response.answer.content }])
+      if (response.remainingToday !== undefined) {
+        setAi({ enabled: response.remainingToday !== null, remaining: response.remainingToday })
+      }
     } catch {
       setSent((items) => [...items, { from: 'bot', text: '지금은 답변을 받아오지 못했어요. 잠시 후 다시 물어봐 주세요.' }])
     } finally {
@@ -148,7 +161,7 @@ function ChatPanel() {
       {messages.map((message, index) => (
         <div key={`${message.from}-${index}`} className={`chat-row flex ${message.from === 'user' ? 'justify-end' : 'justify-start'} gap-4`} style={{ animationDelay: `${index * 120}ms` }}>
           {message.from === 'bot' && <Beluga mood="calm" size="sm" float={false} className="mt-1" />}
-          <div className={`max-w-[720px] px-5 py-3.5 text-[15px] font-medium leading-7 ${message.from === 'user' ? 'rounded-[18px] rounded-br-[6px] bg-blue-700 text-white' : 'rounded-[18px] rounded-bl-[6px] bg-wave-foam text-blue-950'}`}>
+          <div className={`max-w-[720px] whitespace-pre-line px-5 py-3.5 text-[15px] font-medium leading-7 ${message.from === 'user' ? 'rounded-[18px] rounded-br-[6px] bg-blue-700 text-white' : 'rounded-[18px] rounded-bl-[6px] bg-wave-foam text-blue-950'}`}>
             {message.from === 'bot' && message.fresh ? <Typewriter text={message.text} /> : message.text}
             {message.stats && (
               <div className="mt-4 grid gap-3 rounded-2xl bg-blue-50 p-4 sm:grid-cols-3">
@@ -176,7 +189,8 @@ function ChatPanel() {
       )}
       <div className="pt-2">
         <div className="mb-3 flex flex-wrap gap-2">
-          {['이번 달 소비 어땠어?', '지금 투자해도 괜찮을까?', '목표까지 얼마나 남았어?', '어디를 줄이면 좋을까?'].map((item) => (
+          {/* 투자해도 되는지는 코치가 답하지 않기로 한 질문이라 추천하지 않는다. */}
+          {['이번 달 소비 어땠어?', '오늘 얼마까지 써도 돼?', '목표까지 얼마나 남았어?', '어디를 줄이면 좋을까?'].map((item) => (
             <button key={item} onClick={() => sendMessage(item)} className="pressable rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-600 hover:bg-slate-50">{item}</button>
           ))}
         </div>
@@ -196,6 +210,13 @@ function ChatPanel() {
             <SendHorizontal className="h-5 w-5" />
           </button>
         </label>
+        {/* 무엇이 밖으로 나가는지와 코치가 하지 않는 일을 질문하는 자리에서 알린다. */}
+        {ai?.enabled && (
+          <p className="mt-2.5 px-1 text-[12px] font-medium leading-5 text-slate-400">
+            질문과 이번 달 숫자 요약이 답을 만들려고 OpenAI로 전송돼요. 이름, 가게 이름, 메모는 보내지 않아요. 투자 조언은 하지 않아요.
+            {ai.remaining !== null && <span className="font-semibold text-slate-500"> 오늘 {ai.remaining}번 더 물어볼 수 있어요.</span>}
+          </p>
+        )}
       </div>
     </section>
   )

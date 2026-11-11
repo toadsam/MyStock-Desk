@@ -3,6 +3,7 @@ package com.stockflow.coach.controller;
 import com.stockflow.coach.dto.CoachChatRequest;
 import com.stockflow.coach.dto.CoachChatResponse;
 import com.stockflow.coach.dto.CoachMessageDto;
+import com.stockflow.coach.dto.CoachStatusDto;
 import com.stockflow.coach.service.FinancialCoachService;
 import com.stockflow.dashboard.dto.MyWaveDashboardDto;
 import com.stockflow.global.response.ApiResponse;
@@ -30,6 +31,11 @@ public class FinancialCoachController {
     @GetMapping("/context")
     public ApiResponse<MyWaveDashboardDto> context() {
         return ApiResponse.success(coachService.context());
+    }
+
+    @GetMapping("/status")
+    public ApiResponse<CoachStatusDto> status() {
+        return ApiResponse.success(coachService.status());
     }
 
     @PostMapping("/chat")

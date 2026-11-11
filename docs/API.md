@@ -1,6 +1,6 @@
 # API 명세
 
-MyWave 화면이 실제로 부르는 엔드포인트 57개입니다. 프론트의 [`myWaveApi.ts`](../frontend/src/mywave/myWaveApi.ts)와 [`authApi.ts`](../frontend/src/api/authApi.ts)에서 호출하는 주소를 컨트롤러와 하나씩 맞춰 봤습니다(2026-10-12). 백엔드에는 이 밖에도 예전 모의투자 화면이 쓰던 엔드포인트가 50개 남짓 더 있습니다. 맨 아래에 묶어서만 적었습니다.
+MyWave 화면이 실제로 부르는 엔드포인트 58개입니다. 프론트의 [`myWaveApi.ts`](../frontend/src/mywave/myWaveApi.ts)와 [`authApi.ts`](../frontend/src/api/authApi.ts)에서 호출하는 주소를 컨트롤러와 하나씩 맞춰 봤습니다(2026-10-12). 백엔드에는 이 밖에도 예전 모의투자 화면이 쓰던 엔드포인트가 50개 남짓 더 있습니다. 맨 아래에 묶어서만 적었습니다.
 
 ## 공통
 
@@ -181,7 +181,8 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
 | DELETE | `/api/notifications/{id}` | 하나 삭제 | |
 | DELETE | `/api/notifications/read` | 읽은 알림 전부 삭제 | |
 | GET | `/api/ai/financial-coach/messages` | 코치 대화 기록. 처음이면 인사 한 줄을 만들어 줌 | |
-| POST | `/api/ai/financial-coach/chat` | 질문하고 답 받기. 질문과 답 둘 다 저장 | `{ message }` |
+| GET | `/api/ai/financial-coach/status` | 모델이 답을 쓰는지(`aiEnabled`), 오늘 남은 AI 답변 횟수(`remainingToday`), 하루 한도(`dailyLimit`) | |
+| POST | `/api/ai/financial-coach/chat` | 질문하고 답 받기. 질문과 답 둘 다 저장. 응답의 `source` 가 `AI` 면 모델이 쓴 답, `RULE` 이면 정해진 문장 | `{ message }` |
 | GET | `/api/search` | 목표, 소비 카테고리, 보유 종목, 종목을 한 번에 검색. 결과마다 `{ type, title, detail, targetPath }` | `?query=` |
 
 코치의 답은 언어 모델이 아니라 규칙이 만듭니다. 질문에 "투자", "소비", "목표"가 들어 있는지 보고 이번 달 숫자로 문장을 조립합니다.

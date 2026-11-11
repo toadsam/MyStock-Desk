@@ -76,6 +76,10 @@ stockflow:
     enabled: true
     default-symbols: NVDA,AAPL,MSFT,TSLA,AMD
     user-agent: ${SEC_USER_AGENT:StockFlow/1.0 contact@example.com}
+  # AI코치. 한 사람이 하루에 받을 수 있는 AI 답변 수와, 모든 사람을 합친 하루 상한. 넘으면 정해진 답으로 알려 준다.
+  coach:
+    daily-limit: ${STOCKFLOW_COACH_DAILY_LIMIT:30}
+    global-daily-limit: ${STOCKFLOW_COACH_GLOBAL_DAILY_LIMIT:1500}
   ai:
     provider: local
     openai:
