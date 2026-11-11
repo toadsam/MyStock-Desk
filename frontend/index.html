@@ -14,6 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="MyWave" />
     <meta name="description" content="오늘 써도 되는 돈을 알려 주는 가계부, MyWave" />
     <link rel="preload" as="image" href="/splash-beluga.webp" type="image/webp" />
+    <link rel="preload" as="image" href="/logo-wordmark-white.webp" type="image/webp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Jua&display=swap" />
@@ -58,12 +59,12 @@
         filter: drop-shadow(0 14px 18px rgba(10, 40, 140, 0.35));
         animation: splash-rise 0.9s cubic-bezier(0.2, 0.9, 0.2, 1) both, splash-bob 2.8s ease-in-out 0.9s infinite;
       }
+      /* 앱 상단과 같은 워드마크의 흰색 판. 글씨로 쓰면 상단 로고와 모양이 달라진다. */
       .splash-logo {
-        margin-top: 12px;
-        font-size: 42px;
-        font-weight: 900;
-        line-height: 1;
-        letter-spacing: -0.02em;
+        display: block;
+        margin-top: 14px;
+        width: auto;
+        height: 60px;
         animation: splash-fade 0.6s ease 0.2s both;
       }
       .splash-tag {
@@ -141,7 +142,7 @@
       <span class="splash-bubble" style="left: 84%; width: 6px; height: 6px; animation-delay: 2.4s"></span>
       <div class="splash-inner" aria-hidden="true">
         <img class="splash-beluga" src="/splash-beluga.webp" width="303" height="320" alt="" />
-        <div class="splash-logo">MyWave</div>
+        <img class="splash-logo" src="/logo-wordmark-white.webp" width="521" height="144" alt="" />
         <div class="splash-tag">오늘 써도 되는 돈을 알려 주는 가계부</div>
         <div class="splash-slow">연결이 느려요. 조금만 기다려 주세요.</div>
       </div>
