@@ -11,6 +11,7 @@ import {
   getMyWaveHoldings,
   type MyWaveActionResponse,
   type MyWaveCoachMessageResponse,
+  type MyWaveCoachNews,
   type MyWaveDashboardResponse,
   type MyWaveExpenseResponse,
   type MyWaveGoalResponse,
@@ -81,7 +82,7 @@ type RuntimeHolding = { symbol: string; name: string; quantity: number; averageP
 
 type RuntimeActivity = { id: number; title: string; detail: string; amount: number; icon: IconType; color: string }
 
-export type RuntimeCoachMessage = { from: 'bot' | 'user'; text: string; stats?: Array<{ label: string; value: string }>; suggestions?: string[] }
+export type RuntimeCoachMessage = { from: 'bot' | 'user'; text: string; stats?: Array<{ label: string; value: string }>; suggestions?: string[]; news?: MyWaveCoachNews | null }
 
 /** amount/budget 가 null 인 달은 "기록이 시작되기 전"이다. 차트가 그 달에는 선을 긋지 않는다. */
 type RuntimeTrend = { month: string; amount: number | null; budget: number | null }

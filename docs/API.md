@@ -182,7 +182,7 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
 | DELETE | `/api/notifications/read` | 읽은 알림 전부 삭제 | |
 | GET | `/api/ai/financial-coach/messages` | 코치 대화 기록. 처음이면 인사 한 줄을 만들어 줌 | |
 | GET | `/api/ai/financial-coach/status` | 모델이 답을 쓰는지(`aiEnabled`), 오늘 남은 AI 답변 횟수(`remainingToday`), 하루 한도(`dailyLimit`) | |
-| POST | `/api/ai/financial-coach/chat` | 질문하고 답 받기. 질문과 답 둘 다 저장. 응답의 `source` 가 `AI` 면 모델이 쓴 답, `RULE` 이면 정해진 문장 | `{ message }` |
+| POST | `/api/ai/financial-coach/chat` | 질문하고 답 받기. 질문과 답 둘 다 저장. 응답의 `source` 가 `AI` 면 모델이 쓴 답, `RULE` 이면 정해진 문장. 질문에 앱이 아는 종목이 나오면 `news`(최근 기사 세 건, 최신순)가 함께 옴 | `{ message }` |
 | GET | `/api/search` | 목표, 소비 카테고리, 보유 종목, 종목을 한 번에 검색. 결과마다 `{ type, title, detail, targetPath }` | `?query=` |
 
 코치의 답은 언어 모델이 아니라 규칙이 만듭니다. 질문에 "투자", "소비", "목표"가 들어 있는지 보고 이번 달 숫자로 문장을 조립합니다.

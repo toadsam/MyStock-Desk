@@ -6,7 +6,7 @@ import { Card, EmptyGuide } from '../uiKit'
 import { Beluga, BelugaSays } from '../Beluga'
 import { Typewriter } from '../motion'
 import { Amount } from '../Amount'
-import { chatWithMyWaveCoach, getMyWaveCoachStatus } from '../myWaveApi'
+import { chatWithMyWaveCoach, getMyWaveCoachStatus, type MyWaveCoachNews } from '../myWaveApi'
 import { MiniStat, MobileTitle, RingProgress, SummaryLine } from '../components'
 import { useMyWaveData, type RuntimeCoachMessage } from '../runtime'
 import { RiskPanel } from './PortfolioScreens'
@@ -137,7 +137,7 @@ function ChatPanel() {
     setSent((items) => [...items, { from: 'user', text: message }])
     try {
       const response = await chatWithMyWaveCoach(message)
-      setSent((items) => [...items, { from: 'bot', text: response.answer.content }])
+      setSent((items) => [...items, { from: 'bot', text: response.answer.content, news: response.news }])
       if (response.remainingToday !== undefined) {
         setAi({ enabled: response.remainingToday !== null, remaining: response.remainingToday })
       }
@@ -168,6 +168,7 @@ function ChatPanel() {
                 {message.stats.map((stat) => <MiniStat key={stat.label} label={stat.label} value={stat.value} />)}
               </div>
             )}
+            {message.news && message.news.items.length > 0 && <CoachNewsCards news={message.news} />}
             {message.suggestions && (
               <div className="mt-4 rounded-2xl p-4 text-sm leading-7">
                 <div className="font-black">이렇게 해보는 건 어때요?</div>
@@ -220,6 +221,43 @@ function ChatPanel() {
       </div>
     </section>
   )
+}
+
+/**
+ * 질문에 나온 종목의 최근 기사.
+ *
+ * 코치가 쓴 글이 아니다. 뉴스 검색 결과의 제목과 언론사를 그대로, 최신순으로 보여 준다.
+ * 좋은 소식인지 나쁜 소식인지는 표시하지 않는다. 판단은 읽는 사람이 한다.
+ */
+function CoachNewsCards({ news }: { news: MyWaveCoachNews }) {
+  return (
+    <div className="mt-3 space-y-2">
+      <div className="text-[12px] font-semibold text-blue-900/70">{news.stockName} 최근 소식 · 최신순</div>
+      {news.items.map((item) => {
+        const meta = [item.source, newsDate(item.publishedAt)].filter(Boolean).join(' · ')
+        const body = (
+          <>
+            <span className="block text-[14px] font-semibold leading-6 text-slate-900">{item.title}</span>
+            {meta && <span className="mt-0.5 block text-[12px] font-medium text-slate-500">{meta}</span>}
+          </>
+        )
+        return item.url ? (
+          <a key={item.title} href={item.url} target="_blank" rel="noopener noreferrer" className="pressable block rounded-[12px] bg-white px-3.5 py-3 whitespace-normal hover:bg-slate-50">
+            {body}
+          </a>
+        ) : (
+          <div key={item.title} className="rounded-[12px] bg-white px-3.5 py-3 whitespace-normal">{body}</div>
+        )
+      })}
+      <p className="text-[12px] font-medium leading-5 text-blue-900/60">기사는 고르거나 풀어 쓰지 않았어요. 누르면 원문이 열려요.</p>
+    </div>
+  )
+}
+
+/** "11월 10일". 날짜를 읽지 못하면 비워 둔다. */
+function newsDate(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '' : `${date.getMonth() + 1}월 ${date.getDate()}일`
 }
 
 function FinanceState() {

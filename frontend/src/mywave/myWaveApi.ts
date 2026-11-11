@@ -104,6 +104,14 @@ export type MyWaveCoachChatResponse = {
   source?: 'AI' | 'RULE'
   /** 오늘 남은 AI 답변 횟수. AI 가 꺼져 있으면 null. */
   remainingToday?: number | null
+  /** 질문에 나온 종목의 최근 기사. 종목이 없으면 null. */
+  news?: MyWaveCoachNews | null
+}
+
+export type MyWaveCoachNews = {
+  stockName: string
+  symbol: string
+  items: Array<{ title: string; source: string; url: string | null; publishedAt: string }>
 }
 
 export type MyWaveCoachStatusResponse = {
