@@ -358,7 +358,8 @@ function SearchBox() {
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={(event) => event.key === 'Enter' && submitSearch()}
-        className="w-full min-w-0 bg-transparent text-[14px] font-medium text-slate-900 outline-none placeholder:text-slate-400"
+        // 느낌표가 필요하다. index.css 의 "input { font: inherit }" 가 글씨 크기 클래스를 이겨서, 없으면 16px 로 나온다.
+        className="w-full min-w-0 bg-transparent text-[14px]! font-medium! text-slate-900 outline-none placeholder:text-slate-400"
         placeholder={meta.search}
       />
     </label>

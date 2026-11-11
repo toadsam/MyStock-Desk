@@ -290,18 +290,22 @@ export function SodaHero({
       </div>
 
       {/* 벨루가는 날짜와 제목 줄 높이 안에서만 앉는다. 큰 숫자 줄은 가리지 않는다. 누르면 말을 건다. */}
-      <motion.div style={tilt.style} className={`absolute right-3 top-2 z-20 sm:right-5 ${today.budgetSet ? 'hidden lg:block' : ''}`}>
-        <div key={mood} className={`wave-pop ${mood === 'concern' ? '' : 'beluga-breathe'}`}>
-          <BelugaTap
-            mood={mood}
-            alt={faceAlt}
-            lines={lines}
-            bump={splash}
-            bumpLine={bumpLine}
-            imgClassName={mood === 'concern' ? 'h-[80px] w-[72px] sm:h-[92px] sm:w-[84px]' : 'h-[92px] w-[86px] sm:h-[104px] sm:w-[96px]'}
-          />
-        </div>
-      </motion.div>
+      {/* 기울기와 숨쉬기는 그림에만 건다. 말풍선까지 같이 움직이면 카드 위쪽에서 잘린다. */}
+      <div className={`absolute right-3 top-2 z-20 sm:right-5 ${today.budgetSet ? 'hidden lg:block' : ''}`}>
+        <BelugaTap
+          mood={mood}
+          alt={faceAlt}
+          lines={lines}
+          bump={splash}
+          bumpLine={bumpLine}
+          imgClassName={mood === 'concern' ? 'h-[80px] w-[72px] sm:h-[92px] sm:w-[84px]' : 'h-[92px] w-[86px] sm:h-[104px] sm:w-[96px]'}
+          wrapArt={(art) => (
+            <motion.div style={tilt.style}>
+              <div key={mood} className={`wave-pop ${mood === 'concern' ? '' : 'beluga-breathe'}`}>{art}</div>
+            </motion.div>
+          )}
+        />
+      </div>
 
       <div className="relative mt-6">
         <span data-story-piece="budget-label" className="wave-jua text-[20px]">오늘 더 써도 되는 돈</span>

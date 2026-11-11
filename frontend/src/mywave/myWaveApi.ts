@@ -608,6 +608,8 @@ export type MyWaveParseResultResponse = {
   reportedTotal?: number | null
   totalMatched: boolean
   warnings: string[]
+  /** 캡처에 있었지만 소비가 아니라서(입금, 환불, 취소) 넣지 않은 건수 */
+  skippedCount?: number
 }
 
 export type MyWaveImportStatusResponse = {

@@ -8,6 +8,9 @@ import java.util.List;
  *
  * <p>reportedTotal 은 캡처 화면에 적혀 있던 합계이고, totalMatched 가 false 면
  * 금액 자릿수를 잘못 읽었을 가능성이 있으므로 확인 화면에서 경고해야 한다.
+ *
+ * <p>skippedCount 는 캡처에 있었지만 소비가 아니라서(입금, 환불, 취소) 넣지 않은 건수다.
+ * 말없이 빼면 빠뜨린 것처럼 보이므로 확인 화면에서 알려야 한다.
  */
 public record ParseResultDto(
         List<ParsedExpenseDto> items,
@@ -16,6 +19,7 @@ public record ParseResultDto(
         BigDecimal totalAmount,
         BigDecimal reportedTotal,
         boolean totalMatched,
-        List<String> warnings
+        List<String> warnings,
+        int skippedCount
 ) {
 }

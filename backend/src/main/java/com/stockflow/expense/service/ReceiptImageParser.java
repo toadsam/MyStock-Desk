@@ -56,13 +56,14 @@ public class ReceiptImageParser {
                 {"merchant": "가게 이름", "amount": 5600, "date": "2026-09-11"}
               ],
               "reportedTotal": 화면에 적힌 합계 숫자 또는 null,
+              "skipped": 취소/환불/입금이라서 뺀 건수(없으면 0),
               "notes": ["읽기 어려웠던 점"]
             }
 
             규칙:
             - amount 는 콤마 없는 정수입니다. 자릿수를 절대 바꾸지 마세요.
             - date 는 yyyy-MM-dd 입니다. 화면에 연도가 없으면 %d 년으로 쓰세요.
-            - 취소/환불/입금 건은 items 에 넣지 마세요.
+            - 취소/환불/입금 건은 items 에 넣지 마세요. 대신 그런 건이 몇 건이었는지 skipped 에 숫자로 적으세요.
             - 잔액, 누적 사용액, 한도는 결제 건이 아닙니다.
             - 화면에 합계가 보이면 reportedTotal 에 그대로 넣으세요. 없으면 null 입니다.
             """;
@@ -116,7 +117,8 @@ public class ReceiptImageParser {
         }
     }
 
-    private Result toResult(JsonNode root) {
+    /** 모델이 돌려준 JSON 을 결과로 바꾼다. 테스트에서 직접 부른다. */
+    Result toResult(JsonNode root) {
         List<Item> items = new ArrayList<>();
         for (JsonNode node : root.path("items")) {
             BigDecimal amount = node.path("amount").isNumber()
@@ -140,7 +142,9 @@ public class ReceiptImageParser {
                 notes.add(value);
             }
         }
-        return new Result(items, reportedTotal, notes);
+        // 건수가 숫자가 아니거나 음수면 0 으로 본다. 모르는 것을 "뺐다"고 말하지 않는다.
+        int skipped = root.path("skipped").isNumber() ? Math.max(0, root.path("skipped").asInt()) : 0;
+        return new Result(items, reportedTotal, notes, skipped);
     }
 
     private BigDecimal parseAmount(String raw) {
@@ -192,6 +196,7 @@ public class ReceiptImageParser {
     public record Item(String merchant, BigDecimal amount, LocalDate date) {
     }
 
-    public record Result(List<Item> items, BigDecimal reportedTotal, List<String> notes) {
+    /** skipped: 들어온 돈(입금, 환불)이나 취소라서 소비로 넣지 않은 건수. */
+    public record Result(List<Item> items, BigDecimal reportedTotal, List<String> notes, int skipped) {
     }
 }
