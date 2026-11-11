@@ -62,7 +62,7 @@ public class ExpenseImportService {
         if (items.isEmpty()) {
             warnings.add("결제 문자를 찾지 못했습니다. 카드 승인 문자를 통째로 붙여넣었는지 확인해 주세요.");
         }
-        return summarize(items, null, warnings);
+        return summarize(items, null, warnings, 0);
     }
 
     public ParseResultDto parseImage(MultipartFile file) {
@@ -97,7 +97,8 @@ public class ExpenseImportService {
             warnings.add("화면에서 결제 내역을 찾지 못했습니다. 목록이 보이는 화면인지 확인해 주세요.");
         }
         warnings.add("읽어낸 금액과 가게 이름이 맞는지 저장 전에 확인해 주세요.");
-        return summarize(items, read.reportedTotal(), warnings);
+        // 들어온 돈은 일부러 뺀다. 몇 건을 뺐는지 같이 보내서 화면이 알릴 수 있게 한다.
+        return summarize(items, read.reportedTotal(), warnings, read.skipped());
     }
 
     public int remainingImageQuota() {
@@ -137,7 +138,7 @@ public class ExpenseImportService {
      * <p>자릿수를 잘못 읽으면 열 배 차이가 나므로, 여기서 걸러 주지 않으면
      * 월 통계와 목표 달성률이 통째로 망가진다.
      */
-    private ParseResultDto summarize(List<ParsedExpenseDto> items, BigDecimal reportedTotal, List<String> warnings) {
+    private ParseResultDto summarize(List<ParsedExpenseDto> items, BigDecimal reportedTotal, List<String> warnings, int skippedCount) {
         BigDecimal total = items.stream()
                 .map(ParsedExpenseDto::amount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -153,7 +154,7 @@ public class ExpenseImportService {
         if (duplicates > 0) {
             warnings.add("이미 등록된 것으로 보이는 " + duplicates + "건은 기본으로 선택을 해제했습니다.");
         }
-        return new ParseResultDto(items, items.size(), duplicates, total, reportedTotal, matched, warnings);
+        return new ParseResultDto(items, items.size(), duplicates, total, reportedTotal, matched, warnings, skippedCount);
     }
 
     private void validateImage(MultipartFile file) {

@@ -3,6 +3,7 @@ import {
   Check,
   ClipboardPaste,
   ImageUp,
+  Info,
   Loader2,
   Plus,
   Trash2,
@@ -303,6 +304,14 @@ function ReviewList({
         <div className="flex gap-2 rounded-[12px] bg-red-50 px-3.5 py-3 text-[13px] font-semibold text-red-700">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>화면 합계와 항목의 합이 달라요. 금액 자릿수를 확인해 주세요.</span>
+        </div>
+      )}
+
+      {/* 들어온 돈은 일부러 뺀다. 말없이 빼면 빠뜨린 것처럼 보여서 몇 건을 뺐는지 알린다. */}
+      {(result.skippedCount ?? 0) > 0 && (
+        <div className="flex gap-2 rounded-[12px] bg-blue-50 px-3.5 py-3 text-[13px] font-semibold leading-5 text-blue-800">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>들어온 돈이나 취소된 결제 {result.skippedCount}건은 소비가 아니라서 넣지 않았어요.</span>
         </div>
       )}
 

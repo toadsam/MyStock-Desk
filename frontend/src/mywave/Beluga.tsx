@@ -106,6 +106,7 @@ export function BelugaTap({
   bump = 0,
   bumpLine,
   alt = '벨루가',
+  wrapArt,
 }: {
   mood?: BelugaMood
   lines: string[]
@@ -115,6 +116,11 @@ export function BelugaTap({
   bump?: number | string
   bumpLine?: string
   alt?: string
+  /**
+   * 그림에만 걸 움직임(숨쉬기, 기울기)을 여기서 감싼다.
+   * 바깥에서 통째로 감싸면 말풍선까지 같이 흔들려서 카드 가장자리에서 잘린다.
+   */
+  wrapArt?: (art: ReactNode) => ReactNode
 }) {
   const [hop, setHop] = useState(0)
   const [line, setLine] = useState<string | null>(null)
@@ -179,18 +185,23 @@ export function BelugaTap({
 
   const bubblePlace = bubbleSide === 'left' ? 'right-full top-1 mr-2' : bubbleSide === 'right' ? 'left-full top-1 ml-2' : 'bottom-full right-0 mb-1'
 
+  const art = (
+    <button type="button" onClick={poke} aria-label={alt === '벨루가' ? '벨루가에게 말 걸기' : `${alt}에게 말 걸기`} className="relative block cursor-pointer select-none">
+      <span key={`${hop}-${pose ?? ''}`} className={`block ${imgClassName} ${pose === 'surprise' ? 'beluga-startle' : pose ? 'wave-pop' : hop > 0 ? 'beluga-hop' : ''}`}>
+        <BelugaArt mood={pose ?? mood} asleep={asleep} className="h-full w-full drop-shadow-[0_10px_14px_rgba(10,40,140,.3)]" />
+      </span>
+      <MouthBubbles token={mouth} className="left-[22%] top-[38%]" />
+    </button>
+  )
+
   return (
     <div className="relative">
-      <button type="button" onClick={poke} aria-label={alt === '벨루가' ? '벨루가에게 말 걸기' : `${alt}에게 말 걸기`} className="relative block cursor-pointer select-none">
-        <span key={`${hop}-${pose ?? ''}`} className={`block ${imgClassName} ${pose === 'surprise' ? 'beluga-startle' : pose ? 'wave-pop' : hop > 0 ? 'beluga-hop' : ''}`}>
-          <BelugaArt mood={pose ?? mood} asleep={asleep} className="h-full w-full drop-shadow-[0_10px_14px_rgba(10,40,140,.3)]" />
-        </span>
-        <MouthBubbles token={mouth} className="left-[22%] top-[38%]" />
-      </button>
+      {wrapArt ? wrapArt(art) : art}
       {line && (
+        // 말풍선은 그림의 움직임 밖에 있다. 좁은 화면에서는 폭을 줄여 카드 왼쪽으로 넘치지 않게 한다.
         <div
           role="status"
-          className={`bubble-pop absolute z-20 w-max max-w-[220px] rounded-[16px] bg-white px-3.5 py-2.5 text-[13px] font-bold leading-5 text-slate-900 shadow-[0_8px_24px_rgba(25,31,40,.18)] ${bubblePlace}`}
+          className={`bubble-pop absolute z-20 w-max max-w-[min(220px,calc(100vw-11rem))] rounded-[16px] bg-white px-3.5 py-2.5 text-[13px] font-bold leading-5 text-slate-900 shadow-[0_8px_24px_rgba(25,31,40,.18)] ${bubblePlace}`}
         >
           {line}
         </div>
