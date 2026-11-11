@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Component;
  * 금액과 항목 이름(식비, 카페 같은 분류)만 나간다.
  */
 @Component
+@Order(1)
 @RequiredArgsConstructor
 public class MyNumbersRetriever implements CoachContextRetriever {
 

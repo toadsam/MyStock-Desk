@@ -6,7 +6,9 @@ import com.stockflow.coach.dto.CoachChatRequest;
 import com.stockflow.coach.dto.CoachChatResponse;
 import com.stockflow.coach.dto.CoachMessageDto;
 import com.stockflow.coach.dto.CoachStatusDto;
+import com.stockflow.coach.dto.CoachNewsDto;
 import com.stockflow.coach.entity.FinancialCoachMessage;
+import com.stockflow.coach.news.CoachNewsFinder;
 import com.stockflow.coach.repository.FinancialCoachMessageRepository;
 import com.stockflow.dashboard.dto.MyWaveDashboardDto;
 import com.stockflow.dashboard.service.MyWaveDashboardService;
@@ -30,6 +32,7 @@ public class FinancialCoachService {
     private final MyWaveDashboardService dashboardService;
     private final CurrentMemberProvider currentMemberProvider;
     private final CoachAiAnswerer aiAnswerer;
+    private final CoachNewsFinder newsFinder;
     private final Clock clock;
 
     /** 한 사람이 하루에 받을 수 있는 AI 답변 수. 넘으면 정해진 답으로 알려 준다. */
@@ -95,14 +98,21 @@ public class FinancialCoachService {
         boolean overGlobalLimit = askedByEveryone >= globalDailyLimit;
 
         String aiAnswer = aiOn && !overMyLimit && !overGlobalLimit ? aiAnswerer.answer(question, history) : null;
+        // 질문에 종목이 나오면 최근 기사를 붙인다. 판단은 하지 않고 읽을거리만 건넨다.
+        CoachNewsDto news = newsFinder.find(question).orElse(null);
+
         String content;
         if (aiAnswer != null) {
             content = aiAnswer;
-        } else if (aiOn && overMyLimit) {
-            content = "오늘 받을 수 있는 AI 답변 " + dailyLimit + "번을 다 썼어요. 내일 다시 물어봐 주세요.\n"
-                    + answer(question, context);
         } else {
-            content = answer(question, context);
+            // 종목을 물었는데 모델이 답하지 못하면, 숫자 요약 대신 판단은 못 한다는 말부터 한다.
+            String ruleAnswer = news != null ? "투자 판단은 제가 대신해 드릴 수 없어요." : answer(question, context);
+            content = aiOn && overMyLimit
+                    ? "오늘 받을 수 있는 AI 답변 " + dailyLimit + "번을 다 썼어요. 내일 다시 물어봐 주세요.\n" + ruleAnswer
+                    : ruleAnswer;
+        }
+        if (news != null && !content.contains("소식") && !content.contains("기사")) {
+            content = content + "\n대신 " + news.stockName() + "의 최근 소식을 아래에 모아 봤어요.";
         }
 
         FinancialCoachMessage answer = saveMessage(memberId, ASSISTANT, content);
@@ -112,7 +122,8 @@ public class FinancialCoachService {
                 suggestedQuestions(),
                 context,
                 aiAnswer != null ? "AI" : "RULE",
-                remainingToday);
+                remainingToday,
+                news);
     }
 
     public List<String> suggestedQuestions() {
