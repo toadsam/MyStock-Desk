@@ -114,8 +114,8 @@ export default function AuthPage() {
           <span className="beluga-hop block h-28 w-28">
             <BelugaArt mood="hello" className="h-full w-full drop-shadow-[0_10px_16px_rgba(10,40,140,.22)]" />
           </span>
-          <span className="mt-1 text-[32px] font-black leading-none tracking-[-0.02em] text-blue-700">MyWave</span>
-          <span className="mt-2 text-[13px] font-medium text-slate-500">{TAGLINE}</span>
+          <img src="/logo-wordmark.webp" alt="MyWave" width={521} height={144} className="mt-2 block h-12 w-auto" />
+          <span className="mt-3 text-[13px] font-medium text-slate-500">{TAGLINE}</span>
         </Link>
         <div className="rounded-[20px] bg-white p-6 md:p-7">
           <div className="mb-6 flex items-center justify-between">

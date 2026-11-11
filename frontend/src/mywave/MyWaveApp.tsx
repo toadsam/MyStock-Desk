@@ -150,14 +150,9 @@ function DataStatusBanner() {
 function Logo() {
   return (
     <div>
-      <div className="text-[24px] font-black leading-none tracking-[-0.02em] text-blue-700 lg:text-3xl">MyWave</div>
-      {/* 이름 아래 물결 한 줄. 신나게 단계에서는 흐른다. */}
-      <div aria-hidden="true" className="logo-wave mt-1.5 h-[6px] w-[78px] overflow-hidden lg:w-[96px]">
-        <svg className="h-full w-[200%]" viewBox="0 0 200 6" preserveAspectRatio="none">
-          <path d="M0 3 Q12.5 0 25 3 T50 3 T75 3 T100 3 T125 3 T150 3 T175 3 T200 3" fill="none" stroke="#51b9ff" strokeWidth="2" />
-        </svg>
-      </div>
-      <div className="mt-1.5 text-xs font-medium text-slate-500 lg:mt-2 lg:text-sm">{TAGLINE}</div>
+      {/* 로고는 그림 한 장이다. 이름 아래 물결까지 그림에 들어 있다. 글씨로 쓰면 굵기를 더 올릴 수 없어서 로고처럼 보이지 않았다. */}
+      <img src="/logo-wordmark.webp" alt="MyWave" width={521} height={144} className="block h-9 w-auto lg:h-11" />
+      <div className="mt-2 text-xs font-medium text-slate-500 lg:text-sm">{TAGLINE}</div>
     </div>
   )
 }
