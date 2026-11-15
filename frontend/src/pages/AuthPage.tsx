@@ -1,4 +1,4 @@
-import { LockKeyhole, LogIn, UserPlus } from 'lucide-react'
+import { LockKeyhole, LogIn, PlayCircle, UserPlus } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getAuthConfig } from '../api/authApi'
@@ -221,6 +221,20 @@ export default function AuthPage() {
                 )}
               </div>
             </>
+          )}
+
+          {/* 계정을 내놓기 전에 앱이 어떻게 생겼는지 볼 길. 방문자 대부분이 이 화면에서 돌아갔다. */}
+          {configState.status !== 'loading' && (
+            <Link
+              to="/story"
+              className="pressable mt-4 flex h-14 w-full flex-col items-center justify-center rounded-[14px] bg-blue-50 text-blue-700"
+            >
+              <span className="flex items-center gap-2 text-[15px] font-bold">
+                <PlayCircle className="h-[18px] w-[18px]" aria-hidden="true" />
+                먼저 구경하기
+              </span>
+              <span className="text-[12px] font-medium text-blue-700/70">로그인 없이 보는 짧은 소개</span>
+            </Link>
           )}
 
           <div className="mt-6 text-center text-[13px]">
