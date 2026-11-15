@@ -9,7 +9,20 @@ export type SurfClock = { elapsed: number }
 
 // The guide starts the gesture before the UI releases into the same current.
 export const SURF_RELEASE_MS = 180
-export const smoothStep = (start: number, end: number, value: number) => {
+/**
+ * Keyframe sample times: a sparse even grid plus dense windows where the motion
+ * changes fast (docking, impact). Element.animate() cost grows with keyframe count,
+ * and building ~90 animations with 97 frames each stalled the screen swap.
+ */
+export const sampleTimes = (start: number, end: number, segments: number, dense: [number, number, number][] = []) => {
+  const times = Array.from({ length: segments + 1 }, (_, i) => start + (end - start) * i / segments)
+  for (const [from, to, count] of dense) for (let i = 0; i <= count; i++) {
+    const t = from + (to - from) * i / count
+    if (t > start && t < end) times.push(t)
+  }
+  return [...new Set(times.map(t => Math.round(t * 10) / 10))].sort((a, b) => a - b)
+}
+export const smoothStep =(start: number, end: number, value: number) => {
   const t = Math.max(0, Math.min(1, (value - start) / (end - start)))
   return t * t * t * (t * (t * 6 - 15) + 10)
 }

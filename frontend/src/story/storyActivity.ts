@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 
 let active = true
-export const isStoryActive = () => active && !document.hidden
+// The first-visit splash (index.html #splash) covers the page for about two seconds.
+// Hold the film until it is gone, or the opening line plays unseen behind it.
+export const isStoryActive = () => active && !document.hidden && !document.getElementById('splash')
 
 /** Keep a collection of preview tabs from running eleven WebGL films at once. */
 export function useStoryActivity() {

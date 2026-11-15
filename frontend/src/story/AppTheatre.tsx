@@ -44,6 +44,17 @@ function AppTheatre({chapter,phase,playing,reduced,demo,onAction,onChapter,arriv
 
   // Hold the camera during disassembly so viewport-space paths have a stable frame.
   useLayoutEffect(() => {
+    // The first phone arrives already flying. Establish its responsive scale
+    // before the director measures it, even though normal placement is frozen.
+    const node = stage.current
+    if (!node) return
+    const bounds = node.getBoundingClientRect()
+    const compact = bounds.width < 761
+    const top = compact ? (bounds.height < 760 ? 137 : 155) : 94
+    const scale = Math.max(.36, Math.min(1.08, (bounds.height-top-(compact ? 207 : 188))/640, bounds.width*(compact ? .69 : .39)/350))
+    node.style.setProperty('--phone-scale', String(scale))
+  }, [])
+  useLayoutEffect(() => {
     if (surfStarted === undefined || !camera.current) return
     const node = camera.current
     node.style.transform = getComputedStyle(node).transform
@@ -78,7 +89,15 @@ function AppTheatre({chapter,phase,playing,reduced,demo,onAction,onChapter,arriv
       const restY = small ? bounds.bottom - base.top - size * .75 : bounds.bottom - base.top - size * .9
       const x = pointing ? Math.max(0, Math.min(base.width-size*actorScale,pointX-size*actorScale*.94)) : restX
       const y = pointing ? Math.max(70,pointY-size*actorScale*.43) : restY
-      actor.style.transform = `translate3d(${x}px,${y}px,0) scale(${actorScale})`
+      const transform = `translate3d(${x}px,${y}px,0) scale(${actorScale})`
+      if (!actor.style.transform) {
+        // First placement: snap into place. Easing in from the stage origin (0,0)
+        // flew the guide across the header logo on every direct scene load.
+        actor.style.transition = 'none'
+        actor.style.transform = transform
+        void actor.offsetWidth
+        actor.style.removeProperty('transition')
+      } else actor.style.transform = transform
       dot.style.transform = `translate3d(${pointX}px,${pointY}px,0)`
     }
     const schedule = () => { cancelAnimationFrame(frame); frame=requestAnimationFrame(place) }

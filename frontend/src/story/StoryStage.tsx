@@ -1,3 +1,4 @@
+import { STORY_RATE, OPENING_SECONDS, OPENING_TRAVEL_SECONDS } from './playback'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
@@ -437,13 +438,13 @@ export default function StoryStage(props: Props) {
     const render = (now: number) => {
       const { chapter, time, reduced, demo, playing, presenting, surfStarted, surfClock } = latest.current
       const surfProgress = Math.min(1, (surfClock?.elapsed ?? 0) / SURF_TRANSITION_MS)
-      const arrivalProgress = Math.min(1,time/SURF_ARRIVAL_SECONDS)
+      const arrivalProgress = Math.max(0,Math.min(1,time/SURF_ARRIVAL_SECONDS))
       const surfPower = reduced ? 0 : surfStarted !== undefined ? Math.sin(surfProgress*Math.PI) : Math.sin(arrivalProgress*Math.PI)*.35
       oceanSwell.value = surfPower*.22
       oceanSwellTravel.value = surfStarted === undefined ? -9+arrivalProgress*18 : -14+surfProgress*28
       const delta = Math.min(0.05, Math.max(0, (now - previousFrame) / 1000)); previousFrame = now
       if (!isStoryActive()) { measuredAt = now; measuredFrames = 0; frame = requestAnimationFrame(render); return }
-      if (playing && !reduced) ambientTime += delta
+      if (playing && !reduced) ambientTime += delta * STORY_RATE
       const t = reduced ? 0 : ambientTime
       // During the product film, distant scenery does not need a second shadow pass.
       renderer.shadowMap.enabled = false
@@ -470,7 +471,8 @@ export default function StoryStage(props: Props) {
       const follow = reduced ? 1 : 1 - Math.exp(-delta * 5)
       const sceneAngles = [0.12, 0.2, -0.28, 0.35, 0.55, -0.15]
       const cameraAngle = sceneAngles[chapter] + orbit.current + (reduced ? 0 : pointer.x * 0.18 + Math.sin(t * 0.2) * 0.07)
-      const distance = (camera.aspect < 0.9 ? 10.2 : 11.8) * zoom.current - surfPower*1.6
+      const openingTravel = time < 0 && !reduced ? Math.max(0, (time + OPENING_SECONDS - OPENING_TRAVEL_SECONDS) / (OPENING_SECONDS - OPENING_TRAVEL_SECONDS)) : 0
+      const distance = (camera.aspect < 0.9 ? 10.2 : 11.8) * zoom.current - surfPower*1.6 - openingTravel*1.2
       const cameraFollow = reduced ? 1 : 1 - Math.exp(-delta * 4)
       cameraAzimuth = THREE.MathUtils.lerp(cameraAzimuth, cameraAngle, cameraFollow)
       cameraDistance = THREE.MathUtils.lerp(cameraDistance, distance, cameraFollow)
