@@ -1,5 +1,6 @@
 import { isStoryActive } from './storyActivity'
 import type { SurfClock } from './surf'
+import { STORY_RATE } from './playback'
 
 /** Compositor playback, synchronized to the director clock only on pause or drift. */
 export function playStoryAnimations(animations: Animation[], clock: SurfClock, offset: number, isPlaying: () => boolean) {
@@ -19,7 +20,7 @@ export function playStoryAnimations(animations: Animation[], clock: SurfClock, o
     }
     frame = requestAnimationFrame(draw)
   }
-  animations.forEach(animation => { animation.pause(); animation.currentTime = Math.max(0, clock.elapsed - offset) })
+  animations.forEach(animation => { animation.pause(); animation.playbackRate = STORY_RATE; animation.currentTime = Math.max(0, clock.elapsed - offset) })
   draw()
   return () => { cancelAnimationFrame(frame); animations.forEach(animation => animation.cancel()) }
 }

@@ -13,6 +13,8 @@ import { SURF_TRANSITION_MS, SURF_COVER_MS, SURF_ARRIVAL_SECONDS } from './surf'
 import { useSurfPresentation } from './useSurfPresentation'
 import { isStoryActive, useStoryActivity } from './storyActivity'
 import './direction.css'
+import StoryOpening from './StoryOpening'
+import { OPENING_BEAT_SECONDS, OPENING_SECONDS, STORY_RATE, openingBeat, openingLines } from './playback'
 
 const StoryStage = lazy(() => import('./StoryStage'))
 const timeLabel = (time: number) => `${Math.floor(time / 60)}:${String(Math.floor(time % 60)).padStart(2, '0')}`
@@ -21,7 +23,8 @@ const chapterIcons = [Waves, Wallet, Coffee, PiggyBank, ChartPie, Hand]
 export default function StoryPage() {
   const active = useStoryActivity()
   const initialChapter = Math.max(0, Math.min(chapters.length - 1, Math.floor(Number(new URLSearchParams(window.location.search).get('scene') || 1) - 1 || 0)))
-  const [time, setTime] = useState(initialChapter * CHAPTER_SECONDS)
+  const [time, setTime] = useState(initialChapter === 0 ? -OPENING_SECONDS : initialChapter * CHAPTER_SECONDS)
+  const openingClock = useRef({ elapsed: 0 })
   const [playing, setPlaying] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [autoNext, setAutoNext] = useState(true)
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -41,13 +44,15 @@ export default function StoryPage() {
   const timeRef = useRef(time)
   const lastChapter = useRef(initialChapter)
   const chapter = Math.max(0, Math.min(chapters.length - 1, Math.floor(time / CHAPTER_SECONDS)))
-  const localTime = time - chapter * CHAPTER_SECONDS
+  const opening = time < 0
+  const localTime = Math.max(0, time - chapter * CHAPTER_SECONDS)
   const data = chapters[chapter]
-  useSurfPresentation(root, chapter, wave?.id, wave?.clock, playing)
+  const accentStyle = { '--story-accent': data.accent } as React.CSSProperties
+  useSurfPresentation(root, opening ? -1 : chapter, wave?.id, wave?.clock, playing)
   const beat = Math.min(2, Math.floor(localTime / (CHAPTER_SECONDS / 3)))
   const timelineLine = chapter === 1 && beat === 1 ? `오늘 ${money(demo.spent)}원을 썼다면, 잔에는 ${money(remaining(demo))}원이 남아요.`
     : chapter === 3 && beat === 1 ? `30만원 중 ${money(demo.saved)}원을 모았어요. 지금은 ${(demo.saved / 300000 * 100).toFixed(1)}%예요.` : data.captions[beat]
-  const explanation = exploring ? '잠깐 함께 헤엄쳐요! 곧 제가 앱 설명을 이어갈게요.' : feedback && demo.chapter === chapter ? responseLine(demo) : timelineLine
+  const explanation = opening ? openingLines[openingBeat(time + OPENING_SECONDS)] : exploring ? '잠깐 함께 헤엄쳐요! 곧 제가 앱 설명을 이어갈게요.' : feedback && demo.chapter === chapter ? responseLine(demo) : timelineLine
   const narration = useNarration(explanation, playing || feedback)
   const narrationBusy = useRef(false)
   useEffect(() => { narrationBusy.current = narration.enabled && narration.speaking }, [narration.enabled, narration.speaking])
@@ -58,17 +63,18 @@ export default function StoryPage() {
     window.clearTimeout(interactionTimer.current)
     setFeedback(false)
     setExploring(false)
-    const value = Math.max(0, Math.min(TOTAL_SECONDS, next))
+    const value = Math.max(-OPENING_SECONDS, Math.min(TOTAL_SECONDS, next))
+    if (value < 0) openingClock.current.elapsed = (value + OPENING_SECONDS) * 1000
     // Seeking to the end can round slightly backwards; that must not re-arm a demo.
     // Only a new scene or a deliberate rewind before the tap point starts a new pass.
     if (Math.min(chapters.length - 1, Math.floor(value / CHAPTER_SECONDS)) !== lastChapter.current || value % CHAPTER_SECONDS < TOUR_TAP_TIME) autoActionFired.current = null
     timeRef.current = value
     setTime(value)
-  }, [])
+  }, [openingClock])
   const changeScene = useCallback((next:number, restart = false) => {
     const target = Math.max(0,Math.min(chapters.length-1,Math.floor(next/CHAPTER_SECONDS)))
     const commit = () => { if (restart) setDemo(initialDemo); seek(next) }
-    if (reduced || !playing || target === lastChapter.current) { waveBusy.current=false; pendingScene.current=null; setWave(null); commit(); return }
+    if (reduced || !playing || next < 0 || (target === lastChapter.current && timeRef.current >= 0)) { waveBusy.current=false; pendingScene.current=null; setWave(null); commit(); return }
     waveBusy.current=true
     surfClock.current.elapsed = 0
     pendingScene.current = { next, restart, committed: false }
@@ -92,7 +98,7 @@ export default function StoryPage() {
     window.clearTimeout(interactionTimer.current)
     setFeedback(false)
     setExploring(false)
-    if (timeRef.current >= TOTAL_SECONDS - 0.05) changeScene(0,true)
+    if (timeRef.current >= TOTAL_SECONDS - 0.05) changeScene(-OPENING_SECONDS,true)
     setPlaying(value => !value)
   }, [changeScene])
   const fullscreen = useCallback(async () => {
@@ -139,17 +145,28 @@ export default function StoryPage() {
     const tick = (now: number) => {
       // Native animations continue through a delayed frame. Keep their clock on
       // active elapsed time too, instead of seeking them backward after a stall.
-      const elapsed = !isStoryActive() ? 0 : Math.max(0, (now - previous) / 1000)
+      const elapsed = !isStoryActive() ? 0 : Math.max(0, (now - previous) / 1000) * STORY_RATE
       const delta = Math.min(elapsed, .1)
       previous = now
       if (waveBusy.current && pendingScene.current) {
         surfClock.current.elapsed += elapsed * 1000
+        if (timeRef.current < 0) openingClock.current.elapsed = OPENING_SECONDS * 1000 + surfClock.current.elapsed
         if (!pendingScene.current.committed && surfClock.current.elapsed >= SURF_COVER_MS) {
           pendingScene.current.committed = true
           if (pendingScene.current.restart) setDemo(initialDemo)
           seek(pendingScene.current.next)
         }
         if (surfClock.current.elapsed >= SURF_TRANSITION_MS) { waveBusy.current = false; pendingScene.current = null; setWave(null) }
+        frame=requestAnimationFrame(tick); return
+      }
+      if (timeRef.current < 0) {
+        const progress = timeRef.current + OPENING_SECONDS
+        const phraseEnd = progress < OPENING_BEAT_SECONDS ? OPENING_BEAT_SECONDS : OPENING_SECONDS
+        const next = narrationBusy.current ? Math.min(progress + elapsed, phraseEnd - .001) : progress + elapsed
+        openingClock.current.elapsed = next * 1000
+        if (next >= OPENING_SECONDS) { changeScene(0); frame=requestAnimationFrame(tick); return }
+        timeRef.current = next - OPENING_SECONDS
+        if (now - lastPublished >= 100) { setTime(timeRef.current); lastPublished = now }
         frame=requestAnimationFrame(tick); return
       }
       const phraseEnd = (Math.floor(timeRef.current / (CHAPTER_SECONDS / 3)) + 1) * (CHAPTER_SECONDS / 3)
@@ -160,7 +177,7 @@ export default function StoryPage() {
         setPlaying(false)
         return
       }
-      if (next >= TOTAL_SECONDS) { changeScene(0,true); frame=requestAnimationFrame(tick); return }
+      if (next >= TOTAL_SECONDS) { changeScene(-OPENING_SECONDS,true); frame=requestAnimationFrame(tick); return }
       if (next >= boundary) { changeScene(boundary); frame=requestAnimationFrame(tick); return }
       timeRef.current = next
       if (now - lastPublished >= 100) { setTime(next); lastPublished = now }
@@ -168,7 +185,7 @@ export default function StoryPage() {
     }
     frame = requestAnimationFrame(tick)
     return () => { cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', resumeClock); window.removeEventListener('focus', resumeClock) }
-  }, [playing, autoNext, seek, changeScene])
+  }, [playing, autoNext, seek, changeScene, openingClock])
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -184,17 +201,17 @@ export default function StoryPage() {
   }, [toggle, go, fullscreen])
 
   return (
-    <main className="wave-story" data-scene={chapter} data-playing={playing} data-suspended={!active} data-immersed={immersed} data-surfing={!!wave} ref={root} style={{ '--story-accent': data.accent } as React.CSSProperties}>
+    <main className="wave-story" data-scene={chapter} data-opening={opening} data-playing={playing} data-suspended={!active} data-immersed={immersed} data-surfing={!!wave} ref={root}>
       <a className="story-skip" href="#story-player">재생 컨트롤로 건너뛰기</a>
       <section className="story-visual" aria-label={`${data.name} 전체 화면 3D 바다`}>
         <Suspense fallback={<div className="story-loading">벨루가가 헤엄쳐 오고 있어요…</div>}>
-          <StoryStage chapter={chapter} time={localTime} playing={playing} reduced={reduced} demo={demo} onAction={interact} onExplore={explore} onViewChange={explore} presenting={!immersed&&!exploring} surfStarted={wave?.id} surfClock={wave?.clock} />
+          <StoryStage chapter={chapter} time={opening ? time : localTime} playing={playing} reduced={reduced} demo={demo} onAction={interact} onExplore={explore} onViewChange={explore} presenting={opening || (!immersed&&!exploring)} surfStarted={wave?.id} surfClock={wave?.clock} />
         </Suspense>
       </section>
       <div className="story-atmosphere" aria-hidden="true" />
       <OceanResponse sequence={demo.sequence} reduced={reduced}/>
       <header className="story-header">
-        <Link className="story-brand" to="/story" aria-label="MyWave 소개 처음으로" onClick={() => go(0)}>
+        <Link className="story-brand" to="/story" aria-label="MyWave 소개 처음으로" onClick={() => changeScene(-OPENING_SECONDS,true)}>
           <span className="story-brand-mark"><Waves size={25} strokeWidth={2.5} aria-hidden="true" /></span>
           <span translate="no">mywave<span className="story-brand-dot">.</span></span>
         </Link>
@@ -203,8 +220,12 @@ export default function StoryPage() {
         <Link to="/login" className="story-app-link">앱 열기 <ArrowRight size={16} aria-hidden="true" /></Link>
       </header>
 
-      {!immersed && <div className="story-body">
-        <section className="story-copy" key={chapter} aria-labelledby="story-title">
+      {opening && <StoryOpening elapsed={time + OPENING_SECONDS} clock={openingClock} playing={playing} reduced={reduced} onSkip={() => go(0)} />}
+      {!opening && !immersed && <div className="story-body">
+        {/* The accent lives on its two consumers, not on the root: a root custom
+            property restyles every node, and mid-transition ~90 running animations
+            made that a 13ms recalculation in the busiest frame. */}
+        <section className="story-copy" key={chapter} aria-labelledby="story-title" style={accentStyle}>
           <div className="story-eyebrow"><span />{data.eyebrow}</div>
           <h1 id="story-title">{data.title.split('\n').map((line, index) => <span key={line} className={index ? 'story-title-accent' : ''}>{line}</span>)}</h1>
           <p className="story-description">{data.description}</p>
@@ -213,20 +234,20 @@ export default function StoryPage() {
             <strong className="story-amount" key={demo.sequence}>{chapter === 1 ? money(remaining(demo)) : (demo.saved / 300000 * 100).toFixed(1)}<span>{chapter === 1 ? '원' : '%'}</span></strong>
           </div>}
           {chapter === 0 && <div className="story-intro-actions"><div className="story-watch-note"><span className="story-film-bars" aria-hidden="true"><i/><i/><i/><i/></span><div><strong>{playing ? '편하게 구경하세요.' : '재생하면 제가 안내할게요.'}</strong><span>버튼부터 다음 장면까지, 제가 할게요!</span></div></div></div>}
-          {chapter === 5 && <div className="story-end-actions"><Link className="story-start" to="/login">MyWave 시작하기 <span><ArrowRight size={20} aria-hidden="true" /></span></Link><button className="story-restart" onClick={() => { changeScene(0,true); setPlaying(true) }}><RotateCcw size={16} aria-hidden="true" /> 다시 보기</button></div>}
+          {chapter === 5 && <div className="story-end-actions"><Link className="story-start" to="/login">MyWave 시작하기 <span><ArrowRight size={20} aria-hidden="true" /></span></Link><button className="story-restart" onClick={() => { changeScene(-OPENING_SECONDS,true); setPlaying(true) }}><RotateCcw size={16} aria-hidden="true" /> 다시 보기</button></div>}
         </section>
 
       </div>}
 
-      {!immersed && !exploring && <AppTheatre chapter={chapter} phase={tourPhase} playing={playing} reduced={reduced} demo={demo} onAction={interact} onChapter={go} arriving={localTime<SURF_ARRIVAL_SECONDS} surfStarted={wave?.id} surfClock={wave?.clock}/>}
-      {!immersed && <>
+      {!opening && !immersed && !exploring && <AppTheatre chapter={chapter} phase={tourPhase} playing={playing} reduced={reduced} demo={demo} onAction={interact} onChapter={go} arriving={localTime<SURF_ARRIVAL_SECONDS} surfStarted={wave?.id} surfClock={wave?.clock}/>}
+      {!opening && !immersed && <>
         <div className="story-narrator" aria-live={playing ? 'off' : 'polite'}>
           <span className="story-speaker"><Waves size={15} aria-hidden="true" /> BELUGA <i>{exploring ? '잠깐 함께 헤엄쳐요' : feedback ? '곧 설명이 이어져요' : playing ? '자동 시연 중' : '일시정지'}</i></span>
           <p key={`${chapter}-${beat}-${feedback ? demo.sequence : 0}-${exploring}`}>{explanation}</p>
         </div>
       </>}
 
-      <footer className="story-controls" id="story-player" data-expanded={controlsOpen} tabIndex={-1}>
+      <footer className="story-controls" id="story-player" data-expanded={controlsOpen} tabIndex={-1} style={accentStyle}>
         <div className="story-player-details" id="story-player-details" hidden={!controlsOpen}>
         {!immersed && <nav className="story-chapters" aria-label="소개 장면">
           {chapters.map((item, index) => { const Icon = chapterIcons[index]; return <button key={item.name} className={index === chapter ? 'is-current' : ''} aria-current={index === chapter ? 'step' : undefined} onClick={() => go(index)} aria-label={`${index + 1}. ${item.name}`}><span className="story-chapter-content"><Icon size={18} aria-hidden="true" /><span className="story-chapter-text"><i>SCENE {String(index + 1).padStart(2, '0')}</i>{item.name}</span></span><span className="story-chapter-track"><span style={{ transform: `scaleX(${index < chapter ? 1 : index === chapter ? localTime / CHAPTER_SECONDS : 0})` }} /></span></button> })}
@@ -242,9 +263,9 @@ export default function StoryPage() {
             <button className="story-play-button" aria-label={playing ? '일시정지' : '재생'} onClick={toggle}>{playing ? <Pause size={17} fill="currentColor" aria-hidden="true" /> : <Play size={17} fill="currentColor" aria-hidden="true" />}</button>
             <button className="story-icon-button" aria-label="다음 장면" onClick={() => go(chapter + 1)} disabled={chapter === chapters.length - 1}><ArrowRight size={19} aria-hidden="true" /></button>
           </div>
-          <button className="story-scene-picker" aria-label="장면 및 재생 설정" aria-expanded={controlsOpen} aria-controls="story-player-details" onClick={()=>setControlsOpen(value=>!value)}><span>{String(chapter+1).padStart(2,'0')}</span>{data.name}<ChevronUp size={14}/></button>
-          <span className="story-time">{timeLabel(time)} <span>/ {timeLabel(TOTAL_SECONDS)}</span></span>
-          <input className="story-scrubber" aria-label="전체 재생 위치" aria-valuetext={`${timeLabel(time)}, ${data.name}`} name="playback-position" style={{ '--progress': `${time / TOTAL_SECONDS * 100}%` } as React.CSSProperties} type="range" min="0" max={TOTAL_SECONDS} step="0.1" value={time} onChange={event => changeScene(Number(event.target.value))} />
+          <button className="story-scene-picker" aria-label="장면 및 재생 설정" aria-expanded={controlsOpen} aria-controls="story-player-details" onClick={()=>setControlsOpen(value=>!value)}><span>{opening ? '시작' : String(chapter+1).padStart(2,'0')}</span>{opening ? '벨루가와 인사' : data.name}<ChevronUp size={14}/></button>
+          <span className="story-time">{timeLabel((time + OPENING_SECONDS) / STORY_RATE)} <span>/ {timeLabel((TOTAL_SECONDS + OPENING_SECONDS) / STORY_RATE)}</span></span>
+          <input className="story-scrubber" aria-label="전체 재생 위치" aria-valuetext={`${timeLabel((time + OPENING_SECONDS) / STORY_RATE)}, ${opening ? '벨루가와 인사' : data.name}`} name="playback-position" style={{ '--progress': `${(time + OPENING_SECONDS) / (TOTAL_SECONDS + OPENING_SECONDS) * 100}%` } as React.CSSProperties} type="range" min={-OPENING_SECONDS} max={TOTAL_SECONDS} step="0.1" value={time} onChange={event => changeScene(Number(event.target.value))} />
           <button className="story-voice" disabled={!narration.supported} aria-pressed={narration.enabled} onClick={narration.toggle} title={narration.supported ? '브라우저의 한국어 음성으로 설명을 읽어요' : '이 브라우저는 음성 설명을 지원하지 않아요'}>{narration.enabled ? <Volume2 size={16} aria-hidden="true" /> : <VolumeX size={16} aria-hidden="true" />} 음성 설명</button>
           <button className="story-icon-button" aria-label="전체화면 전환" onClick={() => void fullscreen()}><Expand size={18} aria-hidden="true" /></button>
         </div>

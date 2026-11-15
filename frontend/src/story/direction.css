@@ -1,6 +1,6 @@
 /* Film direction: readable product, a guiding character, quiet playback controls. */
 .wave-story .story-product-anchor{z-index:3}
-.story-product-focus{width:350px;height:640px;transform-style:preserve-3d;transform:translate3d(0,0,0) scale(1);transform-origin:50% 48%;transition:transform 1.45s cubic-bezier(.22,.7,.25,1)}
+.story-product-focus{width:350px;height:640px;transform-style:preserve-3d;transform:translate3d(0,0,0) scale(1);transform-origin:50% 48%;transition:transform 1.115s cubic-bezier(.22,.7,.25,1)}
 .story-app-theatre[data-focus=true] .story-product-focus{transform:translate3d(-8px,-8px,0) rotateY(3deg) scale(1.065)}
 .wave-story[data-surfing=true] .story-product-focus{transition:none}
 .wave-story:not([data-immersed=true]) .story-view-controls{display:none}
@@ -11,7 +11,9 @@
 .wave-story .story-description{max-width:315px}
 
 .story-guide-bob{position:relative;aspect-ratio:1}
-.wave-story .story-guide{transform-origin:0 0}
+.wave-story .story-guide{transform-origin:0 0;transition-duration:1s}
+.wave-story .story-guide-pose{transition-duration:.346s}
+.wave-story .story-guide-bob{animation-duration:3.077s}
 .story-guide-swim{position:absolute;inset:0;opacity:0;filter:drop-shadow(0 12px 10px #021d4350);pointer-events:none}
 .story-guide-wake{position:absolute;inset:30% -15% 8% -18%;opacity:0;pointer-events:none;transform-origin:75% 50%}
 .story-guide-wake i{position:absolute;inset:0;border-radius:50%;border-top:2px solid #c4f4ff;border-bottom:1px solid #5bc5f855;transform:rotate(-12deg);box-shadow:0 -4px 12px #80dfff20}
@@ -22,10 +24,10 @@
 .wave-story[data-surfing=true] .story-guide-presenter{animation:none}
 .wave-story[data-surfing=true] .story-product-heading::after,.wave-story[data-surfing=true] .story-phone-brand::after{content:'';position:absolute;inset:-4px;z-index:-1;border-radius:12px;background:#eef6ff;box-shadow:0 3px 0 #8ab2d7;transform:translateZ(-3px);opacity:var(--layer-depth,0);pointer-events:none}
 .wave-story .story-guide-art{filter:drop-shadow(0 11px 14px #03255755)}
-.wave-story .story-guide-art.is-tapping{animation:story-guide-tap .4s ease-in-out both}
+.wave-story .story-guide-art.is-tapping{animation:story-guide-tap .308s ease-in-out both}
 .wave-story .story-guide-shadow{background:radial-gradient(ellipse,#8bd7ff55,transparent 70%);filter:none;height:28px;bottom:0;transform:scaleY(.6)}
 .wave-story .story-guide-touch>span{animation:none;transform:scale(.9);opacity:.55;border-color:#8ae5ff;box-shadow:0 0 0 6px #74d9ff16}
-.wave-story .story-app-theatre[data-tapping=true] .story-guide-touch>span{animation:story-touch-confirm .65s .18s cubic-bezier(.2,.7,.3,1) both}
+.wave-story .story-app-theatre[data-tapping=true] .story-guide-touch>span{animation:story-touch-confirm .5s .138s cubic-bezier(.2,.7,.3,1) both}
 @keyframes story-touch-confirm{0%{transform:scale(.7);opacity:1}100%{transform:scale(2.1);opacity:0}}
 
 .wave-story .story-controls{left:50%;right:auto;transform:translateX(-50%);width:min(760px,calc(100% - 40px));bottom:20px;padding:0 15px;border-radius:22px;background:#061d45c4;border-color:#bce5ff30;backdrop-filter:blur(12px);box-shadow:0 8px 24px #02132e30}

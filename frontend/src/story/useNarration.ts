@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { STORY_RATE } from './playback'
 
 export function useNarration(text: string, active: boolean) {
   const [enabled, setEnabled] = useState(false)
@@ -23,7 +24,7 @@ export function useNarration(text: string, active: boolean) {
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.voice = voice
     utterance.lang = 'ko-KR'
-    utterance.rate = 1.08
+    utterance.rate = 1.08 * STORY_RATE
     utterance.pitch = 1.16
     utterance.onstart = () => setSpeaking(true)
     const timeout = window.setTimeout(() => {

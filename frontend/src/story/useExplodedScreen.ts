@@ -1,12 +1,14 @@
 import { useLayoutEffect, useRef, type RefObject } from 'react'
-import { SURF_COVER_MS, SURF_TRANSITION_MS, SURF_DOCK_START_MS, SURF_RELEASE_MS, smoothStep, surfAngle, type SurfClock } from './surf'
+import { SURF_COVER_MS, SURF_TRANSITION_MS, SURF_DOCK_START_MS, SURF_RELEASE_MS, sampleTimes, smoothStep, surfAngle, type SurfClock } from './surf'
 import { playStoryAnimations } from './playStoryAnimations'
 
 type LayerSpec = { selector: string; order: number }
 // Original app nodes orbit horizontally through depth, then dock in their real layout.
 const layers: LayerSpec[] = [
-  { selector: '.story-phone-backplate,.story-chassis-piece,.story-product-nav', order: 0 },
-  { selector: '.story-phone-island,.story-phone-homebar,.story-phone-status>b,.story-phone-status>span:last-child', order: 1 },
+  // The phone body (backplate, chassis, island, home bar, status) stays put. When
+  // the frame itself flew apart, viewers read the in-between frames as a broken
+  // render rather than "the screen is changing".
+  { selector: '.story-product-nav', order: 0 },
   { selector: '.story-native-home>section,.story-main-goal,.story-allocation,.story-goal-result,.story-ui-portfolio-hero,.story-receipts,.story-finale-stats>.story-ui-card', order: 0 },
   // Keep labels with their surfaces: the viewer follows meaningful UI, not text confetti.
   { selector: '.story-product-heading,.story-phone-brand', order: 1 },
@@ -16,15 +18,32 @@ const layers: LayerSpec[] = [
   { selector: '.story-product-nav button', order: 8 },
 ]
 
+type Dressing = { display: string; edges: HTMLElement[] }
+/** Strip the 3D dressing (depth class, edge faces, inline-block) from nodes not in `keep`. */
+function undress(dressed: Map<HTMLElement, Dressing>, keep?: Set<Element>) {
+  for (const [node, { display, edges }] of dressed) {
+    if (keep?.has(node)) continue
+    edges.forEach(edge => edge.remove())
+    node.classList.remove('story-flight-piece', 'story-depth-plate')
+    node.style.display = display
+    dressed.delete(node)
+  }
+}
+
 export function useExplodedScreen(panelRef: RefObject<HTMLDivElement | null>, chapter: number, started: number | undefined, clock: SurfClock | undefined, playing: boolean, reduced: boolean) {
   const origin = useRef({ id: started, chapter })
   const playback = useRef(playing)
+  // Dressing survives the cover -> entering rebuild at the screen swap. Removing
+  // and re-adding it there toggled position:relative on every plate and forced a
+  // full relayout in the busiest frame of the transition; it now comes off once.
+  const dressed = useRef(new Map<HTMLElement, Dressing>())
   useLayoutEffect(() => { playback.current = playing }, [playing])
+  useLayoutEffect(() => { const map = dressed.current; return () => undress(map) }, [])
   useLayoutEffect(() => {
     const panel = panelRef.current
-    if (!panel || !clock || started === undefined || reduced) return
+    if (!panel || !clock || started === undefined || reduced) { undress(dressed.current); return }
     if (origin.current.id !== started) origin.current = { id: started, chapter }
-    const entering = origin.current.chapter !== chapter
+    const entering = origin.current.chapter !== chapter || clock.elapsed >= SURF_COVER_MS
     const viewport = panel.closest('.wave-story')!.getBoundingClientRect()
     const compact = viewport.width < 761
     const bounds = panel.getBoundingClientRect()
@@ -52,8 +71,7 @@ export function useExplodedScreen(panelRef: RefObject<HTMLDivElement | null>, ch
       hardware: node.matches('.story-phone-part,.story-phone-island'),
       zoom,
       base: styleOf(node).transform.replace(/^none$/, ''),
-      display: node.style.display,
-      inline: styleOf(node).display === 'inline',
+      inline: !dressed.current.has(node) && styleOf(node).display === 'inline',
       plate: node.matches('.story-ui-card,.story-native-home>section,.story-native-home button,.story-goal-actions button,.story-asset-choices button,.story-phone-backplate,.story-ui-portfolio-hero'),
     }}))
     // Orbit in viewport space, then project back into the phone's 3D coordinates.
@@ -87,11 +105,13 @@ export function useExplodedScreen(panelRef: RefObject<HTMLDivElement | null>, ch
       const surface = spec.order === 0
       const flightScale = hardware ? .48 : surface ? .72 : compact ? .82 : 1
       const lane = .82 + group % 3 * .06
-      const radiusX = Math.max(25, viewport.width / 2 - (compact ? 18 : 140) - piece.width * flightScale * .63) * lane
+      // Orbit close to the phone instead of across the whole stage, so the pieces
+      // still read as parts of one screen while they swirl.
+      const radiusX = Math.max(25, Math.min(viewport.width / 2 - (compact ? 18 : 140) - piece.width * flightScale * .63, bounds.width * (compact ? .55 : .75))) * lane
       // Keep angular travel alive during the short inward sweep; never park before docking.
       const theta = surfAngle(elapsed) - .65 - group * .48 - spec.order * .025 - (family === piece ? 0 : index * .035) + capture * .62
       // The ellipse lies in X/Z, not X/Y: pieces pass behind and in front of the phone.
-      const depth = 30 + Math.cos(theta) * (compact ? 155 : 300) + spec.order * 5
+      const depth = 30 + Math.cos(theta) * (compact ? 110 : 190) + spec.order * 5
       const laneY = Math.max(-85, Math.min(85, family.cy * scale * .30)) + (cy - family.cy) * scale * .64
       const bankY = Math.cos(theta) * (compact ? 9 : 18)
       const projectedX = (orbitCenterX + Math.sin(theta) * radiusX + (cx - family.cx) * scale * .70 - bounds.left - bounds.width / 2) / scale
@@ -109,14 +129,16 @@ export function useExplodedScreen(panelRef: RefObject<HTMLDivElement | null>, ch
         lift,
       }
     }
-    const decorations: HTMLElement[] = []
     const rotation = (pose: { yaw: number; pitch: number; roll: number }) => new DOMMatrix()
       .rotateAxisAngle(0, 1, 0, pose.yaw).rotateAxisAngle(1, 0, 0, pose.pitch).rotateAxisAngle(0, 0, 1, pose.roll)
     const duration = entering ? SURF_TRANSITION_MS - SURF_COVER_MS : SURF_COVER_MS
     // Each pose and its rotation are shared by every child of that piece. Compute
     // once per sample, before any DOM writes or animation attachment.
-    const samples = Array.from({ length: 97 }, (_, step) => pieces.map((piece, index) => {
-      const current = pose(piece, index, (entering ? SURF_COVER_MS : 0) + step / 96 * duration)
+    const from = entering ? SURF_COVER_MS : 0
+    // Docking is the fast part (each piece snaps in over ~170ms); keep it dense.
+    const times = sampleTimes(from, from + duration, 32, entering ? [[SURF_DOCK_START_MS - 20, SURF_TRANSITION_MS, 16]] : [[SURF_RELEASE_MS, SURF_RELEASE_MS + 480, 12]])
+    const samples = times.map(time => pieces.map((piece, index) => {
+      const current = pose(piece, index, time)
       const orientation = rotation(current)
       return { ...current, orientation, inverse: orientation.inverse() }
     }))
@@ -124,8 +146,8 @@ export function useExplodedScreen(panelRef: RefObject<HTMLDivElement | null>, ch
     const prepared = pieces.map((piece, pieceIndex) => {
       const { base, zoom } = piece
       const rest = base || 'none'
-      const frames: Keyframe[] = Array.from({ length: 97 }, (_, step) => {
-        const t = step / 96
+      const frames: Keyframe[] = times.map((time, step) => {
+        const t = (time - from) / duration
         // Both screens share the same orbit clock: no hold or speed reset at the swap.
         const current = samples[step][pieceIndex]
         const parentPiece = parents[pieceIndex] < 0 ? null : pieces[parents[pieceIndex]]
@@ -148,7 +170,10 @@ export function useExplodedScreen(panelRef: RefObject<HTMLDivElement | null>, ch
       })
       return { node: piece.node, frames }
     })
+    undress(dressed.current, new Set(pieces.map(piece => piece.node)))
     pieces.forEach(({ node, inline, plate }) => {
+      if (dressed.current.has(node)) return
+      const dressing: Dressing = { display: node.style.display, edges: [] }
       if (inline) node.style.display = 'inline-block'
       node.classList.add('story-flight-piece')
       if (plate) {
@@ -158,9 +183,10 @@ export function useExplodedScreen(panelRef: RefObject<HTMLDivElement | null>, ch
           edge.className = `story-relief-edge story-relief-edge-${side}`
           edge.setAttribute('aria-hidden', 'true')
           node.appendChild(edge)
-          decorations.push(edge)
+          dressing.edges.push(edge)
         }
       }
+      dressed.current.set(node, dressing)
     })
     const animations = prepared.map(({ node, frames }) => {
       // Transform only: animating opacity would flatten the extruded back faces.
@@ -175,8 +201,6 @@ export function useExplodedScreen(panelRef: RefObject<HTMLDivElement | null>, ch
     const stop = playStoryAnimations(animations, clock, entering ? SURF_COVER_MS : 0, () => playback.current)
     return () => {
       stop()
-      decorations.forEach(edge => edge.remove())
-      pieces.forEach(({ node, display }) => { node.classList.remove('story-flight-piece', 'story-depth-plate'); node.style.display = display })
     }
   }, [panelRef, chapter, started, clock, reduced])
 }

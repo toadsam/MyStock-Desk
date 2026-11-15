@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, type RefObject } from 'react'
 import { playStoryAnimations } from './playStoryAnimations'
-import { SURF_TRANSITION_MS, SURF_IMPACT_MS, SURF_IMPACT_DURATION_MS, type SurfClock } from './surf'
+import { SURF_TRANSITION_MS, SURF_IMPACT_MS, SURF_IMPACT_DURATION_MS, sampleTimes, type SurfClock } from './surf'
 
 /** Fade and lighting effects stay on their own compositor layers, not inherited
  * custom properties that invalidate the whole page's styles on every frame. */
@@ -11,8 +11,9 @@ export function useSurfPresentation(rootRef: RefObject<HTMLElement | null>, chap
     const root = rootRef.current
     if (!root || !clock || started === undefined) return
     const copy: Keyframe[] = [], wash: Keyframe[] = [], depth: Keyframe[] = [], phone: Keyframe[] = [], pulse: Keyframe[] = []
-    for (let i = 0; i <= 96; i++) {
-      const p = i / 96
+    // Opacity fades are slow; only the 140ms impact needs dense samples.
+    for (const time of sampleTimes(0, SURF_TRANSITION_MS, 24, [[SURF_IMPACT_MS - 20, SURF_IMPACT_MS + SURF_IMPACT_DURATION_MS + 20, 8]])) {
+      const p = time / SURF_TRANSITION_MS
       const ease = (a: number, b: number) => { const t = Math.max(0, Math.min(1, (p - a) / (b - a))); return t * t * (3 - 2 * t) }
       const impactPhase = Math.max(0, Math.min(1, (p * SURF_TRANSITION_MS - SURF_IMPACT_MS) / SURF_IMPACT_DURATION_MS))
       const impact = Math.sin(impactPhase * Math.PI)
