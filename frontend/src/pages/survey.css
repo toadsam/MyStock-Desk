@@ -1,0 +1,105 @@
+/* 설문 화면: 살아 있는 바다. 배경과 벨루가의 움직임은 SurveyPage 의 프레임 루프가 맡고, 여기는 모양과 작은 숨결만 둔다. */
+.sea {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: radial-gradient(120% 80% at 50% 0%, #2563eb 0%, #1d4ed8 30%, #0b2a7a 70%, #061a4a 100%);
+  color: #fff;
+  touch-action: manipulation;
+}
+
+.sea-in {
+  animation: sea-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+@keyframes sea-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 글자도 물속에서 살짝 흔들린다. */
+.sea-float { animation: sea-float 4.2s ease-in-out infinite; }
+@keyframes sea-float {
+  0%, 100% { transform: translateY(0) rotate(-0.6deg); }
+  50% { transform: translateY(-5px) rotate(0.6deg); }
+}
+
+/* ---- 꾹 눌러 부는 방울 ---- */
+.sea-puff {
+  position: relative;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.14) 38%, rgba(147, 197, 253, 0.2) 70%);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55), inset -10px -14px 30px rgba(96, 165, 250, 0.35), 0 18px 40px rgba(2, 12, 60, 0.4);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: width 90ms linear, height 90ms linear;
+  animation: sea-breathe 3s ease-in-out infinite;
+}
+.sea-puff[data-holding='true'] { animation: sea-wobble 380ms ease-in-out infinite; }
+@keyframes sea-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes sea-wobble {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.03, 0.97); }
+}
+
+/* ---- 떠다니는 선택지 방울 (위치는 프레임 루프가 옮긴다) ---- */
+.sea-option {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 0 10px;
+  border-radius: 50%;
+  text-align: center;
+  font-weight: 800;
+  line-height: 1.25;
+  word-break: keep-all;
+  color: #fff;
+  background: radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.12) 36%, rgba(147, 197, 253, 0.16) 72%);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5), 0 12px 26px rgba(2, 12, 60, 0.35);
+  will-change: transform;
+  cursor: pointer;
+}
+.sea-option:hover { box-shadow: inset 0 0 0 3px #fff, 0 12px 26px rgba(2, 12, 60, 0.35); }
+.sea-option:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+/* ---- 추천 점수: 숫자 방울이 물결처럼 오르내린다 ---- */
+.sea-num {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 17px;
+  color: #fff;
+  background: radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.1) 40%, rgba(147, 197, 253, 0.14) 74%);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
+  animation: sea-num 2.6s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.24s);
+  transition: background 200ms ease, color 200ms ease, box-shadow 200ms ease, scale 260ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.sea-num[aria-checked='true'] {
+  color: #1d4ed8;
+  background: #fff;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.3), 0 10px 24px rgba(2, 12, 60, 0.45);
+  scale: 1.22;
+}
+@keyframes sea-num {
+  0%, 100% { transform: translateY(5px); }
+  50% { transform: translateY(-5px); }
+}
+
+.sea-chip { animation: sea-in 360ms cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sea-in, .sea-float, .sea-puff, .sea-num, .sea-chip { animation: none !important; }
+}

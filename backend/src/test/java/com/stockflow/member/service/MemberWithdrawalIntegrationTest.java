@@ -31,11 +31,15 @@ import org.springframework.test.web.servlet.MvcResult;
 @AutoConfigureMockMvc
 class MemberWithdrawalIntegrationTest {
 
-    /** 회원 번호 칸이 없어도 되는 표. 모두가 같이 보는 시세·뉴스·종목, 회원 자신, 그리고 부모 번호로 묶여 따로 지우는 표다. */
+    /**
+     * 회원 번호 칸이 없어도 되는 표. 모두가 같이 보는 시세·뉴스·종목, 회원 자신, 그리고 부모 번호로 묶여 따로 지우는 표다.
+     * SurveyResponse 는 누가 답했는지 일부러 남기지 않는 익명 설문이라 탈퇴해도 지울 대상을 알 수 없다(/privacy 에 적어 두었다).
+     */
     private static final Set<String> NOT_MEMBER_OWNED = Set.of(
             "Member", "RevokedToken",
             "Stock", "PricePoint", "MarketIndex", "SectorPerformance", "News", "Earnings", "AiInsight",
-            "Holding", "Execution");
+            "Holding", "Execution",
+            "SurveyResponse");
 
     private static final LocalDate TODAY = LocalDate.now(ZoneId.of("Asia/Seoul"));
 

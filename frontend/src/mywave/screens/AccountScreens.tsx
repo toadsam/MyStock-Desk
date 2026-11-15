@@ -324,6 +324,12 @@ export function ProfilePage() {
           <MiniStat label="저축률" value={`${financeSummary.savingRate}%`} change="이번 달" />
         </div>
       </Card>
+      <Card title="의견 남기기">
+        <p className="text-sm font-bold leading-6 text-slate-500">
+          써 보니 어땠는지 들려주세요. 30초면 끝나고, 누가 답했는지는 남지 않아요.{' '}
+          <Link to="/survey" className="text-blue-700 underline underline-offset-4">설문 하러 가기</Link>
+        </p>
+      </Card>
       <Card title="화면 활기">
         <LivelinessPicker />
       </Card>

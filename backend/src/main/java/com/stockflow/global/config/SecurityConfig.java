@@ -4,6 +4,7 @@ import com.stockflow.auth.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -36,6 +37,8 @@ public class SecurityConfig {
                         auth.requestMatchers("/h2-console/**").permitAll();
                     }
                     auth.requestMatchers("/api/auth/**", "/api/health").permitAll()
+                            // 만족도 설문은 써 보지 않은 사람에게도 받는다. 보내는 것만 열고, 결과를 보는 주소는 로그인이 필요하다.
+                            .requestMatchers(HttpMethod.POST, "/api/surveys").permitAll()
                             .anyRequest().authenticated();
                 })
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(jsonAuthenticationEntryPoint()))
