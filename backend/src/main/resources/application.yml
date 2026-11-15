@@ -53,6 +53,12 @@ stockflow:
       # 같은 주소에서 같은 이메일로 이만큼 틀리면 lock-minutes 동안 맞는 비밀번호도 429 다(LoginAttemptLimiter).
       max-failures: ${STOCKFLOW_LOGIN_MAX_FAILURES:5}
       lock-minutes: ${STOCKFLOW_LOGIN_LOCK_MINUTES:10}
+  survey:
+    # 만족도 설문(/survey). 로그인 없이 받으므로 한 주소가 한 시간에 보낼 수 있는 횟수와 하루 전체 건수를 묶는다.
+    per-address-per-hour: ${STOCKFLOW_SURVEY_PER_ADDRESS_PER_HOUR:5}
+    daily-limit: ${STOCKFLOW_SURVEY_DAILY_LIMIT:500}
+    # 설문 결과(/api/surveys/summary)를 볼 수 있는 계정의 이메일. 쉼표로 나눈다. 비워 두면 아무도 못 본다.
+    admin-emails: ${STOCKFLOW_SURVEY_ADMIN_EMAILS:}
   cors:
     # 쉼표로 나눈 허용 주소. 개발 기본값은 Vite(5173)와 미리보기(3000). 운영은 nginx 가 같은 주소에서 /api 를 넘겨 주므로 비워 둔다.
     allowed-origins: ${STOCKFLOW_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000}

@@ -1,0 +1,35 @@
+import axios from 'axios'
+import type { ApiResponse } from '../types/common'
+import { api } from './axios'
+
+/** 서버가 받는 설문 답. 누가 보냈는지 알 수 있는 값은 없다. */
+export type SurveySubmission = {
+  path: 'USED' | 'LOOKED'
+  /** 1(별로)~5(최고). 써 본 사람만. */
+  satisfaction?: number
+  /** 0~10. 써 본 사람만. */
+  nps?: number
+  best?: string[]
+  pain?: string[]
+  whyNot?: string[]
+  wouldHelp?: string[]
+  comment?: string
+}
+
+/**
+ * 설문 답을 보낸다.
+ *
+ * 공용 api 인스턴스를 쓰지 않는다. 그쪽은 로그인 토큰을 붙이는데, 설문은 익명이라 누구인지 알릴 이유가 없다.
+ * 또 토큰이 만료된 사람이 설문을 보냈다고 로그아웃되어서도 안 된다.
+ */
+export async function submitSurvey(submission: SurveySubmission): Promise<void> {
+  try {
+    const response = await axios.post<ApiResponse<null>>(`${api.defaults.baseURL ?? ''}/api/surveys`, submission, { timeout: 15000 })
+    if (!response.data.success) throw new Error(response.data.error?.message ?? '설문을 보내지 못했어요.')
+  } catch (error) {
+    if (axios.isAxiosError<ApiResponse<unknown>>(error)) {
+      throw new Error(error.response?.data?.error?.message ?? '설문을 보내지 못했어요. 연결을 확인하고 다시 눌러 주세요.', { cause: error })
+    }
+    throw error
+  }
+}

@@ -30,6 +30,7 @@ import { SimulationDetailPage, SpendingDetailPage, SpendingPage } from './screen
 
 const activeClass = 'text-blue-700'
 const StoryPage = lazy(() => import('../story/StoryPage'))
+const SurveyPage = lazy(() => import('../pages/SurveyPage'))
 
 const inactiveClass = 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
 
@@ -40,6 +41,8 @@ export default function MyWaveApp() {
       <Route path="login" element={<AuthPage />} />
       <Route path="register" element={<AuthPage />} />
       <Route path="privacy" element={<PrivacyPage />} />
+      {/* 만족도 설문. 써 보지 않은 사람에게도 물어야 해서 로그인 없이 열린다. */}
+      <Route path="survey" element={<Suspense fallback={<div role="status" className="p-8 text-slate-600">설문을 불러오고 있어요…</div>}><SurveyPage /></Suspense>} />
       <Route element={<ProtectedRoute />}>
         {/* 소개 카드는 메뉴 없이 화면 전체를 쓴다. 그래서 화면 틀(Shell) 밖에 둔다. */}
         <Route path="welcome" element={<WelcomePage />} />

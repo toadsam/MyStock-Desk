@@ -175,6 +175,8 @@ HTTPS는 이 compose 앞에 Caddy 같은 리버스 프록시를 두고 `WEB_PORT
 
 **구글 로그인만 받기.** 백엔드에 `STOCKFLOW_PASSWORD_LOGIN_ENABLED=false`를 넣으면 이메일·비밀번호 가입과 로그인을 서버가 거절하고, 로그인 화면에는 구글 버튼만 남습니다. 데모 버튼도 같이 꺼집니다. 가입할 때 이메일 주인인지 확인하지 않고 비밀번호를 되찾을 방법도 없어서, 실제 사용자를 받는 동안에는 꺼 둡니다. 변수를 지우거나 `true`로 바꾸면 원래대로 돌아옵니다.
 
+**만족도 설문.** `/survey` 는 로그인 없이 열리고, 답은 누가 보냈는지 남기지 않고 저장합니다. 결과는 로그인한 관리자가 `GET /api/surveys/summary` 로 봅니다. 백엔드에 `STOCKFLOW_SURVEY_ADMIN_EMAILS` 로 관리자 이메일을 쉼표로 나눠 넣습니다. 비워 두면 아무도 볼 수 없습니다. 같은 주소는 한 시간에 5번, 하루 전체로는 500건까지만 받습니다(`STOCKFLOW_SURVEY_PER_ADDRESS_PER_HOUR`, `STOCKFLOW_SURVEY_DAILY_LIMIT`).
+
 서비스 이름은 `backend`, `frontend` 로 둡니다. 백엔드 내부 주소는 이름을 적지 않고 `${{backend.RAILWAY_PRIVATE_DOMAIN}}` 참조로 받습니다. 내부 주소는 서비스를 처음 만들 때 이름으로 정해지고 나중에 이름을 바꿔도 따라오지 않아서, 참조로 받아야 안 틀립니다. Root Directory 안에 Dockerfile 이 있으면 Railway 가 그걸로 빌드하므로 빌더 설정은 따로 없습니다. 헬스체크 경로와 실패 시 재시작은 서비스 Settings 에서 정합니다(예전의 `railway.json` 설정 파일은 Railway 가 더 이상 받지 않습니다). Railway 내부망은 IPv6 이고 백엔드 주소가 재배포마다 바뀌어서, nginx 는 `[::]` 도 듣고 `/api` 요청 때마다 백엔드 주소를 다시 찾습니다([`nginx.conf.template`](frontend/nginx.conf.template)). 백엔드 포트는 `prod` 프로파일이 `PORT` 를 따르고, `frontend` 의 공개 포트는 `PORT` 로 정합니다. 두 서비스 모두 외부에서 직접 열리는 건 `frontend` 하나이고 `/api` 는 그 뒤에서 넘어가므로 CORS 설정은 비워 둡니다. 로그인 시도 제한은 서버 메모리에 있으므로 Replicas 는 1 로 둡니다.
 
 </details>

@@ -38,6 +38,7 @@ export default function PrivacyPage() {
         <Section title="쓰는 곳">
           <Item>내 화면에 보이는 숫자를 계산하는 데만 써요. 광고에 쓰거나 다른 곳에 팔지 않아요.</Item>
           <Item>기록은 MyWave 서버의 데이터베이스(Railway 클라우드)에 저장돼요.</Item>
+          <Item>만족도 설문에 답하면 고른 답과 적은 한마디가 같은 데이터베이스에 저장돼요. 이름, 이메일, 계정, 접속 주소는 함께 저장하지 않아서 누가 답했는지 알 수 없어요. 그래서 보낸 답을 나중에 찾아서 지워 드릴 수는 없어요.</Item>
           <Item>로그인 상태는 이 브라우저에 하루 동안 남아요.</Item>
         </Section>
 

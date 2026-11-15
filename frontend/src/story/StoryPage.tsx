@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, ChartPie, ChevronUp, Coffee, Expand, Hand, Pause, PiggyBank, Play, RotateCcw, Volume2, VolumeX, Wallet, Waves, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ChartPie, ChevronUp, Coffee, Expand, Hand, MessageCircle, Pause, PiggyBank, Play, RotateCcw, Volume2, VolumeX, Wallet, Waves, Eye, EyeOff } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { chapters, CHAPTER_SECONDS, TOTAL_SECONDS } from './chapters'
 import './story.css'
@@ -234,7 +234,7 @@ export default function StoryPage() {
             <strong className="story-amount" key={demo.sequence}>{chapter === 1 ? money(remaining(demo)) : (demo.saved / 300000 * 100).toFixed(1)}<span>{chapter === 1 ? '원' : '%'}</span></strong>
           </div>}
           {chapter === 0 && <div className="story-intro-actions"><div className="story-watch-note"><span className="story-film-bars" aria-hidden="true"><i/><i/><i/><i/></span><div><strong>{playing ? '편하게 구경하세요.' : '재생하면 제가 안내할게요.'}</strong><span>버튼부터 다음 장면까지, 제가 할게요!</span></div></div></div>}
-          {chapter === 5 && <div className="story-end-actions"><Link className="story-start" to="/login">MyWave 시작하기 <span><ArrowRight size={20} aria-hidden="true" /></span></Link><button className="story-restart" onClick={() => { changeScene(-OPENING_SECONDS,true); setPlaying(true) }}><RotateCcw size={16} aria-hidden="true" /> 다시 보기</button></div>}
+          {chapter === 5 && <div className="story-end-actions"><Link className="story-start" to="/login">MyWave 시작하기 <span><ArrowRight size={20} aria-hidden="true" /></span></Link><button className="story-restart" onClick={() => { changeScene(-OPENING_SECONDS,true); setPlaying(true) }}><RotateCcw size={16} aria-hidden="true" /> 다시 보기</button><Link className="story-restart" to="/survey"><MessageCircle size={16} aria-hidden="true" /> 30초 설문 남기기</Link></div>}
         </section>
 
       </div>}
