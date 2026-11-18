@@ -1,0 +1,128 @@
+/* 설문 결과(관리자용). 설문과 같은 바다에서 시작해, 아래로는 읽기 편한 흰 카드로 이어진다. */
+.res {
+  min-height: 100dvh;
+  background: #eef4ff;
+  color: #0f172a;
+}
+
+/* ---- 머리: 바다 ---- */
+.res-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 0%, #2f6df0 0%, #1d4ed8 34%, #0b2a7a 76%, #071d57 100%);
+  color: #fff;
+}
+.res-ray {
+  position: absolute;
+  top: -10%;
+  width: 90px;
+  height: 130%;
+  background: linear-gradient(180deg, rgba(190, 225, 255, 0.2), rgba(190, 225, 255, 0));
+  transform-origin: 50% 0;
+  animation: res-ray 7s ease-in-out infinite alternate;
+  z-index: -1;
+}
+@keyframes res-ray {
+  from { transform: rotate(12deg) translateX(-14px); opacity: 0.7; }
+  to { transform: rotate(20deg) translateX(18px); opacity: 1; }
+}
+.res-bubble {
+  position: absolute;
+  bottom: -16px;
+  border-radius: 50%;
+  border: 1.2px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.1);
+  animation: res-rise var(--dur, 8s) ease-in infinite;
+  animation-delay: var(--delay, 0s);
+  z-index: -1;
+}
+@keyframes res-rise {
+  0% { opacity: 0; transform: translate(0, 0); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx, 10px), -340px); }
+}
+.res-beluga { animation: res-bob 3.2s ease-in-out infinite; }
+@keyframes res-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-8px) rotate(2deg); }
+}
+.res-wave {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 200%;
+  height: 30px;
+  animation: res-drift 10s linear infinite;
+}
+.res-wave-back { height: 40px; opacity: 0.5; animation-duration: 16s; animation-direction: reverse; }
+@keyframes res-drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.res-total { font-variant-numeric: tabular-nums; }
+
+/* ---- 카드 ---- */
+.res-card {
+  border-radius: 24px;
+  background: #fff;
+  padding: 22px;
+  box-shadow: 0 14px 34px rgba(30, 64, 175, 0.08);
+  animation: res-in 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 80ms + 120ms);
+}
+@keyframes res-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 막대는 0에서 제 길이까지 자란다. */
+.res-bar {
+  height: 100%;
+  width: var(--w, 0%);
+  border-radius: inherit;
+  animation: res-grow 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 380ms);
+}
+@keyframes res-grow {
+  from { width: 0%; }
+}
+.res-column {
+  width: 100%;
+  height: var(--h, 0%);
+  border-radius: 10px 10px 4px 4px;
+  animation: res-rise-column 900ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+  animation-delay: calc(var(--i, 0) * 90ms + 380ms);
+}
+@keyframes res-rise-column {
+  from { height: 0%; }
+}
+
+/* 추천 점수 눈금: 반원이 왼쪽에서 채워진다. */
+.res-gauge {
+  stroke-dasharray: var(--len);
+  stroke-dashoffset: var(--off);
+  animation: res-gauge 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) 400ms both;
+}
+@keyframes res-gauge {
+  from { stroke-dashoffset: var(--len); }
+}
+
+/* 한마디: 말풍선 */
+.res-say {
+  position: relative;
+  border-radius: 18px 18px 18px 6px;
+  background: #f1f6ff;
+  padding: 12px 14px;
+  animation: res-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 50ms + 300ms);
+}
+
+.res-spin { animation: res-spin 900ms linear infinite; }
+@keyframes res-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .res-ray, .res-bubble, .res-beluga, .res-wave, .res-card, .res-bar, .res-column, .res-gauge, .res-say, .res-spin { animation: none !important; }
+}
