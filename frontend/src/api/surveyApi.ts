@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type { ApiResponse } from '../types/common'
-import { api } from './axios'
+import { api, requestStrictData } from './axios'
 
 /** 서버가 받는 설문 답. 누가 보냈는지 알 수 있는 값은 없다. */
 export type SurveySubmission = {
@@ -32,4 +32,32 @@ export async function submitSurvey(submission: SurveySubmission): Promise<void> 
     }
     throw error
   }
+}
+
+/** 선택지 하나와 그걸 고른 사람 수. 많이 고른 순서로 온다. */
+export type SurveyTally = { option: string; count: number }
+
+/** 모인 답의 요약. 서버가 계산해서 준다. */
+export type SurveySummary = {
+  total: number
+  used: number
+  looked: number
+  /** 1~5. 답이 없으면 null. */
+  satisfactionAverage: number | null
+  /** 1점부터 5점까지 각각 몇 명인지. */
+  satisfactionCounts: number[]
+  /** 0~10. 답이 없으면 null. */
+  npsAverage: number | null
+  /** -100~100. 답이 없으면 null. */
+  npsScore: number | null
+  best: SurveyTally[]
+  pain: SurveyTally[]
+  whyNot: SurveyTally[]
+  wouldHelp: SurveyTally[]
+  comments: { path: 'USED' | 'LOOKED'; text: string; createdAt: string }[]
+}
+
+/** 설문 결과. 로그인한 관리자 계정에만 열린다. 아니면 서버의 거절 문구가 오류로 온다. */
+export function getSurveySummary() {
+  return requestStrictData<SurveySummary>(api.get('/api/surveys/summary'))
 }
