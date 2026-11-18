@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Pencil, X } from 'lucide-react'
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { submitSurvey } from '../api/surveyApi'
@@ -46,6 +46,17 @@ const PATHS: { value: Path; label: string }[] = [
   { value: 'looked', label: '아직요,\n구경만 했어요' },
 ]
 const NONE = '딱히 없어요'
+/** 보기에 없는 답을 직접 적는 방울. 터뜨리면 그 자리에서 입력 칸이 열린다. */
+const WRITE = '직접 적기'
+/** 서버가 고르는 답 하나에 허용하는 길이와 개수(SurveySubmitRequest). */
+const WRITE_MAX = 40
+const CHOICE_MAX = 10
+const WRITE_EXAMPLES: Record<Exclude<PopStep, 'path'>, string> = {
+  best: '예: 알림이 마음에 들어요',
+  pain: '예: 글씨가 작아요',
+  whyNot: '예: 시간이 없었어요',
+  wouldHelp: '예: 아이폰 앱',
+}
 /** 방울 안에 들어가야 해서 짧게 쓴다. */
 const POOLS: Record<Exclude<PopStep, 'path'>, string[]> = {
   best: ['오늘 써도 되는 돈', '버튼 한 번 기록', '목표 모으기', 'AI 코치', '귀여운 벨루가', '깔끔한 화면', NONE],
@@ -56,11 +67,11 @@ const POOLS: Record<Exclude<PopStep, 'path'>, string[]> = {
 const TITLES: Record<StepId, { title: string; hint: string }> = {
   path: { title: 'MyWave, 써 보셨나요?', hint: '방울을 눌러 주세요. 30초면 끝나요.' },
   satisfaction: { title: '얼마나 마음에 들었나요?', hint: '방울을 꾹 눌러서 마음만큼 불어 주세요.' },
-  best: { title: '좋았던 걸 터뜨려 주세요', hint: '여러 개 터뜨려도 돼요.' },
-  pain: { title: '불편했던 걸 터뜨려 주세요', hint: '솔직할수록 도움이 돼요.' },
+  best: { title: '좋았던 걸 터뜨려 주세요', hint: '여러 개 터뜨려도 되고, 직접 적어도 돼요.' },
+  pain: { title: '불편했던 걸 터뜨려 주세요', hint: '솔직할수록 도움이 돼요. 직접 적어도 돼요.' },
   nps: { title: '친구에게 추천하고 싶나요?', hint: '0은 전혀, 10은 꼭.' },
-  whyNot: { title: '시작하지 않은 이유는요?', hint: '여러 개 터뜨려도 돼요.' },
-  wouldHelp: { title: '무엇이 있으면 써 볼까요?', hint: '여러 개 터뜨려도 돼요.' },
+  whyNot: { title: '시작하지 않은 이유는요?', hint: '여러 개 터뜨려도 되고, 직접 적어도 돼요.' },
+  wouldHelp: { title: '무엇이 있으면 써 볼까요?', hint: '여러 개 터뜨려도 되고, 직접 적어도 돼요.' },
   comment: { title: '마지막으로 한마디!', hint: '안 적어도 괜찮아요. 연락처는 적지 말아 주세요.' },
 }
 
@@ -75,7 +86,7 @@ const levelIndex = (percent: number) => Math.min(4, Math.floor(Math.max(0, perce
 
 const BELUGA_SIZE = 124
 const isPop = (step: StepId): step is PopStep => step === 'path' || step === 'best' || step === 'pain' || step === 'whyNot' || step === 'wouldHelp'
-const optionsOf = (step: PopStep) => (step === 'path' ? PATHS.map((item) => item.label) : POOLS[step])
+const optionsOf = (step: PopStep) => (step === 'path' ? PATHS.map((item) => item.label) : [...POOLS[step], WRITE])
 const sizeOf = (step: PopStep) => (step === 'path' ? 138 : 106)
 
 /** 화면에서 모은 답을 서버가 받는 모양으로 바꿔 보낸다. 갈림길 반대쪽 질문의 답은 넣지 않는다. */
@@ -110,6 +121,12 @@ type Shared = {
   dart: { x: number; y: number; left: number } | null
   pops: { x: number; y: number }[]
   ripples: { x: number; y: number }[]
+  /** 글자를 칠 때마다 입력 칸에서 올라오는 작은 방울의 자리. */
+  puffs: { x: number; y: number }[]
+  /** 직접 적는 동안 벨루가가 옆에 와서 지켜볼 자리. */
+  watch: { x: number; y: number } | null
+  /** 입력 칸이 열려 있을 때 그 가운데 높이. 떠다니는 방울이 칸을 가리지 않게 위아래로 비켜 간다. */
+  band: number | null
   bodies: { x: number; y: number; vx: number; vy: number }[]
 }
 
@@ -118,7 +135,7 @@ export default function SurveyPage() {
   const beluga = useRef<HTMLDivElement>(null)
   const optionNodes = useRef<(HTMLButtonElement | null)[]>([])
   const heading = useRef<HTMLHeadingElement>(null)
-  const shared = useRef<Shared>({ floating: false, radius: 53, caught: [], hint: { mood: 'hello', tired: false }, finished: false, pointer: { x: 0, y: 0, at: 0, touched: false }, cheer: 0, dart: null, pops: [], ripples: [], bodies: [] })
+  const shared = useRef<Shared>({ floating: false, radius: 53, caught: [], hint: { mood: 'hello', tired: false }, finished: false, pointer: { x: 0, y: 0, at: 0, touched: false }, cheer: 0, dart: null, pops: [], ripples: [], puffs: [], watch: null, band: null, bodies: [] })
   const pump = useRef<number | undefined>(undefined)
   const timer = useRef<number | undefined>(undefined)
 
@@ -129,6 +146,10 @@ export default function SurveyPage() {
   const [sending, setSending] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
   const [look, setLook] = useState<Look>({ mood: 'hello', tired: false, asleep: false, swimming: false })
+  /** 직접 적는 칸이 열려 있으면 그 자리. x 는 방울이 있던 가로 위치(펼쳐지는 중심), top 은 칸의 세로 위치. */
+  const [writing, setWriting] = useState<{ origin: number; top: number } | null>(null)
+  const [draft, setDraft] = useState('')
+  const writer = useRef<HTMLInputElement>(null)
 
   const steps = FLOW[answers.path ?? 'used']
   const step = steps[index]
@@ -137,18 +158,24 @@ export default function SurveyPage() {
   const options = pop ? optionsOf(pop) : []
   const picked = pop === 'path' ? PATHS.filter((item) => item.value === answers.path).map((item) => item.label) : pop ? answers[pop] : []
   const size = pop ? sizeOf(pop) : 106
-  const hint = done ? { mood: 'trophy' as BelugaMood, tired: false } : hintFor(step, answers)
+  const hint: Hint = done ? { mood: 'trophy', tired: false }
+    : writing ? { mood: draft.trim() ? 'think' : 'point', tired: false }
+    : hintFor(step, answers)
+  /** 방울이 화면에서 사라져 있어야 하는가: 고른 답이거나, 직접 적기 방울이 입력 칸으로 펼쳐져 있을 때. */
+  const hidden = (option: string) => (option === WRITE ? writing !== null : picked.includes(option))
 
   useEffect(() => () => { window.clearInterval(pump.current); window.clearTimeout(timer.current) }, [])
   // 질문이 바뀌면 읽기 프로그램과 키보드가 새 질문에서 시작하게 한다.
   useEffect(() => { heading.current?.focus({ preventScroll: true }) }, [index, done])
+  // 입력 칸이 열리면 바로 칠 수 있게 커서를 둔다.
+  useEffect(() => { if (writing) writer.current?.focus({ preventScroll: true }) }, [writing])
 
   // 프레임 루프가 읽을 값들을 맞춰 둔다.
   useEffect(() => {
     const s = shared.current
     s.floating = pop !== null && !done
     s.radius = size / 2
-    s.caught = options.map((option) => picked.includes(option))
+    s.caught = options.map(hidden)
     s.hint = hint
     s.finished = done
   })
@@ -226,8 +253,10 @@ export default function SurveyPage() {
       if (asleep) { tx = me.x; ty = Math.min(height - 210, me.y + 6) }
       if (s.dart) { s.dart.left -= dt; if (s.dart.left <= 0) s.dart = null }
       if (s.dart) { tx = s.dart.x; ty = s.dart.y }
+      // 직접 적는 동안에는 손가락을 쫓지 않고 입력 칸 옆에 와서 지켜본다.
+      else if (s.watch) { tx = s.watch.x + Math.sin(time * 1.1) * 10; ty = s.watch.y + Math.sin(time * 1.7) * 6 }
       else if (near) { tx = s.pointer.x; ty = s.pointer.y - 86 }
-      const pull = s.dart ? 16 : near ? 9 : 2.2
+      const pull = s.dart ? 16 : s.watch ? 7 : near ? 9 : 2.2
       const drag = s.dart ? 7 : 3.4
       me.vx += ((tx - me.x) * pull - me.vx * drag) * dt
       me.vy += ((ty - me.y) * pull - me.vy * drag) * dt
@@ -269,6 +298,10 @@ export default function SurveyPage() {
           })
           const bx = body.x - me.x, by = body.y - me.y, reach = Math.hypot(bx, by) || 1
           if (reach < radius + 50) { body.vx += (bx / reach) * 90 * dt; body.vy += (by / reach) * 90 * dt }
+          if (s.band !== null) {
+            const away = body.y - s.band
+            if (Math.abs(away) < radius + 48) body.vy += (away < 0 ? -1 : 1) * 170 * dt
+          }
           if (body.x < radius + 8) body.vx += 60 * dt
           if (body.x > width - radius - 8) body.vx -= 60 * dt
           if (body.y < top) body.vy += 60 * dt
@@ -286,6 +319,9 @@ export default function SurveyPage() {
         rings.push({ x: point.x, y: point.y, age: 0 })
       })
       s.ripples.splice(0).forEach((point) => rings.push({ x: point.x, y: point.y, age: 0 }))
+      s.puffs.splice(0).forEach((point) => {
+        for (let n = 0; n < 2; n++) bubbles.push({ x: point.x + random(-5, 5), y: point.y, r: random(2, 5), speed: random(55, 95), phase: random(0, 6.28) })
+      })
 
       /* ---- 그리기 ---- */
       context.clearRect(0, 0, width, height)
@@ -405,7 +441,8 @@ export default function SurveyPage() {
     setHolding(true)
     pump.current = window.setInterval(() => setAnswers((current) => ({ ...current, satisfaction: Math.min(100, current.satisfaction + 1.6) })), 30)
   }
-  const go = (next: number) => { window.clearTimeout(timer.current); stopPump(); setIndex(next) }
+  const closeWriter = () => { shared.current.watch = null; shared.current.band = null; setWriting(null); setDraft('') }
+  const go = (next: number) => { window.clearTimeout(timer.current); stopPump(); closeWriter(); setIndex(next) }
   /** 서버가 받았을 때만 고맙다고 한다. 못 보냈으면 그 자리에 남아 다시 누를 수 있게 한다. */
   const finish = () => {
     if (sending) return
@@ -421,6 +458,19 @@ export default function SurveyPage() {
 
   const burst = (option: string, n: number) => {
     const body = shared.current.bodies[n]
+    if (option === WRITE) {
+      // 방울이 터진 자리에서 입력 칸이 펼쳐지고, 벨루가가 그 위로 와서 지켜본다.
+      const node = canvas.current
+      if (!node || picked.length >= CHOICE_MAX) return
+      const x = body?.x ?? node.clientWidth / 2
+      const top = Math.max(150, Math.min(node.clientHeight - 330, (body?.y ?? node.clientHeight * 0.45) - 36))
+      shared.current.pops.push({ x, y: top + 36 })
+      shared.current.watch = { x: Math.max(80, Math.min(node.clientWidth - 80, x)), y: top - 58 }
+      shared.current.band = top + 36
+      setDraft('')
+      setWriting({ origin: Math.round((x / node.clientWidth) * 100), top })
+      return
+    }
     celebrate(body ? { x: body.x, y: body.y } : undefined)
     if (pop === 'path') {
       // 하나만 고르는 질문: 터지는 걸 잠깐 보여 주고 넘어간다.
@@ -430,6 +480,23 @@ export default function SurveyPage() {
     } else if (pop) {
       setAnswers((current) => ({ ...current, [pop]: [...current[pop].filter((item) => item !== option), option] }))
     }
+  }
+  /** 적은 글을 답 하나로 넣는다. 서버가 받지 않는 글자('|', 줄바꿈)는 빼고, 이미 있는 답이면 한 번만 둔다. */
+  const commitDraft = () => {
+    const text = draft.replace(/[|\r\n]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, WRITE_MAX)
+    const node = canvas.current
+    if (!text || text === WRITE || !pop || pop === 'path') { closeWriter(); return }
+    setAnswers((current) => ({ ...current, [pop]: [...current[pop].filter((item) => item !== text), text] }))
+    if (node && writing) celebrate({ x: node.clientWidth / 2, y: writing.top + 36 })
+    closeWriter()
+  }
+  /** 글자를 칠 때마다 입력 칸에서 방울이 올라온다. */
+  const type = (input: HTMLInputElement) => {
+    setDraft(input.value)
+    const box = canvas.current?.getBoundingClientRect()
+    if (!box) return
+    const rect = input.getBoundingClientRect()
+    shared.current.puffs.push({ x: rect.left - box.left + Math.min(rect.width - 8, 10 + input.value.length * 9), y: rect.top - box.top })
   }
   const release = (option: string) => { if (pop && pop !== 'path') setAnswers((current) => ({ ...current, [pop]: current[pop].filter((item) => item !== option) })) }
 
@@ -480,15 +547,41 @@ export default function SurveyPage() {
             </div>
 
             {/* 떠다니는 방울. 위치는 프레임 루프가 정한다. */}
-            {pop && options.map((option, n) => picked.includes(option) ? null : (
+            {pop && options.map((option, n) => hidden(option) ? null : (
               <button
                 key={option}
                 ref={(element) => { optionNodes.current[n] = element }}
                 onClick={() => burst(option, n)}
-                className={`sea-option whitespace-pre-line ${pop === 'path' ? 'text-[16px]' : 'text-[13.5px]'}`}
+                className={`sea-option whitespace-pre-line ${pop === 'path' ? 'text-[16px]' : 'text-[13.5px]'} ${option === WRITE ? 'sea-option-write' : ''}`}
                 style={{ width: size, height: size }}
-              >{option}</button>
+              >{option === WRITE ? <span className="flex flex-col items-center gap-1"><Pencil className="sea-pen h-5 w-5" aria-hidden="true" />{option}</span> : option}</button>
             ))}
+
+            {/* 직접 적기 방울이 터진 자리에서 펼쳐지는 입력 칸. */}
+            {writing && pop && pop !== 'path' && (
+              <form
+                className="sea-writer"
+                style={{ top: writing.top, '--origin': `${writing.origin}%` } as CSSProperties}
+                onSubmit={(event) => { event.preventDefault(); commitDraft() }}
+              >
+                <Pencil className="sea-pen h-5 w-5 shrink-0 text-blue-600" aria-hidden="true" />
+                <input
+                  ref={writer}
+                  value={draft}
+                  onChange={(event) => type(event.currentTarget)}
+                  onKeyDown={(event) => { if (event.key === 'Escape') closeWriter() }}
+                  maxLength={WRITE_MAX}
+                  placeholder={WRITE_EXAMPLES[pop]}
+                  aria-label="직접 적기"
+                  enterKeyHint="done"
+                  autoComplete="off"
+                  className="min-w-0 flex-1 bg-transparent text-[16px] font-bold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400"
+                />
+                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-slate-400" aria-hidden="true">{draft.length}/{WRITE_MAX}</span>
+                <button type="button" onClick={closeWriter} aria-label="적지 않고 닫기" className="pressable grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500"><X className="h-4 w-4" aria-hidden="true" /></button>
+                <button type="submit" disabled={!draft.trim()} aria-label="적은 답 넣기" className="pressable grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-white disabled:bg-slate-200 disabled:text-slate-400"><Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" /></button>
+              </form>
+            )}
 
             {step === 'satisfaction' && (
               <>
