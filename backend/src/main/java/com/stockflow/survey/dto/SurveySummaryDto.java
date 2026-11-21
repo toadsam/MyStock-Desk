@@ -20,11 +20,21 @@ public record SurveySummaryDto(
         List<Tally> pain,
         List<Tally> whyNot,
         List<Tally> wouldHelp,
+        /** 하나만 고르는 질문들. 질문이 더해진 뒤의 답만 들어 있어서, 합계가 그 질문에 답한 사람 수다. */
+        List<Tally> situation,
+        List<Tally> invest,
+        List<Tally> spendChange,
+        /** 상황별로 나눈 만족도와 추천 지수. 답한 사람이 많은 상황부터 온다. */
+        List<Segment> bySituation,
         List<Comment> comments
 ) {
 
     /** 선택지 하나와 그걸 고른 사람 수. 많이 고른 순서로 온다. */
     public record Tally(String option, long count) {
+    }
+
+    /** 한 상황을 고른 사람들: 몇 명인지, 그중 써 본 사람은 몇 명인지, 그 사람들의 만족도 평균과 추천 지수(답이 없으면 null). */
+    public record Segment(String option, long responses, long used, Double satisfactionAverage, Integer npsScore) {
     }
 
     public record Comment(String path, String text, LocalDateTime createdAt) {

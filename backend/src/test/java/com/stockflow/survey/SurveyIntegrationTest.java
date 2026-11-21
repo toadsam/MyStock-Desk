@@ -70,7 +70,8 @@ class SurveyIntegrationTest {
         // 답한 사람을 알아볼 칸이 표에 없다: 회원 번호도 접속 주소도 저장하지 않는다.
         assertThat(SurveyResponse.class.getDeclaredFields())
                 .extracting(java.lang.reflect.Field::getName)
-                .containsExactlyInAnyOrder("SEPARATOR", "id", "path", "satisfaction", "nps", "best", "pain", "whyNot", "wouldHelp", "comment", "createdAt");
+                .containsExactlyInAnyOrder("SEPARATOR", "id", "path", "satisfaction", "nps", "best", "pain", "whyNot", "wouldHelp",
+                        "situation", "invest", "spendChange", "comment", "createdAt");
     }
 
     @Test
@@ -91,6 +92,41 @@ class SurveyIntegrationTest {
     }
 
     @Test
+    void theNewerQuestionsAreStoredAndSpendChangeOnlyForSomeoneWhoUsedIt() throws Exception {
+        mockMvc.perform(submit("10.1.0.6", Map.of(
+                        "path", "USED", "satisfaction", 4, "situation", "대학생 (알바)", "invest", "관심만 있어요", "spendChange", "덜 쓰게 됐어요")))
+                .andExpect(status().isOk());
+        mockMvc.perform(submit("10.1.0.7", Map.of(
+                        "path", "LOOKED", "situation", " 사회초년생 ", "invest", "안 해요", "spendChange", "덜 쓰게 됐어요")))
+                .andExpect(status().isOk());
+
+        List<SurveyResponse> saved = repository.findAll();
+        assertThat(saved).filteredOn(response -> "USED".equals(response.getPath())).singleElement().satisfies(response -> {
+            assertThat(response.getSituation()).isEqualTo("대학생 (알바)");
+            assertThat(response.getInvest()).isEqualTo("관심만 있어요");
+            assertThat(response.getSpendChange()).isEqualTo("덜 쓰게 됐어요");
+        });
+        // 써 보지 않은 사람에게 "달라졌나요"는 묻지 않으니, 보내 와도 버린다.
+        assertThat(saved).filteredOn(response -> "LOOKED".equals(response.getPath())).singleElement().satisfies(response -> {
+            assertThat(response.getSituation()).isEqualTo("사회초년생");
+            assertThat(response.getInvest()).isEqualTo("안 해요");
+            assertThat(response.getSpendChange()).isNull();
+        });
+    }
+
+    @Test
+    void anOlderScreenThatDoesNotSendTheNewerQuestionsStillWorks() throws Exception {
+        mockMvc.perform(submit("10.1.0.8", Map.of("path", "USED", "satisfaction", 3, "nps", 7)))
+                .andExpect(status().isOk());
+
+        assertThat(repository.findAll()).singleElement().satisfies(saved -> {
+            assertThat(saved.getSituation()).isNull();
+            assertThat(saved.getInvest()).isNull();
+            assertThat(saved.getSpendChange()).isNull();
+        });
+    }
+
+    @Test
     void answersOutsideTheAllowedShapeAreRefused() throws Exception {
         mockMvc.perform(submit("10.1.0.3", Map.of("path", "MAYBE"))).andExpect(status().isBadRequest());
         mockMvc.perform(submit("10.1.0.3", Map.of("satisfaction", 3))).andExpect(status().isBadRequest());
@@ -98,6 +134,8 @@ class SurveyIntegrationTest {
         mockMvc.perform(submit("10.1.0.3", Map.of("path", "USED", "nps", 11))).andExpect(status().isBadRequest());
         mockMvc.perform(submit("10.1.0.3", Map.of("path", "USED", "best", List.of("가|나")))).andExpect(status().isBadRequest());
         mockMvc.perform(submit("10.1.0.3", Map.of("path", "USED", "best", List.of("x".repeat(41))))).andExpect(status().isBadRequest());
+        mockMvc.perform(submit("10.1.0.3", Map.of("path", "USED", "situation", "x".repeat(41)))).andExpect(status().isBadRequest());
+        mockMvc.perform(submit("10.1.0.3", Map.of("path", "USED", "invest", "가|나"))).andExpect(status().isBadRequest());
         mockMvc.perform(submit("10.1.0.3", Map.of("path", "USED", "comment", "가".repeat(301))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.message").value("한마디는 300자 이내로 적어 주세요."));
@@ -131,11 +169,13 @@ class SurveyIntegrationTest {
 
     @Test
     void theSummaryCountsAveragesAndRanksTheAnswers() throws Exception {
-        mockMvc.perform(submit("10.1.1.1", Map.of("path", "USED", "satisfaction", 5, "nps", 10, "best", List.of("AI 코치", "목표 모으기"), "comment", "최고")))
+        mockMvc.perform(submit("10.1.1.1", Map.of("path", "USED", "satisfaction", 5, "nps", 10, "best", List.of("AI 코치", "목표 모으기"), "comment", "최고",
+                        "situation", "대학생 (용돈)", "invest", "관심만 있어요", "spendChange", "덜 쓰게 됐어요")))
                 .andExpect(status().isOk());
-        mockMvc.perform(submit("10.1.1.2", Map.of("path", "USED", "satisfaction", 2, "nps", 3, "best", List.of("AI 코치"), "pain", List.of("화면이 느려요"))))
+        mockMvc.perform(submit("10.1.1.2", Map.of("path", "USED", "satisfaction", 2, "nps", 3, "best", List.of("AI 코치"), "pain", List.of("화면이 느려요"),
+                        "situation", "대학생 (용돈)", "invest", "안 해요", "spendChange", "그대로예요")))
                 .andExpect(status().isOk());
-        mockMvc.perform(submit("10.1.1.3", Map.of("path", "LOOKED", "whyNot", List.of("구글 로그인이 부담"))))
+        mockMvc.perform(submit("10.1.1.3", Map.of("path", "LOOKED", "whyNot", List.of("구글 로그인이 부담"), "situation", "사회초년생", "invest", "관심만 있어요")))
                 .andExpect(status().isOk());
 
         MvcResult result = mockMvc.perform(get("/api/surveys/summary").header("Authorization", "Bearer " + adminToken()))
@@ -154,6 +194,22 @@ class SurveyIntegrationTest {
         assertThat(data.path("best").get(0).path("option").asText()).isEqualTo("AI 코치");
         assertThat(data.path("best").get(0).path("count").asLong()).isEqualTo(2);
         assertThat(data.path("whyNot").get(0).path("option").asText()).isEqualTo("구글 로그인이 부담");
+        assertThat(data.path("situation").get(0).path("option").asText()).isEqualTo("대학생 (용돈)");
+        assertThat(data.path("situation").get(0).path("count").asLong()).isEqualTo(2);
+        assertThat(data.path("invest").get(0).path("option").asText()).isEqualTo("관심만 있어요");
+        assertThat(data.path("invest").get(0).path("count").asLong()).isEqualTo(2);
+        assertThat(data.path("spendChange")).hasSize(2);
+        // 상황별: 대학생(용돈) 2명 모두 써 봤고 만족도 평균 3.5, 사회초년생 1명은 구경만 해서 만족도가 없다.
+        JsonNode students = data.path("bySituation").get(0);
+        assertThat(students.path("option").asText()).isEqualTo("대학생 (용돈)");
+        assertThat(students.path("responses").asLong()).isEqualTo(2);
+        assertThat(students.path("used").asLong()).isEqualTo(2);
+        assertThat(students.path("satisfactionAverage").asDouble()).isEqualTo(3.5);
+        assertThat(students.path("npsScore").asInt()).isZero();
+        JsonNode starters = data.path("bySituation").get(1);
+        assertThat(starters.path("option").asText()).isEqualTo("사회초년생");
+        assertThat(starters.path("used").asLong()).isZero();
+        assertThat(starters.path("satisfactionAverage").isNull()).isTrue();
         assertThat(data.path("comments")).hasSize(1);
         assertThat(data.path("comments").get(0).path("text").asText()).isEqualTo("최고");
     }

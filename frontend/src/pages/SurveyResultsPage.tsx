@@ -1,7 +1,7 @@
 import { ArrowLeft, Check, Copy, MessageCircle, RefreshCw } from 'lucide-react'
 import { type CSSProperties, type ReactNode, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getSurveySummary, type SurveySummary, type SurveyTally } from '../api/surveyApi'
+import { getSurveySummary, type SurveySegment, type SurveySummary, type SurveyTally } from '../api/surveyApi'
 import { BelugaArt, type BelugaMood } from '../mywave/BelugaArt'
 import { useCountUp } from '../mywave/useCountUp'
 import './survey-results.css'
@@ -96,10 +96,14 @@ export default function SurveyResultsPage() {
           <div key={round} className="grid gap-4 md:grid-cols-2">
             <Satisfaction data={data} />
             <Recommend data={data} />
-            <Ranking index={2} title="좋았던 점" who="써 본 사람" tallies={data.best} color="#2563eb" />
-            <Ranking index={3} title="불편했던 점" who="써 본 사람" tallies={data.pain} color="#f43f5e" />
-            <Ranking index={4} title="시작하지 않은 이유" who="구경만 한 사람" tallies={data.whyNot} color="#fb923c" />
-            <Ranking index={5} title="있으면 써 볼 것" who="구경만 한 사람" tallies={data.wouldHelp} color="#0ea5e9" />
+            <Ranking index={2} title="써 보고 달라진 것" who="써 본 사람" tallies={data.spendChange} color="#10b981" single />
+            <Segments index={3} segments={data.bySituation} />
+            <Ranking index={4} title="지금 상황" who="모두" tallies={data.situation} color="#6366f1" single />
+            <Ranking index={5} title="투자 여부" who="모두" tallies={data.invest} color="#8b5cf6" single />
+            <Ranking index={6} title="좋았던 점" who="써 본 사람" tallies={data.best} color="#2563eb" />
+            <Ranking index={7} title="불편했던 점" who="써 본 사람" tallies={data.pain} color="#f43f5e" />
+            <Ranking index={8} title="시작하지 않은 이유" who="구경만 한 사람" tallies={data.whyNot} color="#fb923c" />
+            <Ranking index={9} title="있으면 써 볼 것" who="구경만 한 사람" tallies={data.wouldHelp} color="#0ea5e9" />
             <Comments data={data} />
           </div>
         )}
@@ -249,20 +253,27 @@ function Recommend({ data }: { data: SurveySummary }) {
   )
 }
 
-function Ranking({ index, title, who, tallies, color }: { index: number; title: string; who: string; tallies: SurveyTally[]; color: string }) {
+/**
+ * 선택지 순위. single 이면 한 사람이 하나만 고른 질문이라 합계가 답한 사람 수이고, 비율도 함께 보여 준다.
+ * 이 질문들은 11월 21일에 더해져서 그 전 답에는 없다. 그래서 전체 응답 수가 아니라 이 질문에 답한 수로 나눈다.
+ */
+function Ranking({ index, title, who, tallies, color, single = false }: { index: number; title: string; who: string; tallies: SurveyTally[]; color: string; single?: boolean }) {
   const [open, setOpen] = useState(false)
   const most = Math.max(1, ...tallies.map((tally) => tally.count))
+  const answered = tallies.reduce((sum, tally) => sum + tally.count, 0)
   const shown = open ? tallies : tallies.slice(0, 6)
   return (
     <section className="res-card" style={{ '--i': index } as CSSProperties}>
-      <Title title={title} who={who} />
+      <Title title={title} who={who} count={single && answered > 0 ? `${answered}명 답함` : undefined} />
       {tallies.length === 0 ? <None /> : (
         <ol className="space-y-3">
           {shown.map((tally, n) => (
             <li key={tally.option}>
               <div className="flex items-baseline justify-between gap-3">
                 <span className={`min-w-0 break-words text-[14px] ${n === 0 ? 'font-bold text-slate-900' : 'font-semibold text-slate-600'}`}>{tally.option}</span>
-                <span className="shrink-0 text-[14px] font-bold tabular-nums" style={{ color }}>{tally.count}</span>
+                <span className="shrink-0 text-[14px] font-bold tabular-nums" style={{ color }}>
+                  {tally.count}{single && <span className="ml-1 text-[12px] font-semibold text-slate-400">{Math.round((tally.count / answered) * 100)}%</span>}
+                </span>
               </div>
               <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-slate-100">
                 <div className="res-bar" style={{ '--w': `${(tally.count / most) * 100}%`, '--i': n, background: color, opacity: n === 0 ? 1 : 0.55 } as CSSProperties} />
@@ -278,9 +289,47 @@ function Ranking({ index, title, who, tallies, color }: { index: number; title: 
   )
 }
 
+/** 상황별 만족도. "대학생만 보면 어떤가"를 한눈에 본다. 구경만 한 사람만 있는 상황은 만족도가 비어 있다. */
+function Segments({ index, segments }: { index: number; segments: SurveySegment[] }) {
+  return (
+    <section className="res-card" style={{ '--i': index } as CSSProperties}>
+      <Title title="상황별 만족도" who="써 본 사람 기준" />
+      {segments.length === 0 ? <None /> : (
+        <ul className="space-y-3.5">
+          {segments.map((segment, n) => {
+            const average = segment.satisfactionAverage
+            const tone = average === null ? '#cbd5e1' : LEVELS[Math.min(4, Math.max(0, Math.round(average) - 1))].color
+            return (
+              <li key={segment.option}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 break-words text-[14px] font-bold text-slate-800">{segment.option}</span>
+                  <span className="shrink-0 text-[12px] font-semibold text-slate-400">
+                    {segment.responses}명{segment.used < segment.responses ? ` · 써 본 ${segment.used}명` : ''}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex items-center gap-3">
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                    <div className="res-bar" style={{ '--w': `${average === null ? 0 : (average / 5) * 100}%`, '--i': n, background: tone } as CSSProperties} />
+                  </div>
+                  <span className="w-[86px] shrink-0 text-right text-[13px] font-bold tabular-nums" style={{ color: average === null ? '#94a3b8' : tone }}>
+                    {average === null ? '써 본 사람 없음' : `${average.toFixed(1)} / 5`}
+                  </span>
+                </div>
+                {segment.npsScore !== null && (
+                  <p className="mt-1 text-[12px] font-medium text-slate-400">추천 지수 {segment.npsScore > 0 ? `+${segment.npsScore}` : segment.npsScore}</p>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </section>
+  )
+}
+
 function Comments({ data }: { data: SurveySummary }) {
   return (
-    <section className="res-card md:col-span-2" style={{ '--i': 6 } as CSSProperties}>
+    <section className="res-card md:col-span-2" style={{ '--i': 10 } as CSSProperties}>
       <Title title="한마디" who="최근 순" count={`${data.comments.length}개`} />
       {data.comments.length === 0 ? <None /> : (
         <ul className="grid gap-3 md:grid-cols-2">
