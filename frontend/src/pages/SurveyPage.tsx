@@ -13,17 +13,26 @@ import './survey.css'
  * 답은 방울로 한다: 꾹 눌러 불고, 떠다니는 방울을 터뜨린다.
  *
  * 첫 질문에서 써 본 사람과 구경만 한 사람을 가른다. 써 보지 않은 사람에게 만족도를 물을 수는 없어서다.
+ * 그다음 두 질문(지금 상황, 투자 여부)은 모두에게 묻는다. 답한 사람이 대상 사용자인지 알아야 결과를 읽을 수 있다.
  *
  * 움직임은 전부 한 개의 requestAnimationFrame 안에서 계산한다. 배경은 캔버스에 그리고,
  * 벨루가와 선택지 방울은 DOM 을 직접 옮긴다(프레임마다 React 를 다시 그리지 않는다).
  */
 
 type Path = 'used' | 'looked'
-type StepId = 'path' | 'satisfaction' | 'best' | 'pain' | 'nps' | 'whyNot' | 'wouldHelp' | 'comment'
-type PopStep = 'path' | 'best' | 'pain' | 'whyNot' | 'wouldHelp'
+type StepId = 'path' | 'situation' | 'invest' | 'satisfaction' | 'best' | 'pain' | 'change' | 'nps' | 'whyNot' | 'wouldHelp' | 'comment'
+/** 하나만 고르는 방울 질문. 터뜨리면 잠깐 뒤에 다음 질문으로 넘어간다. */
+type SingleStep = 'situation' | 'invest' | 'change'
+/** 여러 개 고르는 방울 질문. 직접 적기 방울이 있다. */
+type MultiStep = 'best' | 'pain' | 'whyNot' | 'wouldHelp'
+type PopStep = 'path' | SingleStep | MultiStep
 
 type Answers = {
   path: Path | null
+  situation: string | null
+  invest: string | null
+  /** 써 보고 돈 쓰는 게 달라졌는지. 써 본 사람만. */
+  change: string | null
   /** 방울을 분 정도(0~100). 0 은 아직 답하지 않은 것. 보낼 때 1~5 로 바꾼다. */
   satisfaction: number
   best: string[]
@@ -34,11 +43,11 @@ type Answers = {
   comment: string
 }
 
-const EMPTY: Answers = { path: null, satisfaction: 0, best: [], pain: [], nps: null, whyNot: [], wouldHelp: [], comment: '' }
+const EMPTY: Answers = { path: null, situation: null, invest: null, change: null, satisfaction: 0, best: [], pain: [], nps: null, whyNot: [], wouldHelp: [], comment: '' }
 
 const FLOW: Record<Path, StepId[]> = {
-  used: ['path', 'satisfaction', 'best', 'pain', 'nps', 'comment'],
-  looked: ['path', 'whyNot', 'wouldHelp', 'comment'],
+  used: ['path', 'situation', 'invest', 'satisfaction', 'best', 'pain', 'change', 'nps', 'comment'],
+  looked: ['path', 'situation', 'invest', 'whyNot', 'wouldHelp', 'comment'],
 }
 
 const PATHS: { value: Path; label: string }[] = [
@@ -51,24 +60,33 @@ const WRITE = '직접 적기'
 /** 서버가 고르는 답 하나에 허용하는 길이와 개수(SurveySubmitRequest). */
 const WRITE_MAX = 40
 const CHOICE_MAX = 10
-const WRITE_EXAMPLES: Record<Exclude<PopStep, 'path'>, string> = {
+const WRITE_EXAMPLES: Record<MultiStep, string> = {
   best: '예: 알림이 마음에 들어요',
   pain: '예: 글씨가 작아요',
   whyNot: '예: 시간이 없었어요',
   wouldHelp: '예: 아이폰 앱',
 }
 /** 방울 안에 들어가야 해서 짧게 쓴다. */
-const POOLS: Record<Exclude<PopStep, 'path'>, string[]> = {
+const POOLS: Record<MultiStep, string[]> = {
   best: ['오늘 써도 되는 돈', '버튼 한 번 기록', '목표 모으기', 'AI 코치', '귀여운 벨루가', '깔끔한 화면', NONE],
   pain: ['직접 적기 귀찮아요', '뭘 누를지 헷갈려요', '숫자가 안 믿겨요', '화면이 느려요', '기능이 부족해요', NONE],
   whyNot: ['구글 로그인이 부담', '뭔지 잘 모르겠어요', '쓰는 가계부가 있어요', '적는 게 귀찮아요', '그냥 구경만'],
   wouldHelp: ['로그인 없이 써 보기', '카드 내역 자동 연동', '더 쉬운 설명', '친구가 추천하면', '잘 모르겠어요'],
 }
+/** 하나만 고르는 질문의 보기. 이 글자가 그대로 서버에 저장되니 줄바꿈과 '|' 는 쓰지 않는다. */
+const SINGLES: Record<SingleStep, string[]> = {
+  situation: ['대학생 (용돈)', '대학생 (알바)', '사회초년생', '취업 준비 중', '그 외'],
+  invest: ['하고 있어요', '관심만 있어요', '안 해요'],
+  change: ['덜 쓰게 됐어요', '한 번 더 생각해요', '그대로예요', '아직 모르겠어요'],
+}
 const TITLES: Record<StepId, { title: string; hint: string }> = {
-  path: { title: 'MyWave, 써 보셨나요?', hint: '방울을 눌러 주세요. 30초면 끝나요.' },
+  path: { title: 'MyWave, 써 보셨나요?', hint: '방울을 눌러 주세요. 1분이면 끝나요.' },
+  situation: { title: '지금 어떤 상황이에요?', hint: '하나만 터뜨려 주세요.' },
+  invest: { title: '투자도 하고 계세요?', hint: '주식이나 적립식 투자요. 하나만 터뜨려 주세요.' },
   satisfaction: { title: '얼마나 마음에 들었나요?', hint: '방울을 꾹 눌러서 마음만큼 불어 주세요.' },
   best: { title: '좋았던 걸 터뜨려 주세요', hint: '여러 개 터뜨려도 되고, 직접 적어도 돼요.' },
   pain: { title: '불편했던 걸 터뜨려 주세요', hint: '솔직할수록 도움이 돼요. 직접 적어도 돼요.' },
+  change: { title: '써 보고 나서\n돈 쓰는 게 달라졌나요?', hint: '하나만 터뜨려 주세요.' },
   nps: { title: '친구에게 추천하고 싶나요?', hint: '0은 전혀, 10은 꼭.' },
   whyNot: { title: '시작하지 않은 이유는요?', hint: '여러 개 터뜨려도 되고, 직접 적어도 돼요.' },
   wouldHelp: { title: '무엇이 있으면 써 볼까요?', hint: '여러 개 터뜨려도 되고, 직접 적어도 돼요.' },
@@ -85,18 +103,23 @@ const LEVELS: { label: string; mood: BelugaMood; tired: boolean }[] = [
 const levelIndex = (percent: number) => Math.min(4, Math.floor(Math.max(0, percent - 0.01) / 20))
 
 const BELUGA_SIZE = 124
-const isPop = (step: StepId): step is PopStep => step === 'path' || step === 'best' || step === 'pain' || step === 'whyNot' || step === 'wouldHelp'
-const optionsOf = (step: PopStep) => (step === 'path' ? PATHS.map((item) => item.label) : [...POOLS[step], WRITE])
+const isSingle = (step: StepId | null): step is SingleStep => step === 'situation' || step === 'invest' || step === 'change'
+const isMulti = (step: StepId | null): step is MultiStep => step === 'best' || step === 'pain' || step === 'whyNot' || step === 'wouldHelp'
+const isPop = (step: StepId): step is PopStep => step === 'path' || isSingle(step) || isMulti(step)
+const optionsOf = (step: PopStep) => (step === 'path' ? PATHS.map((item) => item.label) : isSingle(step) ? SINGLES[step] : [...POOLS[step], WRITE])
 const sizeOf = (step: PopStep) => (step === 'path' ? 138 : 106)
 
 /** 화면에서 모은 답을 서버가 받는 모양으로 바꿔 보낸다. 갈림길 반대쪽 질문의 답은 넣지 않는다. */
 function saveSurvey(answers: Answers): Promise<void> {
   const comment = answers.comment.trim() || undefined
+  const about = { situation: answers.situation ?? undefined, invest: answers.invest ?? undefined }
   if (answers.path === 'looked') {
-    return submitSurvey({ path: 'LOOKED', whyNot: answers.whyNot, wouldHelp: answers.wouldHelp, comment })
+    return submitSurvey({ path: 'LOOKED', ...about, whyNot: answers.whyNot, wouldHelp: answers.wouldHelp, comment })
   }
   return submitSurvey({
     path: 'USED',
+    ...about,
+    spendChange: answers.change ?? undefined,
     satisfaction: answers.satisfaction > 0 ? levelIndex(answers.satisfaction) + 1 : undefined,
     nps: answers.nps ?? undefined,
     best: answers.best,
@@ -156,7 +179,9 @@ export default function SurveyPage() {
   const last = index === steps.length - 1
   const pop = isPop(step) ? step : null
   const options = pop ? optionsOf(pop) : []
-  const picked = pop === 'path' ? PATHS.filter((item) => item.value === answers.path).map((item) => item.label) : pop ? answers[pop] : []
+  const picked = pop === 'path' ? PATHS.filter((item) => item.value === answers.path).map((item) => item.label)
+    : isSingle(pop) ? (answers[pop] ? [answers[pop]] : [])
+    : isMulti(pop) ? answers[pop] : []
   const size = pop ? sizeOf(pop) : 106
   const hint: Hint = done ? { mood: 'trophy', tired: false }
     : writing ? { mood: draft.trim() ? 'think' : 'point', tired: false }
@@ -477,7 +502,13 @@ export default function SurveyPage() {
       set({ path: PATHS[n].value })
       window.clearTimeout(timer.current)
       timer.current = window.setTimeout(() => setIndex(1), 750)
-    } else if (pop) {
+    } else if (isSingle(pop)) {
+      // 하나만 고르는 질문: 고른 답을 바꿔 끼우고, 터지는 걸 잠깐 보여 준 뒤 넘어간다.
+      const from = index
+      set({ [pop]: option })
+      window.clearTimeout(timer.current)
+      timer.current = window.setTimeout(() => go(from + 1), 750)
+    } else if (isMulti(pop)) {
       setAnswers((current) => ({ ...current, [pop]: [...current[pop].filter((item) => item !== option), option] }))
     }
   }
@@ -485,7 +516,7 @@ export default function SurveyPage() {
   const commitDraft = () => {
     const text = draft.replace(/[|\r\n]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, WRITE_MAX)
     const node = canvas.current
-    if (!text || text === WRITE || !pop || pop === 'path') { closeWriter(); return }
+    if (!text || text === WRITE || !isMulti(pop)) { closeWriter(); return }
     setAnswers((current) => ({ ...current, [pop]: [...current[pop].filter((item) => item !== text), text] }))
     if (node && writing) celebrate({ x: node.clientWidth / 2, y: writing.top + 36 })
     closeWriter()
@@ -498,7 +529,10 @@ export default function SurveyPage() {
     const rect = input.getBoundingClientRect()
     shared.current.puffs.push({ x: rect.left - box.left + Math.min(rect.width - 8, 10 + input.value.length * 9), y: rect.top - box.top })
   }
-  const release = (option: string) => { if (pop && pop !== 'path') setAnswers((current) => ({ ...current, [pop]: current[pop].filter((item) => item !== option) })) }
+  const release = (option: string) => {
+    if (isSingle(pop)) { window.clearTimeout(timer.current); set({ [pop]: null }) }
+    else if (isMulti(pop)) setAnswers((current) => ({ ...current, [pop]: current[pop].filter((item) => item !== option) }))
+  }
 
   const level = LEVELS[levelIndex(answers.satisfaction)]
   const puff = 104 + answers.satisfaction * 1.5
@@ -558,7 +592,7 @@ export default function SurveyPage() {
             ))}
 
             {/* 직접 적기 방울이 터진 자리에서 펼쳐지는 입력 칸. */}
-            {writing && pop && pop !== 'path' && (
+            {writing && isMulti(pop) && (
               <form
                 className="sea-writer"
                 style={{ top: writing.top, '--origin': `${writing.origin}%` } as CSSProperties}
@@ -609,7 +643,7 @@ export default function SurveyPage() {
               </>
             )}
 
-            {pop && pop !== 'path' && (
+            {(isSingle(pop) || isMulti(pop)) && (
               <>
                 <div className="mt-auto min-h-[40px]">
                   <div className="flex flex-wrap justify-center gap-2" aria-live="polite">
@@ -620,7 +654,7 @@ export default function SurveyPage() {
                     ))}
                   </div>
                 </div>
-                <div className="relative z-[6] mt-3 flex"><Next onClick={next} disabled={picked.length === 0} label={picked.length === 0 ? '방울을 터뜨려 주세요' : `${picked.length}개 골랐어요`} /></div>
+                <div className="relative z-[6] mt-3 flex"><Next onClick={next} disabled={picked.length === 0} label={picked.length === 0 ? '방울을 터뜨려 주세요' : isSingle(pop) ? '다음' : `${picked.length}개 골랐어요`} /></div>
               </>
             )}
 
@@ -668,6 +702,9 @@ function hintFor(step: StepId, answers: Answers): Hint {
   if (step === 'satisfaction') return answers.satisfaction === 0 ? { mood: 'think', tired: false } : LEVELS[levelIndex(answers.satisfaction)]
   if (step === 'best') return { mood: some(answers.best) ? 'cheer' : 'hello', tired: false }
   if (step === 'pain') return some(answers.pain) ? { mood: 'concern', tired: true } : { mood: 'think', tired: false }
+  if (step === 'situation' || step === 'invest') return { mood: answers[step] ? 'hello' : 'think', tired: false }
+  // "그대로예요" 에 기운 빠진 얼굴을 하면 탓하는 것처럼 보인다. 손짓하는 얼굴로 받는다.
+  if (step === 'change') return { mood: answers.change === '덜 쓰게 됐어요' || answers.change === '한 번 더 생각해요' ? 'cheer' : answers.change ? 'point' : 'think', tired: false }
   if (step === 'nps') return answers.nps === null ? { mood: 'think', tired: false } : answers.nps >= 9 ? { mood: 'cheer', tired: false } : answers.nps >= 7 ? { mood: 'hello', tired: false } : answers.nps >= 4 ? { mood: 'point', tired: false } : { mood: 'concern', tired: true }
   if (step === 'whyNot') return answers.whyNot.length > 0 ? { mood: 'concern', tired: true } : { mood: 'think', tired: false }
   if (step === 'wouldHelp') return { mood: answers.wouldHelp.length > 0 ? 'surprise' : 'think', tired: false }

@@ -13,6 +13,12 @@ export type SurveySubmission = {
   pain?: string[]
   whyNot?: string[]
   wouldHelp?: string[]
+  /** 지금 어떤 상황인지. 모두. */
+  situation?: string
+  /** 투자를 하고 있는지. 모두. */
+  invest?: string
+  /** 써 보고 돈 쓰는 게 달라졌는지. 써 본 사람만. */
+  spendChange?: string
   comment?: string
 }
 
@@ -37,6 +43,9 @@ export async function submitSurvey(submission: SurveySubmission): Promise<void> 
 /** 선택지 하나와 그걸 고른 사람 수. 많이 고른 순서로 온다. */
 export type SurveyTally = { option: string; count: number }
 
+/** 한 상황을 고른 사람들의 만족도와 추천 지수. 답이 없으면 null. */
+export type SurveySegment = { option: string; responses: number; used: number; satisfactionAverage: number | null; npsScore: number | null }
+
 /** 모인 답의 요약. 서버가 계산해서 준다. */
 export type SurveySummary = {
   total: number
@@ -54,6 +63,11 @@ export type SurveySummary = {
   pain: SurveyTally[]
   whyNot: SurveyTally[]
   wouldHelp: SurveyTally[]
+  /** 하나만 고르는 질문들(2026-11-21 부터). 합계가 그 질문에 답한 사람 수다. */
+  situation: SurveyTally[]
+  invest: SurveyTally[]
+  spendChange: SurveyTally[]
+  bySituation: SurveySegment[]
   comments: { path: 'USED' | 'LOOKED'; text: string; createdAt: string }[]
 }
 

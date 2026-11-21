@@ -83,6 +83,9 @@ public class SurveyService {
                 .pain(used ? join(request.pain()) : null)
                 .whyNot(used ? null : join(request.whyNot()))
                 .wouldHelp(used ? null : join(request.wouldHelp()))
+                .situation(blankToNull(request.situation()))
+                .invest(blankToNull(request.invest()))
+                .spendChange(used ? blankToNull(request.spendChange()) : null)
                 .comment(blankToNull(request.comment()))
                 .createdAt(LocalDateTime.now(clock))
                 .build());
@@ -108,6 +111,10 @@ public class SurveyService {
                 tally(all, SurveyResponse::getPain),
                 tally(all, SurveyResponse::getWhyNot),
                 tally(all, SurveyResponse::getWouldHelp),
+                tally(all, SurveyResponse::getSituation),
+                tally(all, SurveyResponse::getInvest),
+                tally(all, SurveyResponse::getSpendChange),
+                bySituation(all),
                 all.stream()
                         .filter(response -> response.getComment() != null)
                         .limit(RECENT_COMMENTS)
@@ -148,6 +155,23 @@ public class SurveyService {
         long promoters = scores.stream().filter(score -> score >= 9).count();
         long detractors = scores.stream().filter(score -> score <= 6).count();
         return (int) Math.round((promoters - detractors) * 100.0 / scores.size());
+    }
+
+    /** 상황마다 만족도와 추천 지수를 따로 센다. "대학생만 보면 어떤가"를 보려고 둔다. */
+    private static List<SurveySummaryDto.Segment> bySituation(List<SurveyResponse> all) {
+        Map<String, List<SurveyResponse>> groups = all.stream()
+                .filter(response -> response.getSituation() != null)
+                .collect(Collectors.groupingBy(SurveyResponse::getSituation, LinkedHashMap::new, Collectors.toList()));
+        return groups.entrySet().stream()
+                .sorted(Comparator.comparingInt((Map.Entry<String, List<SurveyResponse>> entry) -> entry.getValue().size()).reversed())
+                .map(entry -> {
+                    List<SurveyResponse> group = entry.getValue();
+                    List<Integer> satisfactions = group.stream().map(SurveyResponse::getSatisfaction).filter(Objects::nonNull).toList();
+                    List<Integer> scores = group.stream().map(SurveyResponse::getNps).filter(Objects::nonNull).toList();
+                    long used = group.stream().filter(response -> USED.equals(response.getPath())).count();
+                    return new SurveySummaryDto.Segment(entry.getKey(), group.size(), used, average(satisfactions), npsScore(scores));
+                })
+                .toList();
     }
 
     private static List<SurveySummaryDto.Tally> tally(List<SurveyResponse> all, Function<SurveyResponse, String> column) {

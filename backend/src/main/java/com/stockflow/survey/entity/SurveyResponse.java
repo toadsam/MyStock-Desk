@@ -55,6 +55,18 @@ public class SurveyResponse {
     @Column(length = 600)
     private String wouldHelp;
 
+    /** 지금 어떤 상황인지. 하나만 고른다. 2026-11-21 에 더한 질문이라 그 전 답에는 없다. */
+    @Column(length = 40)
+    private String situation;
+
+    /** 투자를 하고 있는지. 하나만 고른다. 2026-11-21 부터. */
+    @Column(length = 40)
+    private String invest;
+
+    /** 써 보고 돈 쓰는 게 달라졌는지. 써 본 사람만 답한다. 2026-11-21 부터. */
+    @Column(length = 40)
+    private String spendChange;
+
     @Column(length = 300)
     private String comment;
 
