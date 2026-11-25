@@ -67,6 +67,18 @@ public class SurveyResponse {
     @Column(length = 40)
     private String spendChange;
 
+    /** 며칠 써 봤는지. 써 본 사람만 답한다. 2026-11-25 부터. */
+    @Column(length = 40)
+    private String usagePeriod;
+
+    /** 돈을 내고라도 쓰고 싶은 기능들. 여러 개 고른다. 2026-11-25 부터. */
+    @Column(length = 600)
+    private String payFeatures;
+
+    /** 한 달에 얼마까지 낼 수 있는지. 하나만 고른다. 2026-11-25 부터. */
+    @Column(length = 40)
+    private String payPrice;
+
     @Column(length = 300)
     private String comment;
 

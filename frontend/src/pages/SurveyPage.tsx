@@ -14,17 +14,19 @@ import './survey.css'
  *
  * 첫 질문에서 써 본 사람과 구경만 한 사람을 가른다. 써 보지 않은 사람에게 만족도를 물을 수는 없어서다.
  * 그다음 두 질문(지금 상황, 투자 여부)은 모두에게 묻는다. 답한 사람이 대상 사용자인지 알아야 결과를 읽을 수 있다.
+ * 끝 무렵 두 질문(돈을 내도 쓸 기능, 한 달에 낼 금액)도 모두에게 묻는다. 수익화 방향을 정할 근거다.
+ * 써 본 사람에게는 며칠 써 봤는지도 묻는다. 하루 써 본 사람과 2주 써 본 사람의 만족도는 무게가 다르다.
  *
  * 움직임은 전부 한 개의 requestAnimationFrame 안에서 계산한다. 배경은 캔버스에 그리고,
  * 벨루가와 선택지 방울은 DOM 을 직접 옮긴다(프레임마다 React 를 다시 그리지 않는다).
  */
 
 type Path = 'used' | 'looked'
-type StepId = 'path' | 'situation' | 'invest' | 'satisfaction' | 'best' | 'pain' | 'change' | 'nps' | 'whyNot' | 'wouldHelp' | 'comment'
+type StepId = 'path' | 'situation' | 'invest' | 'period' | 'satisfaction' | 'best' | 'pain' | 'change' | 'payFor' | 'price' | 'nps' | 'whyNot' | 'wouldHelp' | 'comment'
 /** 하나만 고르는 방울 질문. 터뜨리면 잠깐 뒤에 다음 질문으로 넘어간다. */
-type SingleStep = 'situation' | 'invest' | 'change'
+type SingleStep = 'situation' | 'invest' | 'change' | 'period' | 'price'
 /** 여러 개 고르는 방울 질문. 직접 적기 방울이 있다. */
-type MultiStep = 'best' | 'pain' | 'whyNot' | 'wouldHelp'
+type MultiStep = 'best' | 'pain' | 'whyNot' | 'wouldHelp' | 'payFor'
 type PopStep = 'path' | SingleStep | MultiStep
 
 type Answers = {
@@ -33,6 +35,10 @@ type Answers = {
   invest: string | null
   /** 써 보고 돈 쓰는 게 달라졌는지. 써 본 사람만. */
   change: string | null
+  /** 며칠 써 봤는지. 써 본 사람만. */
+  period: string | null
+  /** 한 달에 얼마까지 낼 수 있는지. 모두. */
+  price: string | null
   /** 방울을 분 정도(0~100). 0 은 아직 답하지 않은 것. 보낼 때 1~5 로 바꾼다. */
   satisfaction: number
   best: string[]
@@ -40,14 +46,16 @@ type Answers = {
   nps: number | null
   whyNot: string[]
   wouldHelp: string[]
+  /** 돈을 내고라도 쓰고 싶은 기능. 모두. */
+  payFor: string[]
   comment: string
 }
 
-const EMPTY: Answers = { path: null, situation: null, invest: null, change: null, satisfaction: 0, best: [], pain: [], nps: null, whyNot: [], wouldHelp: [], comment: '' }
+const EMPTY: Answers = { path: null, situation: null, invest: null, change: null, period: null, price: null, satisfaction: 0, best: [], pain: [], nps: null, whyNot: [], wouldHelp: [], payFor: [], comment: '' }
 
 const FLOW: Record<Path, StepId[]> = {
-  used: ['path', 'situation', 'invest', 'satisfaction', 'best', 'pain', 'change', 'nps', 'comment'],
-  looked: ['path', 'situation', 'invest', 'whyNot', 'wouldHelp', 'comment'],
+  used: ['path', 'situation', 'invest', 'period', 'satisfaction', 'best', 'pain', 'change', 'payFor', 'price', 'nps', 'comment'],
+  looked: ['path', 'situation', 'invest', 'whyNot', 'wouldHelp', 'payFor', 'price', 'comment'],
 }
 
 const PATHS: { value: Path; label: string }[] = [
@@ -65,6 +73,7 @@ const WRITE_EXAMPLES: Record<MultiStep, string> = {
   pain: '예: 글씨가 작아요',
   whyNot: '예: 시간이 없었어요',
   wouldHelp: '예: 아이폰 앱',
+  payFor: '예: 카드 내역 자동 연동',
 }
 /** 방울 안에 들어가야 해서 짧게 쓴다. */
 const POOLS: Record<MultiStep, string[]> = {
@@ -72,12 +81,15 @@ const POOLS: Record<MultiStep, string[]> = {
   pain: ['직접 적기 귀찮아요', '뭘 누를지 헷갈려요', '숫자가 안 믿겨요', '화면이 느려요', '기능이 부족해요', NONE],
   whyNot: ['구글 로그인이 부담', '뭔지 잘 모르겠어요', '쓰는 가계부가 있어요', '적는 게 귀찮아요', '그냥 구경만'],
   wouldHelp: ['로그인 없이 써 보기', '카드 내역 자동 연동', '더 쉬운 설명', '친구가 추천하면', '잘 모르겠어요'],
+  payFor: ['캡처 분석 무제한', '월간 소비 리포트', '목표 여러 개', 'AI 코치 상담', '광고 없이', NONE],
 }
 /** 하나만 고르는 질문의 보기. 이 글자가 그대로 서버에 저장되니 줄바꿈과 '|' 는 쓰지 않는다. */
 const SINGLES: Record<SingleStep, string[]> = {
   situation: ['대학생 (용돈)', '대학생 (알바)', '사회초년생', '취업 준비 중', '그 외'],
   invest: ['하고 있어요', '관심만 있어요', '안 해요'],
   change: ['덜 쓰게 됐어요', '한 번 더 생각해요', '그대로예요', '아직 모르겠어요'],
+  period: ['하루', '2~3일', '일주일쯤', '2주 넘게'],
+  price: ['무료만 쓸래요', '월 1,000원', '월 3,000원', '월 5,000원', '그 이상도 OK'],
 }
 const TITLES: Record<StepId, { title: string; hint: string }> = {
   path: { title: 'MyWave, 써 보셨나요?', hint: '방울을 눌러 주세요. 1분이면 끝나요.' },
@@ -90,6 +102,9 @@ const TITLES: Record<StepId, { title: string; hint: string }> = {
   nps: { title: '친구에게 추천하고 싶나요?', hint: '0은 전혀, 10은 꼭.' },
   whyNot: { title: '시작하지 않은 이유는요?', hint: '여러 개 터뜨려도 되고, 직접 적어도 돼요.' },
   wouldHelp: { title: '무엇이 있으면 써 볼까요?', hint: '여러 개 터뜨려도 되고, 직접 적어도 돼요.' },
+  period: { title: '며칠 정도 써 보셨어요?', hint: '대충이면 돼요. 하나만 터뜨려 주세요.' },
+  payFor: { title: '돈을 내도 쓰고 싶은\n기능이 있나요?', hint: '여러 개 터뜨려도 되고, 직접 적어도 돼요.' },
+  price: { title: '그런 기능이 있다면\n한 달에 얼마까지 낼까요?', hint: '솔직하게 하나만 터뜨려 주세요.' },
   comment: { title: '마지막으로 한마디!', hint: '안 적어도 괜찮아요. 연락처는 적지 말아 주세요.' },
 }
 
@@ -103,8 +118,8 @@ const LEVELS: { label: string; mood: BelugaMood; tired: boolean }[] = [
 const levelIndex = (percent: number) => Math.min(4, Math.floor(Math.max(0, percent - 0.01) / 20))
 
 const BELUGA_SIZE = 124
-const isSingle = (step: StepId | null): step is SingleStep => step === 'situation' || step === 'invest' || step === 'change'
-const isMulti = (step: StepId | null): step is MultiStep => step === 'best' || step === 'pain' || step === 'whyNot' || step === 'wouldHelp'
+const isSingle = (step: StepId | null): step is SingleStep => step === 'situation' || step === 'invest' || step === 'change' || step === 'period' || step === 'price'
+const isMulti = (step: StepId | null): step is MultiStep => step === 'best' || step === 'pain' || step === 'whyNot' || step === 'wouldHelp' || step === 'payFor'
 const isPop = (step: StepId): step is PopStep => step === 'path' || isSingle(step) || isMulti(step)
 const optionsOf = (step: PopStep) => (step === 'path' ? PATHS.map((item) => item.label) : isSingle(step) ? SINGLES[step] : [...POOLS[step], WRITE])
 const sizeOf = (step: PopStep) => (step === 'path' ? 138 : 106)
@@ -113,13 +128,17 @@ const sizeOf = (step: PopStep) => (step === 'path' ? 138 : 106)
 function saveSurvey(answers: Answers): Promise<void> {
   const comment = answers.comment.trim() || undefined
   const about = { situation: answers.situation ?? undefined, invest: answers.invest ?? undefined }
+  // 지불 의향은 써 본 사람과 구경만 한 사람 모두에게 묻는다.
+  const pay = { payFeatures: answers.payFor, payPrice: answers.price ?? undefined }
   if (answers.path === 'looked') {
-    return submitSurvey({ path: 'LOOKED', ...about, whyNot: answers.whyNot, wouldHelp: answers.wouldHelp, comment })
+    return submitSurvey({ path: 'LOOKED', ...about, ...pay, whyNot: answers.whyNot, wouldHelp: answers.wouldHelp, comment })
   }
   return submitSurvey({
     path: 'USED',
     ...about,
+    ...pay,
     spendChange: answers.change ?? undefined,
+    usagePeriod: answers.period ?? undefined,
     satisfaction: answers.satisfaction > 0 ? levelIndex(answers.satisfaction) + 1 : undefined,
     nps: answers.nps ?? undefined,
     best: answers.best,
@@ -705,6 +724,10 @@ function hintFor(step: StepId, answers: Answers): Hint {
   if (step === 'situation' || step === 'invest') return { mood: answers[step] ? 'hello' : 'think', tired: false }
   // "그대로예요" 에 기운 빠진 얼굴을 하면 탓하는 것처럼 보인다. 손짓하는 얼굴로 받는다.
   if (step === 'change') return { mood: answers.change === '덜 쓰게 됐어요' || answers.change === '한 번 더 생각해요' ? 'cheer' : answers.change ? 'point' : 'think', tired: false }
+  if (step === 'period') return { mood: answers.period ? 'hello' : 'think', tired: false }
+  if (step === 'payFor') return { mood: some(answers.payFor) ? 'surprise' : 'think', tired: false }
+  // 무료만 쓰겠다는 답도 소중한 답이다. 실망한 얼굴로 받지 않는다.
+  if (step === 'price') return { mood: answers.price ? 'cheer' : 'think', tired: false }
   if (step === 'nps') return answers.nps === null ? { mood: 'think', tired: false } : answers.nps >= 9 ? { mood: 'cheer', tired: false } : answers.nps >= 7 ? { mood: 'hello', tired: false } : answers.nps >= 4 ? { mood: 'point', tired: false } : { mood: 'concern', tired: true }
   if (step === 'whyNot') return answers.whyNot.length > 0 ? { mood: 'concern', tired: true } : { mood: 'think', tired: false }
   if (step === 'wouldHelp') return { mood: answers.wouldHelp.length > 0 ? 'surprise' : 'think', tired: false }

@@ -19,6 +19,12 @@ export type SurveySubmission = {
   invest?: string
   /** 써 보고 돈 쓰는 게 달라졌는지. 써 본 사람만. */
   spendChange?: string
+  /** 며칠 써 봤는지. 써 본 사람만. */
+  usagePeriod?: string
+  /** 돈을 내고라도 쓰고 싶은 기능. 모두. */
+  payFeatures?: string[]
+  /** 한 달에 얼마까지 낼 수 있는지. 모두. */
+  payPrice?: string
   comment?: string
 }
 
@@ -67,6 +73,10 @@ export type SurveySummary = {
   situation: SurveyTally[]
   invest: SurveyTally[]
   spendChange: SurveyTally[]
+  /** 수익화 질문들(2026-11-25 부터). */
+  usagePeriod: SurveyTally[]
+  payFeatures: SurveyTally[]
+  payPrice: SurveyTally[]
   bySituation: SurveySegment[]
   comments: { path: 'USED' | 'LOOKED'; text: string; createdAt: string }[]
 }

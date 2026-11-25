@@ -104,6 +104,10 @@ export default function SurveyResultsPage() {
             <Ranking index={7} title="불편했던 점" who="써 본 사람" tallies={data.pain} color="#f43f5e" />
             <Ranking index={8} title="시작하지 않은 이유" who="구경만 한 사람" tallies={data.whyNot} color="#fb923c" />
             <Ranking index={9} title="있으면 써 볼 것" who="구경만 한 사람" tallies={data.wouldHelp} color="#0ea5e9" />
+            {/* 수익화 질문(2026-11-25 부터). 질문이 생긴 뒤에 답한 사람만 세므로 "N명 답함"을 함께 보여 준다. */}
+            <Ranking index={10} title="며칠 써 봤나요" who="써 본 사람" tallies={data.usagePeriod ?? []} color="#14b8a6" single />
+            <Ranking index={11} title="돈을 내도 쓰고 싶은 기능" who="모두" tallies={data.payFeatures ?? []} color="#eab308" />
+            <Ranking index={12} title="한 달에 낼 수 있는 금액" who="모두" tallies={data.payPrice ?? []} color="#f59e0b" single />
             <Comments data={data} />
           </div>
         )}
