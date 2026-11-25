@@ -30,6 +30,12 @@ public record SurveySubmitRequest(
         @SingleChoice String invest,
         /** 써 보고 돈 쓰는 게 달라졌는지. 써 본 사람만. */
         @SingleChoice String spendChange,
+        /** 며칠 써 봤는지. 써 본 사람만. */
+        @SingleChoice String usagePeriod,
+        /** 돈을 내고라도 쓰고 싶은 기능. 모두 답한다. */
+        @Size(max = 10, message = "고른 답이 너무 많아요.") List<@Choice String> payFeatures,
+        /** 한 달에 얼마까지 낼 수 있는지. 모두 답한다. */
+        @SingleChoice String payPrice,
         @Size(max = 300, message = "한마디는 300자 이내로 적어 주세요.") String comment
 ) {
 }

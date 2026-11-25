@@ -71,7 +71,7 @@ class SurveyIntegrationTest {
         assertThat(SurveyResponse.class.getDeclaredFields())
                 .extracting(java.lang.reflect.Field::getName)
                 .containsExactlyInAnyOrder("SEPARATOR", "id", "path", "satisfaction", "nps", "best", "pain", "whyNot", "wouldHelp",
-                        "situation", "invest", "spendChange", "comment", "createdAt");
+                        "situation", "invest", "spendChange", "usagePeriod", "payFeatures", "payPrice", "comment", "createdAt");
     }
 
     @Test
@@ -112,6 +112,37 @@ class SurveyIntegrationTest {
             assertThat(response.getInvest()).isEqualTo("안 해요");
             assertThat(response.getSpendChange()).isNull();
         });
+    }
+
+    @Test
+    void payIntentQuestionsAreStoredAndCountedButUsagePeriodOnlyForSomeoneWhoUsedIt() throws Exception {
+        mockMvc.perform(submit("10.1.0.9", Map.of(
+                        "path", "USED", "satisfaction", 4, "usagePeriod", "일주일쯤",
+                        "payFeatures", List.of("캡처 분석 무제한", "월간 소비 리포트"), "payPrice", "3,000원")))
+                .andExpect(status().isOk());
+        mockMvc.perform(submit("10.1.0.10", Map.of(
+                        "path", "LOOKED", "usagePeriod", "2주 넘게", "payFeatures", List.of("캡처 분석 무제한"), "payPrice", "무료만 쓸래요")))
+                .andExpect(status().isOk());
+
+        List<SurveyResponse> saved = repository.findAll();
+        assertThat(saved).filteredOn(response -> "USED".equals(response.getPath())).singleElement().satisfies(response -> {
+            assertThat(response.getUsagePeriod()).isEqualTo("일주일쯤");
+            assertThat(response.getPayFeatures()).isEqualTo("캡처 분석 무제한|월간 소비 리포트");
+            assertThat(response.getPayPrice()).isEqualTo("3,000원");
+        });
+        // 써 보지 않은 사람에게 "며칠 써 봤나요"는 묻지 않으니 버린다. 지불 의향은 모두에게 묻는다.
+        assertThat(saved).filteredOn(response -> "LOOKED".equals(response.getPath())).singleElement().satisfies(response -> {
+            assertThat(response.getUsagePeriod()).isNull();
+            assertThat(response.getPayFeatures()).isEqualTo("캡처 분석 무제한");
+            assertThat(response.getPayPrice()).isEqualTo("무료만 쓸래요");
+        });
+
+        JsonNode data = objectMapper.readTree(mockMvc.perform(get("/api/surveys/summary").header("Authorization", "Bearer " + adminToken()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8)).path("data");
+        assertThat(data.path("payFeatures").get(0).path("option").asText()).isEqualTo("캡처 분석 무제한");
+        assertThat(data.path("payFeatures").get(0).path("count").asLong()).isEqualTo(2);
+        assertThat(data.path("payPrice")).hasSize(2);
+        assertThat(data.path("usagePeriod")).hasSize(1);
     }
 
     @Test

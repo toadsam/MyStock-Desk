@@ -24,6 +24,10 @@ public record SurveySummaryDto(
         List<Tally> situation,
         List<Tally> invest,
         List<Tally> spendChange,
+        /** 수익화 질문들(2026-11-25 부터): 며칠 써 봤는지, 돈을 내고 쓸 기능, 한 달에 낼 수 있는 금액. */
+        List<Tally> usagePeriod,
+        List<Tally> payFeatures,
+        List<Tally> payPrice,
         /** 상황별로 나눈 만족도와 추천 지수. 답한 사람이 많은 상황부터 온다. */
         List<Segment> bySituation,
         List<Comment> comments

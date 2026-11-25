@@ -86,6 +86,9 @@ public class SurveyService {
                 .situation(blankToNull(request.situation()))
                 .invest(blankToNull(request.invest()))
                 .spendChange(used ? blankToNull(request.spendChange()) : null)
+                .usagePeriod(used ? blankToNull(request.usagePeriod()) : null)
+                .payFeatures(join(request.payFeatures()))
+                .payPrice(blankToNull(request.payPrice()))
                 .comment(blankToNull(request.comment()))
                 .createdAt(LocalDateTime.now(clock))
                 .build());
@@ -114,6 +117,9 @@ public class SurveyService {
                 tally(all, SurveyResponse::getSituation),
                 tally(all, SurveyResponse::getInvest),
                 tally(all, SurveyResponse::getSpendChange),
+                tally(all, SurveyResponse::getUsagePeriod),
+                tally(all, SurveyResponse::getPayFeatures),
+                tally(all, SurveyResponse::getPayPrice),
                 bySituation(all),
                 all.stream()
                         .filter(response -> response.getComment() != null)
