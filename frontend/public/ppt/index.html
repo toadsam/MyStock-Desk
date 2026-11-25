@@ -143,6 +143,7 @@ ul.pts li::before{content:"";flex:none;width:12px;height:12px;border-radius:50%;
 .ph{display:flex;flex-direction:column;align-items:center;text-align:center}
 .ph b{font-family:var(--f-title);font-weight:400;font-size:22px;margin-top:10px}
 .ph span.s{font-size:15px;color:var(--dim);line-height:1.35}
+.fun.tight.wide .frow{grid-template-columns:168px 1fr 44px}.fun.tight.wide .frow span{white-space:nowrap}
 .fun.tight{gap:5px}.fun.tight .frow{grid-template-columns:104px 1fr 78px;font-size:17px}.fun.tight .frow .bar{height:22px}.fun.tight .frow b{font-size:23px}
 .cmp{display:grid;grid-template-columns:76px 1fr 1.3fr 310px;background:var(--glass);box-shadow:inset 0 0 0 2px var(--edge),0 16px 36px rgba(2,12,60,.35);border-radius:22px;padding:6px 18px;font-size:16.5px;line-height:1.35}
 .cmp>div{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.18);display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
@@ -334,13 +335,13 @@ ul.pts li::before{content:"";flex:none;width:12px;height:12px;border-radius:50%;
   </div>
 </section>
 
-<section class="slide" data-t="40" data-pose="point" data-note="사용자 피드백과 개선. 써 본 사람과 안 써 본 사람의 이유를 묻는 익명 설문을 만들었고, 로그인 전에 소개를 볼 수 있게 했음. 설문 결과 숫자가 나오면 이 장에서 말함.">
+<section class="slide" data-t="40" data-pose="point" data-note="사용자 피드백과 개선. 써 본 사람과 안 써 본 사람의 이유를 묻는 익명 설문을 만들었고, 11/25 기준 20명이 답했음(써 본 사람 13, 구경만 한 사람 7). 오른쪽은 테스터와 설문 의견으로 고친 것. 자세한 결과는 다음 장.">
   <div class="eb in">10</div>
   <h2 class="in" style="--i:1">사용자 피드백과 개선</h2>
   <div class="cols" style="grid-template-columns:.9fr 1.1fr">
     <div class="glass in" style="--i:2;display:flex;gap:20px;align-items:center;padding:18px 22px">
       <div class="ph"><div class="shot" style="width:170px;height:368px"><img src="img/app-survey.webp" alt="실제 설문 화면. MyWave, 써 보셨나요? 방울 두 개 중 하나를 누른다."></div><span class="real">실제 화면</span></div>
-      <div style="display:flex;flex-direction:column;gap:10px"><h3>익명 설문</h3><ul class="pts" style="font-size:18px;gap:8px"><li>11/16 공개, mywave.day/survey</li><li>사용자: 만족도, 불편한 점</li><li>미사용자: 시작하지 않은 이유</li><li>응답자 정보는 저장하지 않음</li></ul><span class="pill chk">응답 수, 주요 답변 넣기</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px"><h3>익명 설문</h3><ul class="pts" style="font-size:18px;gap:8px"><li>11/16 공개, mywave.day/survey</li><li>사용자: 만족도, 불편한 점</li><li>미사용자: 시작하지 않은 이유</li><li>응답자 정보는 저장하지 않음</li></ul><span class="pill ok">응답 20명 · 써 본 13 · 구경 7</span></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;justify-content:center">
       <h3 class="in" style="--i:3;font-size:22px">피드백 반영 내역</h3>
@@ -352,8 +353,54 @@ ul.pts li::before{content:"";flex:none;width:12px;height:12px;border-radius:50%;
   </div>
 </section>
 
-<section class="slide" data-t="30" data-pose="think" data-note="배운 점 3가지를 숫자와 함께 짧게. 길게 말하지 않고 다음 장 향후 계획으로 넘어감.">
+<section class="slide" data-t="45" data-pose="surprise" data-note="설문 결과. 11/25 기준 20명이 답함. 써 본 13명의 만족도 평균 4.2점(5점 만점, 5점이 9명), 친구 추천 점수 평균 8.8점. 좋았던 점은 벨루가 캐릭터와 버튼 한 번 기록, AI 코치. 불편한 점 1위는 뭘 누를지 헷갈린다는 것이라 첫 사용 안내를 넣었음. 구경만 한 사람은 서비스가 뭔지 잘 모르겠다는 답이 많았음. 응답 수가 적어 방향을 보는 참고 자료로 씀.">
   <div class="eb in">11</div>
+  <h2 class="in" style="--i:1;margin-bottom:12px">설문 결과</h2>
+  <div class="cols" style="grid-template-columns:.8fr 1.2fr 1fr">
+    <div class="glass in" style="--i:2;display:flex;flex-direction:column;gap:14px;justify-content:center">
+      <div><span class="small">응답</span><div class="big" style="font-size:58px"><span data-count="20">20</span><span style="font-size:26px">명</span></div><p class="small" style="font-size:16px">써 본 사람 13 · 구경만 한 사람 7</p></div>
+      <div><span class="small">만족도 (써 본 13명)</span><div class="big" style="font-size:46px">4.2<span style="font-size:22px"> / 5</span></div><p class="small" style="font-size:16px">5점을 준 사람 9명</p></div>
+      <div><span class="small">친구 추천 점수</span><div class="big" style="font-size:46px">8.8<span style="font-size:22px"> / 10</span></div></div>
+    </div>
+    <div class="glass in" style="--i:3;display:flex;flex-direction:column;gap:8px">
+      <h3 style="font-size:20px">좋았던 점 <span class="small" style="font-size:14px">써 본 사람 · 여러 개 선택</span></h3>
+      <div class="fun tight wide"><div class="frow"><span>귀여운 벨루가</span><div class="bar"><i data-w="100.0"></i></div><b>11</b></div><div class="frow"><span>버튼 한 번 기록</span><div class="bar"><i data-w="81.8"></i></div><b>9</b></div><div class="frow"><span>AI 코치</span><div class="bar"><i data-w="81.8"></i></div><b>9</b></div><div class="frow"><span>깔끔한 화면</span><div class="bar"><i data-w="63.6"></i></div><b>7</b></div><div class="frow"><span>오늘 써도 되는 돈</span><div class="bar"><i data-w="63.6"></i></div><b>7</b></div></div>
+      <h3 style="font-size:20px;margin-top:6px">불편했던 점</h3>
+      <div class="fun tight wide"><div class="frow"><span>뭘 누를지 헷갈려요</span><div class="bar"><i class="warn" data-w="54.5"></i></div><b>6</b></div><div class="frow"><span>기능이 부족해요</span><div class="bar"><i class="warn" data-w="27.3"></i></div><b>3</b></div><div class="frow"><span>숫자가 안 믿겨요</span><div class="bar"><i class="warn" data-w="18.2"></i></div><b>2</b></div></div>
+      <p class="note" style="font-size:14px">"헷갈려요" → 첫 사용 안내 추가 (앞 장 반영 내역)</p>
+    </div>
+    <div class="glass in" style="--i:4;display:flex;flex-direction:column;gap:8px">
+      <h3 style="font-size:20px">시작하지 않은 이유 <span class="small" style="font-size:14px">구경만 한 사람</span></h3>
+      <div class="fun tight wide"><div class="frow"><span>뭔지 잘 모르겠어요</span><div class="bar"><i data-w="100.0"></i></div><b>2</b></div><div class="frow"><span>그냥 구경만</span><div class="bar"><i data-w="100.0"></i></div><b>2</b></div><div class="frow"><span>적는 게 귀찮아요</span><div class="bar"><i data-w="50.0"></i></div><b>1</b></div></div>
+      <h3 style="font-size:20px;margin-top:6px">있으면 써 볼 것</h3>
+      <div class="fun tight wide"><div class="frow"><span>친구가 추천하면</span><div class="bar"><i data-w="100.0"></i></div><b>2</b></div><div class="frow"><span>카드 내역 자동 연동</span><div class="bar"><i data-w="100.0"></i></div><b>2</b></div></div>
+      <p class="note" style="font-size:14px">"뭔지 모르겠다" → 로그인 전 "먼저 구경하기" 추가<br>응답 20명이라 방향을 보는 참고 자료로 씀</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-t="45" data-pose="think" data-note="수익화 계획. 11/25에 설문에 지불 의향 질문을 추가했고 지금까지 5명이 답했음. 5명 모두 무료만 쓰겠다고 하지 않았고, 원하는 기능은 월간 소비 리포트와 광고 없는 화면이 4명씩으로 가장 많았음. 그래서 핵심 기능은 무료로 두고, 리포트와 캡처 분석 확대를 묶은 프리미엄을 검토함. 가격은 응답이 적어 아직 가설이고, 응답을 더 모아 정함.">
+  <div class="eb in">12</div>
+  <h2 class="in" style="--i:1;margin-bottom:12px">수익화 계획</h2>
+  <div class="cols" style="grid-template-columns:1fr 1fr">
+    <div class="glass in" style="--i:2;display:flex;flex-direction:column;gap:8px">
+      <h3 style="font-size:20px">돈을 내도 쓰고 싶은 기능 <span class="small" style="font-size:14px">11/25 추가 질문 · 응답 5명</span></h3>
+      <div class="fun tight wide"><div class="frow"><span>월간 소비 리포트</span><div class="bar"><i data-w="80.0"></i></div><b>4</b></div><div class="frow"><span>광고 없이</span><div class="bar"><i data-w="80.0"></i></div><b>4</b></div><div class="frow"><span>캡처 분석 무제한</span><div class="bar"><i data-w="20.0"></i></div><b>1</b></div><div class="frow"><span>목표 여러 개</span><div class="bar"><i data-w="20.0"></i></div><b>1</b></div></div>
+      <h3 style="font-size:20px;margin-top:6px">한 달에 낼 수 있는 금액</h3>
+      <div class="fun tight wide"><div class="frow"><span>무료만</span><div class="bar"><i data-w="0.0"></i></div><b>0</b></div><div class="frow"><span>월 1,000원</span><div class="bar"><i data-w="20.0"></i></div><b>1</b></div><div class="frow"><span>월 3,000원</span><div class="bar"><i data-w="20.0"></i></div><b>1</b></div><div class="frow"><span>월 5,000원</span><div class="bar"><i data-w="20.0"></i></div><b>1</b></div><div class="frow"><span>그 이상</span><div class="bar"><i data-w="40.0"></i></div><b>2</b></div></div>
+      <p class="note" style="font-size:14px">5명 중 "무료만 쓰겠다"는 0명</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;justify-content:center">
+      <div class="prow in" style="--i:3"><span class="pill ok">무료</span><b>매일 쓰는 핵심 기능은 무료</b><p>오늘 써도 되는 돈, 버튼 한 번 기록, 목표 1개, 카드 문자 붙여넣기</p></div>
+      <div class="prow in" style="--i:4"><span class="pill mid">프리미엄</span><b>설문에서 원한 기능을 묶어 유료로</b><p>월간 소비 리포트, 캡처 분석 확대(지금은 하루 20장), 목표 여러 개, 광고 없는 화면(무료에 광고를 넣을 경우)</p></div>
+      <div class="prow in" style="--i:5"><span class="pill">검증</span><b>가격은 월 3,000~5,000원 사이에서 시험</b><p>설문 응답을 더 모아 가격을 정하고, 실제 유료 전환율로 확인</p></div>
+      <p class="small in" style="--i:6;margin-top:4px"><span class="pill chk">가격은 가설 · 지불 의향 응답 5명</span></p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-t="30" data-pose="think" data-note="배운 점 3가지를 숫자와 함께 짧게. 길게 말하지 않고 다음 장 향후 계획으로 넘어감.">
+  <div class="eb in">13</div>
   <h2 class="in" style="--i:1">배운 점</h2>
   <div class="cols c3">
     <div class="glass in" style="--i:2"><div class="big" style="font-size:54px">5초</div><h3 style="margin:8px 0">홍보 영상 평균 조회 시간</h3><p class="small">조회 수는 나왔지만 끝까지 본 사람이 적었고 링크 클릭이 없었음. 앞부분에서 서비스 화면을 보여 줘야 함</p></div>
@@ -363,7 +410,7 @@ ul.pts li::before{content:"";flex:none;width:12px;height:12px;border-radius:50%;
 </section>
 
 <section class="slide" data-t="40" data-pose="point" data-note="남은 학기와 그 이후에 할 일. 설문 결과 반영, 가입 없이 써 보기, 홍보 2차를 먼저 하고, 기술 보완은 그 다음. 날짜는 팀 일정에 맞게 말함.">
-  <div class="eb in">12</div>
+  <div class="eb in">14</div>
   <h2 class="in" style="--i:1">향후 계획</h2>
   <div class="cols c3">
     <div class="glass in" style="--i:2;display:flex;flex-direction:column;gap:12px"><span class="pill">1단계 · 학기 내</span><h3>사용자 의견 반영</h3><ul class="pts" style="font-size:19px;gap:9px"><li>설문 결과 정리, 가장 많이 나온 불편 사항 수정</li><li>가입 없이 써 볼 수 있는 체험 모드 추가</li><li>최종 결과 보고서 작성</li></ul></div>
