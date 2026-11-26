@@ -43,7 +43,7 @@
 | ![소비 분석. 총 소비 162,700원, 지난달 같은 기간 대비, 카테고리별 지출, TOP 3](docs/screens/spending.webp) | ![목표 관리. 다음 달까지 30만원 모으기 37.3%, 추천 행동](docs/screens/goals.webp) |
 | 이번 달 소비를 **지난달 같은 날짜까지**와 비교합니다. 12일까지 쓴 돈을 지난달 한 달 전체와 비교하면 매달 초에는 늘 "줄었다"가 되기 때문입니다. 기록은 직접 입력, 퀵버튼, 카드 문자 붙여넣기, 결제 캡처로 넣습니다. | 진행 중인 목표 중 목표일이 가장 가까운 것을 메인 목표로 두고, 하루에 얼마씩 모으면 되는지 보여 줍니다. 추천 행동은 이번 달 실제로 많이 쓴 카테고리 세 곳을 20% 줄였을 때 아끼는 돈입니다. |
 | ![투자 상세. 총 투자자산, 보유 종목 표, 거래 기록](docs/screens/portfolio-detail.webp) | ![AI 코치. 이번 달 재무 상태, 목표 전망, 대화](docs/screens/coach.webp) |
-| 이 서비스의 출발점입니다. 거래를 넣고 고치고 지우면 보유 종목의 수량과 평균단가가 `Holding.buy()`를 다시 거쳐 나옵니다. | 총자산, 소비, 목표, 리스크를 한 화면에 모았습니다. 다만 이 화면의 답변은 언어 모델이 아니라 규칙이 만듭니다. 바로 아래에 적었습니다. |
+| 이 서비스의 출발점입니다. 거래를 넣고 고치고 지우면 보유 종목의 수량과 평균단가가 `Holding.buy()`를 다시 거쳐 나옵니다. | 총자산, 소비, 목표, 리스크를 한 화면에 모았습니다. 모델이 답할 때도 숫자는 서버가 준 것만 나갑니다. 그 장치를 바로 아래에 적었습니다. |
 
 이 밖에 계좌 수동 등록과 월 예산, 기업 상세, 리포트, 알림, 검색이 있습니다. 화면 19개 전부는 [화면 목록](docs/SCREENS.md)에 있습니다.
 
@@ -58,14 +58,19 @@
 ### 하루 예산은 저장하지 않고 매번 계산한다
 
 하루 예산, 남은 생활비, 투자 가능 금액, 목표 달성률은 DB에 없습니다. 소비를 하나 지우면 같이 고쳐야 할 숫자가 넷이고, 저장해 두면 언젠가 하나를 빠뜨립니다. 그래서 요청마다 예산, 소비, 거래 기록에서 다시 셉니다. 홈의 퀵버튼을 누르면 화면이 숫자를 직접 빼지 않고 서버에 다시 묻습니다. 계산하는 곳이 한 곳뿐이라 홈과 소비 화면과 코치가 서로 다른 숫자를 말할 일이 없습니다. 투자의 보유 종목을 거래 기록에서 다시 만드는 것(아래)과 같은 생각입니다.
+### "AI"라고 적힌 화면이 넷인데 모델을 부르는 곳은 둘
 
-### "AI"라고 적힌 화면이 넷인데 모델을 부르는 곳은 하나
+AI 코치, AI 리포트, AI 요약, 테마 설명 넷 중 OpenAI를 호출하는 것은 AI 코치와 테마 설명 둘입니다. 둘 다 `stockflow.ai.provider: openai`와 `OPENAI_API_KEY`가 있을 때만 모델을 부르고, 기본 설정 `local`에서는 규칙으로 답합니다. AI 리포트와 AI 요약은 언제나 자바 규칙입니다. [`PortfolioReportService`](backend/src/main/java/com/stockflow/ai/service/PortfolioReportService.java)는 보유 비중과 손익 개수를 세어 문장을 조립합니다.
 
-AI 코치, AI 리포트, AI 요약, 테마 설명 넷 중 실제로 OpenAI를 호출하는 것은 테마 설명 하나뿐이고, 그마저 기본 설정이 `stockflow.ai.provider: local`이라 꺼져 있습니다. 나머지 셋은 전부 자바 규칙입니다. [`PortfolioReportService`](backend/src/main/java/com/stockflow/ai/service/PortfolioReportService.java)는 보유 비중과 손익 개수를 세어 문장을 조립하고, [`FinancialCoachService.answer()`](backend/src/main/java/com/stockflow/coach/service/FinancialCoachService.java#L71-L91)는 질문에 "투자, 소비, 목표"가 들어 있는지만 보는 4갈래 분기입니다.
+이 화면들에서 모델이 종목 이름을 말하는 순간 투자 권유가 됩니다. 그래서 테마 설명은 지시문으로 매수/매도, 목표가, 상승 확률을 금지했고([`ThemeAiExplanationService#L50-L56`](backend/src/main/java/com/stockflow/theme/service/ThemeAiExplanationService.java#L50-L56)), 규칙으로 쓰는 리포트에는 마지막 필드에 면책 문장을 데이터로 넣어서 화면이 지울 수 없게 했습니다([`PortfolioReportService#L56`](backend/src/main/java/com/stockflow/ai/service/PortfolioReportService.java#L56)).
 
-이렇게 둔 이유는 하나입니다. 이 화면에서 모델이 종목 이름을 말하는 순간 투자 권유가 됩니다. 그래서 모델을 부르는 유일한 자리에는 지시문으로 매수/매도, 목표가, 상승 확률을 금지했고([`ThemeAiExplanationService#L50-L56`](backend/src/main/java/com/stockflow/theme/service/ThemeAiExplanationService.java#L50-L56)), 규칙으로 쓰는 리포트에는 마지막 필드에 면책 문장을 데이터로 넣어서 화면이 지울 수 없게 했습니다([`PortfolioReportService#L56`](backend/src/main/java/com/stockflow/ai/service/PortfolioReportService.java#L56)).
+AI 코치는 2026-11에 정해진 문장 네 개에서 모델 답으로 바꾸면서, 모델이 하는 일을 문장 쓰기로 좁혔습니다.
 
-대가는 코치 화면입니다. 실행해서 "지금 뭐 사야 돼? 종목 추천해줘"를 넣어 봤더니 돌아온 답은 거절이 아니라 기본 분기의 총자산 요약이었습니다. 종목을 말하지 않는다는 목적은 지켰지만, 거절하도록 만든 것이 아니라 말할 줄 몰라서 그런 것입니다. 4갈래 밖의 질문은 전부 같은 문장으로 떨어집니다. 규칙으로 안전을 확보한 대신 대화가 없습니다.
+- **숫자는 서버가 줍니다.** 가계부 숫자를 DB에서 꺼내 "이름: 값" 줄로 모델에 넘기고, 답에 자료에 없는 세 자리 이상 숫자나 "1만 3천원" 같은 어림이 있으면 그 답을 버립니다([`CoachAnswerGuard`](backend/src/main/java/com/stockflow/coach/service/CoachAnswerGuard.java)).
+- **투자 조언은 하지 않습니다.** 지시문으로 막고, 답이 사라/팔라/오를 것이다처럼 보이면 거절 문장으로 바꿉니다. 종목을 물으면 판단 대신 그 종목의 최근 기사 세 건을 답 아래에 보여 줍니다.
+- **개인정보는 보내지 않습니다.** 이름, 이메일, 계좌 이름, 금융기관, 가게 이름, 메모, 목표 이름, 종목 이름은 빼고, 질문에 적힌 이메일, 전화번호, 긴 숫자는 가린 뒤 보냅니다([`CoachPrivacy`](backend/src/main/java/com/stockflow/coach/service/CoachPrivacy.java)).
+- **횟수에 상한이 있습니다.** 한 사람 하루 30번, 모든 사람 합쳐 하루 1,500번입니다. 넘거나 모델을 부르지 못하면 예전의 규칙 답으로 돌아가므로 코치는 언제나 답을 합니다([`FinancialCoachService#L96-L112`](backend/src/main/java/com/stockflow/coach/service/FinancialCoachService.java#L96-L112)).
+
 
 ### 거래를 고치면 보유를 고치지 않고 처음부터 다시 계산
 
@@ -142,7 +147,7 @@ cd frontend && npm install && npm run dev
 | 변수 | 없을 때 |
 |---|---|
 | `DART_API_KEY` | 재무제표가 시드로 남고 `source`가 `demo-`로 표시됩니다 |
-| `OPENAI_API_KEY` (+ `stockflow.ai.provider: openai`) | 테마 설명이 규칙 기반 로컬 설명으로 나갑니다 |
+| `OPENAI_API_KEY` (+ `stockflow.ai.provider: openai`) | AI 코치와 테마 설명이 규칙으로 만든 답으로 나갑니다 |
 | `SEC_USER_AGENT` | SEC EDGAR에 예시 User-Agent로 요청합니다. 실제로 쓸 거면 연락처를 넣어야 합니다 |
 
 Windows OneDrive 경로에서 Gradle이 `.class` 동기화 때문에 실패하는 것을 피하려고, 백엔드 빌드 산출물은 OS 임시 폴더의 `stockflow-backend-build`에 만들어집니다([`build.gradle#L11`](backend/build.gradle#L11)).
@@ -171,7 +176,8 @@ HTTPS는 이 compose 앞에 Caddy 같은 리버스 프록시를 두고 `WEB_PORT
 | `backend` | GitHub 저장소, Settings → Root Directory `backend`, Healthcheck Path `/api/health` | `SPRING_DATASOURCE_URL` = `jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/${{MySQL.MYSQLDATABASE}}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true`, `SPRING_DATASOURCE_USERNAME` = `${{MySQL.MYSQLUSER}}`, `SPRING_DATASOURCE_PASSWORD` = `${{MySQL.MYSQLPASSWORD}}`, `STOCKFLOW_JWT_SECRET` = 새로 만든 32바이트 이상 값, `PORT` = `8080`, (선택) `GOOGLE_CLIENT_ID` |
 | `frontend` | GitHub 저장소, Settings → Root Directory `frontend`, Healthcheck Path `/`, Networking 에서 공개 도메인 생성(포트 80) | `BACKEND_UPSTREAM` = `${{backend.RAILWAY_PRIVATE_DOMAIN}}:8080`, `PORT` = `80` |
 
-**구글 로그인 켜기.** Google Cloud Console → API 및 서비스 → 사용자 인증 정보에서 OAuth 클라이언트 ID(웹 애플리케이션)를 만들고, 승인된 JavaScript 원본에 화면 주소(`https://mywave.day`, `https://www.mywave.day`, 개발용 `http://localhost:5173`)를 넣습니다. 리디렉션 URI는 쓰지 않습니다. 만든 ID를 백엔드의 `GOOGLE_CLIENT_ID`에 넣으면 로그인 화면에 버튼이 뜹니다. 프론트는 이 값을 빌드할 때가 아니라 뜰 때 서버에 묻기 때문에(`GET /api/auth/config`) 다시 빌드할 필요가 없습니다. 클라이언트 보안 비밀은 쓰지 않습니다. 화면이 받은 ID 토큰을 서버가 구글 공개키로 직접 검증합니다.
+**구글 로그인 켜기.** Google Cloud Console → API 및 서비스 → 사용자 인증 정보에서 OAuth 클라이언트 ID(웹 애플리케이션)를 만들고, 승인된 JavaScript 원본에 화면 주소(`https://mywave.day`, `https://www.mywave.day`, 개발용 `http://localhost:5173`)를 넣습니다. 리디렉션 URI는 쓰지 않습니다. 만든 ID를 백엔드의 `GOOGLE_CLIENT_ID`에 넣으면 로그인 화면에 버튼이 뜹니다. 프론트는 이 값을 빌드할 때가 아니라 뜰 때 서버에 묻기 때문에(`GET /api/auth/config`) 다시 빌드할 필요가 없습니다. 클라이언트 보안 비밀은 쓰지 않습니다. 화면이 받은 ID 토큰을 서버가 구글 공개키로 직접 검증합니다.
+
 
 **구글 로그인만 받기.** 백엔드에 `STOCKFLOW_PASSWORD_LOGIN_ENABLED=false`를 넣으면 이메일·비밀번호 가입과 로그인을 서버가 거절하고, 로그인 화면에는 구글 버튼만 남습니다. 데모 버튼도 같이 꺼집니다. 가입할 때 이메일 주인인지 확인하지 않고 비밀번호를 되찾을 방법도 없어서, 실제 사용자를 받는 동안에는 꺼 둡니다. 변수를 지우거나 `true`로 바꾸면 원래대로 돌아옵니다.
 
